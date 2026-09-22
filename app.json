@@ -1,0 +1,39 @@
+{
+  "expo": {
+    "name": "自重进阶",
+    "slug": "zizhong-jinjie",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/app-icon.png",
+    "userInterfaceStyle": "light",
+    "scheme": "zizhongjinjie",
+    "plugins": [
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "允许自重进阶使用位置，以记录跑步距离与配速。",
+          "locationAlwaysAndWhenInUsePermission": "允许自重进阶在训练期间持续记录跑步路线。"
+        }
+      ]
+    ],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.zizhong.jinjie",
+      "infoPlist": {
+        "UIBackgroundModes": ["location"]
+      }
+    },
+    "android": {
+      "package": "com.zizhong.jinjie",
+      "permissions": ["ACCESS_COARSE_LOCATION", "ACCESS_FINE_LOCATION", "ACCESS_BACKGROUND_LOCATION"],
+      "adaptiveIcon": {
+        "backgroundColor": "#151712",
+        "foregroundImage": "./assets/app-icon.png"
+      },
+      "predictiveBackGestureEnabled": true
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    }
+  }
+}

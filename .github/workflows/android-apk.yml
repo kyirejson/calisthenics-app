@@ -1,0 +1,43 @@
+name: Build Android APK
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v3
+      - run: npm ci
+      - run: npm run typecheck
+      - name: Generate Android project
+        run: npx expo prebuild --platform android --no-install
+      - name: Build standalone preview APK
+        working-directory: android
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleRelease --no-daemon --max-workers=2
+      - name: Stage APK
+        run: cp android/app/build/outputs/apk/release/app-release.apk zizhong-jinjie-preview.apk
+      - uses: actions/upload-artifact@v4
+        with:
+          name: android-preview-apk
+          path: zizhong-jinjie-preview.apk
+      - name: Publish downloadable prerelease
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "preview-${GITHUB_RUN_NUMBER}" zizhong-jinjie-preview.apk --prerelease --title "自重进阶 Android 测试版 ${GITHUB_RUN_NUMBER}" --notes "独立运行的 Android 测试安装包，无需 Expo Go。使用框架默认测试签名，仅用于测试；尚未完成真机验收，功能迁移仍有缺项。"
