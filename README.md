@@ -53,9 +53,36 @@
 
 技术栈：Expo SDK 57、React Native 0.86、TypeScript。动作数据来自原小程序。
 
+### 电脑浏览器实时预览
+
+```bash
+npm run dev:web
+```
+
+浏览器打开后，修改并保存 `src/screens` 中的页面，界面会自动刷新。浏览器适合调布局；GPS、震动和系统权限需要在安卓手机上检查。
+
+### 安卓手机实时预览
+
+手机安装 Expo Go，并与电脑连接同一 Wi-Fi，然后运行：
+
+```bash
+npm run dev:phone
+```
+
+用 Expo Go 扫描终端二维码。修改代码并保存后，手机会自动刷新。如果局域网连接失败，改用：
+
+```bash
+npm run dev:tunnel
+```
+
+Web 预览使用 8081 端口，Expo Go 使用 8082 端口，两种预览可以同时运行。
+
+主要页面源码位于 `src/screens/`，公共组件位于 `src/components/`，配色位于 `src/theme.ts`。
+
+### 安装与检查
+
 ```bash
 npm ci
-npm start
 ```
 
 ```bash
