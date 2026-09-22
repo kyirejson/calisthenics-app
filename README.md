@@ -1,35 +1,62 @@
-# 自重进阶 App
+<div align="center">
 
-由 `miniprogram-calisthenics` 迁移而来的 Android / iOS 原生跨平台项目，技术栈为 Expo SDK 57、React Native 0.86 和 TypeScript。
+<img src="assets/app-icon.png" width="112" alt="自重进阶 App 图标" />
 
-## 已迁移功能
+# 自重进阶
 
-- 首次建档：身体数据、目标、每周训练频率
-- 今日训练：按星期自动排课、休息日与临时加练
-- 完整训练流程：逐组次数、完成打卡、组间倒计时、震动提示
-- 进阶统计：累计训练、动作总量、近七天趋势、六艺等级
-- 188 个动作：分类、搜索、详情、动作要点、常见问题、进阶标准
-- 户外跑步：手机 GPS 测距、计时、平均配速和热量估算
-- 营养概览：根据个人资料、训练频率和目标估算热量与三大营养素
-- 本地数据：训练记录、用户档案、偏好设置和 JSON 系统分享备份
-- Android / iOS 权限、App 图标和应用标识配置
+从第一次训练开始，记录你的每一步进阶。
 
-原小程序目录没有被修改。动作库数据从原项目复制至 `src/data/legacy`，保持同一份动作名称、分级和训练说明。
+**v1.0.0 · 首个正式发布版 · Android**
 
-## 本地运行
+### [⬇ 下载安卓安装包（约 66 MB）](https://github.com/kyirejson/calisthenics-app/releases/download/v1.0.0/zizhong-jinjie-v1.0.0.apk)
+
+[版本发布页](https://github.com/kyirejson/calisthenics-app/releases/tag/v1.0.0) · [更新记录](CHANGELOG.md) · [反馈问题](https://github.com/kyirejson/calisthenics-app/issues)
+
+手机直接下载安装，安装后无需电脑或 Expo Go。
+
+</div>
+
+## 安装只需三步
+
+1. 用安卓手机点击上方「下载安卓安装包」。
+2. 在浏览器下载列表或文件管理中打开下载的 APK。
+3. 如系统提示，允许该浏览器或文件管理器安装应用，然后完成安装。
+
+首次打开后填写个人资料、选择训练目标与每周频率，即可开始使用。
+
+如果下载按钮无法打开，可进入[版本发布页](https://github.com/kyirejson/calisthenics-app/releases/tag/v1.0.0)，展开 **Assets**，选择 `zizhong-jinjie-v1.0.0.apk`。Source code 是源码压缩包，不是安装包。
+
+## v1.0.0 可以做什么
+
+| 模块 | 功能 |
+| --- | --- |
+| 今日训练 | 个人建档、按每周频率安排训练、休息日临时加练 |
+| 训练记录 | 逐组填写次数、完成打卡、组间倒计时与震动反馈 |
+| 动作库 | 188 个动作，分类搜索、动作要点、常见问题和进阶标准 |
+| 训练统计 | 累计次数、时长、近七天记录与当前六艺等级展示 |
+| 户外跑步 | 前台 GPS 测距、计时、平均配速与热量估算 |
+| 能量概览 | 按个人资料与目标估算热量和三大营养素 |
+| 本地数据 | 保存档案和训练记录，通过系统分享导出 JSON 备份 |
+
+## 数据与版本说明
+
+个人资料和训练记录默认保存在本机，不自动同步到云端。动作图片需要联网加载。微信小程序历史记录暂不支持直接导入。
+
+这是本项目首次正式发布。当前 APK 沿用首次构建的默认测试签名，已通过类型检查与云端 APK 构建，尚未完成真机验收。发布名称不代表已完成专属签名配置或应用商店审核。
+
+跑步当前仅支持前台定位，暂停计距仍有已知问题，暂不建议用于精确运动记录。原小程序的周期计划引擎、自定义计划、完整食谱、报告、备份导入和训练中断恢复尚未迁移。iOS 暂未提供安装包。
+
+详细信息见[版本说明](RELEASE-NOTES.md)。遇到问题可在 [Issues](https://github.com/kyirejson/calisthenics-app/issues) 中提供手机型号、系统版本和复现步骤。
+
+<details>
+<summary>开发者：本地运行与构建</summary>
+
+技术栈：Expo SDK 57、React Native 0.86、TypeScript。动作数据来自原小程序。
 
 ```bash
-npm install
+npm ci
 npm start
 ```
-
-终端出现二维码后：
-
-- Android：使用 Expo Go 扫码，或按 `a` 启动已配置的模拟器。
-- iOS：使用 Expo Go 扫码；iOS 本机构建需要 macOS / Xcode。
-- GPS 跑步请在实体手机上测试，模拟器通常不会持续产生真实位移。
-
-## 检查与构建
 
 ```bash
 npm run typecheck
@@ -37,13 +64,6 @@ npx expo-doctor
 npx expo export --platform android
 ```
 
-生成可安装包需登录 Expo 账号并使用 EAS：
+Actions → Build Android APK 可手动生成后续测试包，该流程不会覆盖 v1.0.0 正式发布页。
 
-```bash
-npx eas-cli build --platform android
-npx eas-cli build --platform ios
-```
-
-## 数据说明
-
-App 采用 AsyncStorage 离线保存数据，默认不上传云端。微信小程序与手机 App 属于不同系统沙箱，因此无法自动读取微信里的历史数据；需要从小程序导出 JSON 后，再为 App 接入文件导入流程。当前版本支持从“我的 → 导出 JSON 备份”分享手机端数据。
+</details>
