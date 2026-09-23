@@ -30,6 +30,7 @@ export type MasteryCriteria = {
   unit: 'reps' | 'seconds' | 'steps' | 'meters';
   display: string;
   manual: boolean;
+  confirmationHint?: string;
 };
 
 export type ProgressionStatus = {
@@ -53,13 +54,18 @@ export function getSeriesExercises(seriesKey: string) {
 
 export function parseMasteryCriteria(exercise: Exercise): MasteryCriteria {
   const display = exercise.standards?.upgrade || '完成当前处方上限';
-  const requiresConfirmation = /每侧|每向|往返|负重|公斤|kg/i.test(display);
+  const fullContext = [display, exercise.name, exercise.purpose, ...(exercise.keyPoints || [])].join(' ');
+  const unilateral = /每侧|左右|双侧|单侧|单臂|单手|单腿|单脚|一只手|一条腿/i.test(fullContext);
+  const requiresConfirmation = unilateral || /每向|往返|负重|公斤|kg/i.test(fullContext) || exercise.riskLevel === 'high';
+  const confirmationHint = unilateral && !/每侧|左右|双侧/i.test(display)
+    ? '请确认左右两侧均按要求完成。'
+    : undefined;
   const setRep = display.match(/(\d+)\s*组\s*[×xX]\s*(\d+)\s*(次|步)/);
-  if (setRep) return { sets: Number(setRep[1]), value: Number(setRep[2]), unit: setRep[3] === '步' ? 'steps' : 'reps', display, manual: requiresConfirmation };
+  if (setRep) return { sets: Number(setRep[1]), value: Number(setRep[2]), unit: setRep[3] === '步' ? 'steps' : 'reps', display, manual: requiresConfirmation, confirmationHint };
   const continuous = display.match(/连续\s*(\d+)\s*次/);
-  if (continuous) return { sets: 1, value: Number(continuous[1]), unit: 'reps', display, manual: requiresConfirmation };
+  if (continuous) return { sets: 1, value: Number(continuous[1]), unit: 'reps', display, manual: requiresConfirmation, confirmationHint };
   const duration = display.match(/(\d+)\s*(分钟|分|秒)/);
-  if (duration) return { sets: 1, value: Number(duration[1]) * (duration[2].startsWith('分') ? 60 : 1), unit: 'seconds', display, manual: requiresConfirmation };
+  if (duration) return { sets: 1, value: Number(duration[1]) * (duration[2].startsWith('分') ? 60 : 1), unit: 'seconds', display, manual: requiresConfirmation, confirmationHint };
   const steps = display.match(/(\d+)\s*级台阶/);
   if (steps) return { sets: 1, value: Number(steps[1]), unit: 'steps', display, manual: true };
   const meters = display.match(/(\d+)\s*米/);
@@ -89,12 +95,18 @@ export function getProgressionStatus(seriesKey: string, profile: Profile, sessio
   const criteria = parseMasteryCriteria(current);
   const recent = sessions
     .filter((session) => session.kind !== 'running' && session.workoutId === `single_${current.id}` && session.exercises.length === 1)
-    .sort((left, right) => new Date(right.completedAt).getTime() - new Date(left.completedAt).getTime())
-    .slice(0, 3);
+    .sort((left, right) => new Date(right.completedAt).getTime() - new Date(left.completedAt).getTime());
   let qualifiedSessions = 0;
+  let lastCountedAt = Number.POSITIVE_INFINITY;
   for (const session of recent) {
     if (!sessionQualifies(session, current, criteria)) break;
-    qualifiedSessions += 1;
+    const completedAt = new Date(session.completedAt).getTime();
+    if (!Number.isFinite(completedAt)) break;
+    if (qualifiedSessions === 0 || lastCountedAt - completedAt >= 24 * 60 * 60 * 1000) {
+      qualifiedSessions += 1;
+      lastCountedAt = completedAt;
+    }
+    if (qualifiedSessions >= 2) break;
   }
   return {
     series, current, next: seriesExercises[level], criteria,

@@ -1,28 +1,31 @@
 {
   "expo": {
-    "name": "涅槃",
-    "slug": "niepan",
-    "version": "1.1.0",
+    "name": "Uncover",
+    "slug": "uncover",
+    "version": "1.2.0",
     "orientation": "portrait",
     "icon": "./assets/app-icon.png",
     "userInterfaceStyle": "light",
-    "scheme": "niepan",
+    "scheme": "uncover",
+    "extra": {
+      "updateChannel": "preview"
+    },
     "plugins": [
       [
         "expo-location",
         {
-          "locationWhenInUsePermission": "允许涅槃在跑步记录页使用位置，以计算距离与配速。"
+          "locationWhenInUsePermission": "允许 Uncover 在跑步记录页使用位置，以计算距离与配速。"
         }
       ]
     ],
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.zizhong.jinjie",
-      "buildNumber": "2"
+      "buildNumber": "3"
     },
     "android": {
       "package": "com.zizhong.jinjie",
-      "versionCode": 2,
+      "versionCode": 3,
       "permissions": ["ACCESS_COARSE_LOCATION", "ACCESS_FINE_LOCATION"],
       "adaptiveIcon": {
         "backgroundColor": "#151712",

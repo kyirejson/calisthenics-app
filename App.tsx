@@ -1,6 +1,6 @@
 import { StatusBar } from 'expo-status-bar';
 import React, { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, BackHandler, Platform, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Alert, BackHandler, Linking, Platform, StyleSheet, View } from 'react-native';
 import { TabBar, type TabKey } from './src/components/TabBar';
 import { AppStoreProvider, useAppStore } from './src/store/AppStore';
 import { ExerciseDetailScreen } from './src/screens/ExerciseDetailScreen';
@@ -13,6 +13,7 @@ import { RunScreen } from './src/screens/RunScreen';
 import { TodayScreen } from './src/screens/TodayScreen';
 import { TrainingScreen } from './src/screens/TrainingScreen';
 import { colors } from './src/theme';
+import { checkForUpdates, markUpdatePrompted } from './src/services/updateChecker';
 import type { Route } from './src/types';
 import { confirmAction } from './src/utils/confirm';
 
@@ -42,10 +43,29 @@ function AppShell() {
   }, [returnFromActiveSession]);
 
   useEffect(() => {
+    if (Platform.OS !== 'android' || !ready || !profile || route.name !== 'tabs') return;
+    let active = true;
+    void checkForUpdates().then(async (available) => {
+      if (!active || !available || !await markUpdatePrompted(available.tag) || !active) return;
+      Alert.alert(
+        'Uncover 有新版本',
+        `v${available.version} 已发布。建议先在“我的”导出备份，再下载 APK 覆盖安装。`,
+        [
+          { text: '稍后', style: 'cancel' },
+          { text: '前往下载', onPress: () => { void Linking.openURL(available.apkUrl).catch(() => Alert.alert('无法打开下载页', '请在“我的”页面重试。')); } },
+        ],
+      );
+    }).catch(() => {
+      // Offline use remains available; Profile offers a manual retry.
+    });
+    return () => { active = false; };
+  }, [ready, Boolean(profile), route.name]);
+
+  useEffect(() => {
     if (Platform.OS !== 'android' || !ready) return;
     const subscription = BackHandler.addEventListener('hardwareBackPress', () => {
       if (!profile) {
-        Alert.alert('退出涅槃？', '建立档案后即可生成个人训练计划。', [
+        Alert.alert('退出 Uncover？', '建立档案后即可生成个人训练计划。', [
           { text: '继续建档', style: 'cancel' },
           { text: '退出', onPress: () => BackHandler.exitApp() },
         ]);
@@ -63,7 +83,7 @@ function AppShell() {
         setTab('today');
         return true;
       }
-      Alert.alert('退出涅槃？', '确认结束本次使用吗？', [
+      Alert.alert('退出 Uncover？', '确认结束本次使用吗？', [
         { text: '取消', style: 'cancel' },
         { text: '退出', onPress: () => BackHandler.exitApp() },
       ]);
@@ -82,7 +102,7 @@ function AppShell() {
 
   return <View style={styles.root}>
     {tab === 'today' ? <TodayScreen onStart={(workoutId, setMultiplier, rirTarget) => setRoute({ name: 'training', workoutId, setMultiplier, rirTarget })} onRun={() => setRoute({ name: 'run' })} onPlans={() => setTab('plans')} onNutrition={() => setRoute({ name: 'nutrition' })} /> : null}
-    {tab === 'plans' ? <PlansScreen /> : null}
+    {tab === 'plans' ? <PlansScreen onStart={(workoutId, setMultiplier, rirTarget) => setRoute({ name: 'training', workoutId, setMultiplier, rirTarget })} onRun={() => setRoute({ name: 'run' })} /> : null}
     {tab === 'progress' ? <ProgressScreen onOpen={(exerciseId) => setRoute({ name: 'exercise', exerciseId })} /> : null}
     {tab === 'profile' ? <ProfileScreen onPlans={() => setTab('plans')} onNutrition={() => setRoute({ name: 'nutrition' })} /> : null}
     <TabBar active={tab} onChange={setTab} />

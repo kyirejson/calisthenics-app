@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { BackHandler, KeyboardAvoidingView, Platform, Pressable, SafeAreaView, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { BackHandler, Image, KeyboardAvoidingView, Platform, Pressable, SafeAreaView, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Button } from '../components/ui';
 import { colors, radius } from '../theme';
 import type { Goal, Profile } from '../types';
@@ -53,7 +53,7 @@ export function OnboardingScreen() {
     <SafeAreaView style={styles.safe}>
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
         <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-          <View style={styles.brand}><Text style={styles.brandMark}>涅</Text><Text style={styles.brandText}>涅槃</Text></View>
+          <View style={styles.brand}><Image source={require('../../assets/app-icon.png')} style={styles.brandIcon} /><Text style={styles.brandText}>Uncover</Text></View>
           <View style={styles.progress}><View style={[styles.progressFill, { width: `${((step + 1) / 3) * 100}%` }]} /></View>
 
           {step === 0 ? (
@@ -110,7 +110,7 @@ const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.ink },
   content: { padding: 24, minHeight: '100%' },
   brand: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 26 },
-  brandMark: { width: 34, height: 34, borderRadius: 10, backgroundColor: colors.lime, color: colors.ink, textAlign: 'center', lineHeight: 34, fontWeight: '900', fontSize: 17 },
+  brandIcon: { width: 36, height: 36, borderRadius: 10 },
   brandText: { color: '#FFFFFF', fontWeight: '900', fontSize: 17 },
   progress: { height: 3, backgroundColor: '#34372F', marginBottom: 42 },
   progressFill: { height: 3, backgroundColor: colors.lime },

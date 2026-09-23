@@ -1,6 +1,6 @@
 {
-  "name": "niepan-app",
-  "version": "1.1.0",
+  "name": "uncover-app",
+  "version": "1.2.0",
   "main": "index.ts",
   "dependencies": {
     "@expo/metro-runtime": "~57.0.16",

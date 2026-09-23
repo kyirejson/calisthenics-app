@@ -33,13 +33,16 @@ jobs:
           chmod +x gradlew
           ./gradlew assembleRelease --no-daemon --max-workers=2
       - name: Stage APK
-        run: cp android/app/build/outputs/apk/release/app-release.apk niepan-preview.apk
+        run: cp android/app/build/outputs/apk/release/app-release.apk uncover-preview.apk
       - uses: actions/upload-artifact@v4
         with:
           name: android-preview-apk
-          path: niepan-preview.apk
+          path: uncover-preview.apk
       - name: Publish downloadable prerelease
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create "preview-${GITHUB_RUN_NUMBER}" niepan-preview.apk --prerelease --title "涅槃 Android 测试版 ${GITHUB_RUN_NUMBER}" --notes "涅槃 v1.1 开发测试包，包含周期训练、动作进阶和分目标营养计划。无需 Expo Go；使用框架默认测试签名，仅用于真机验收。"
+          APP_VERSION=$(node -p "require('./app.json').expo.version")
+          ANDROID_CODE=$(node -p "require('./app.json').expo.android.versionCode")
+          NOTES=$(printf 'Uncover v%s Android 测试包：训练目标、每日计划、动作指导与进阶路线整合。无需 Expo Go；测试签名，仅用于真机验收。\n\nApp version: %s\nAndroid versionCode: %s\n' "$APP_VERSION" "$APP_VERSION" "$ANDROID_CODE")
+          gh release create "preview-${GITHUB_RUN_NUMBER}" uncover-preview.apk --prerelease --title "Uncover Android 测试版 ${GITHUB_RUN_NUMBER}" --notes "$NOTES"

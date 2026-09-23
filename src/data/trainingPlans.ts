@@ -59,8 +59,8 @@ export const trainingPlans: TrainingPlanDefinition[] = [
   },
   {
     id: 'rebirth_7',
-    name: '涅槃起步 · 7 天重启',
-    shortName: '7天重启',
+    name: '7 天起步 · 建立节奏',
+    shortName: '7天起步',
     badge: '零基础',
     description: '从启用当天开始 7 天温和破冰；第 8 天恢复，随后自动衔接基础三练。',
     suitableFor: '久坐重启、零基础、较大体重或长时间未训练者',
