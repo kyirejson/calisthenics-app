@@ -25,6 +25,7 @@ jobs:
           packages: platform-tools
       - run: npm ci
       - run: npm run typecheck
+      - run: npm run test:domain
       - name: Generate Android project
         run: npx expo prebuild --platform android --no-install
       - name: Build standalone preview APK

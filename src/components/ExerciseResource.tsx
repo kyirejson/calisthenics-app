@@ -25,7 +25,6 @@ export function ExercisePhoto({ exercise }: { exercise: Exercise }) {
     <View style={styles.placeholder}>
       <View style={styles.placeholderShape} />
       <Text style={styles.placeholderMark}>↗</Text>
-      <Text style={styles.placeholderCategory}>{exercise.categoryLabel || '动作指导'}</Text>
     </View>
     {canLoad ? <Image key={exercise.id} source={{ uri }} style={styles.image} resizeMode="cover" onError={() => setFailed(true)} /> : null}
     <View style={styles.photoShade} />
@@ -60,7 +59,6 @@ const styles = StyleSheet.create({
   placeholder: { position: 'absolute', top: 0, right: 0, bottom: 0, left: 0, alignItems: 'center', justifyContent: 'center' },
   placeholderShape: { position: 'absolute', width: 220, height: 220, borderRadius: 110, borderWidth: 1, borderColor: '#4A5540', transform: [{ scaleX: 1.55 }] },
   placeholderMark: { color: '#A8D258', fontSize: 74, fontWeight: '900', opacity: 0.48 },
-  placeholderCategory: { color: '#DBE5CF', fontSize: 12, fontWeight: '800', letterSpacing: 2, marginTop: -6 },
   placeholderNotice: { color: '#C9D2C2', fontSize: 11, marginTop: 9 },
   image: { position: 'absolute', top: 0, right: 0, bottom: 0, left: 0, width: '100%', height: '100%' },
   photoShade: { position: 'absolute', top: 0, right: 0, bottom: 0, left: 0, backgroundColor: 'rgba(13,15,11,0.56)' },
