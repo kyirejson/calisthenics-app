@@ -1,11 +1,12 @@
 import * as Location from 'expo-location';
 import React, { useEffect, useRef, useState } from 'react';
-import { Alert, Pressable, SafeAreaView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, SafeAreaView, StyleSheet, Text, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Button } from '../components/ui';
 import { useAppStore } from '../store/AppStore';
 import { colors, radius } from '../theme';
 import type { TrainingSession } from '../types';
+import { showMessage } from '../utils/confirm';
 
 type Point = { latitude: number; longitude: number };
 
@@ -18,22 +19,30 @@ export function RunScreen({ onBack, onComplete }: { onBack: () => void; onComple
   const watch = useRef<Location.LocationSubscription | null>(null);
   const lastPoint = useRef<Point | null>(null);
   const startedAt = useRef<Date | null>(null);
+  const statusRef = useRef<'idle' | 'running' | 'paused'>('idle');
 
   useEffect(() => () => watch.current?.remove(), []);
   useEffect(() => { if (status !== 'running') return; const id = setInterval(() => setElapsed((v) => v + 1), 1000); return () => clearInterval(id); }, [status]);
 
   const begin = async () => {
     const result = await Location.requestForegroundPermissionsAsync();
-    if (result.status !== 'granted') { setPermission('denied'); Alert.alert('需要定位权限', '开启定位后才能计算跑步距离和实时配速。'); return; }
-    setPermission('granted'); startedAt.current = new Date(); setStatus('running');
+    if (result.status !== 'granted') { setPermission('denied'); showMessage('需要定位权限', '开启定位后才能计算跑步距离和实时配速。'); return; }
+    setPermission('granted'); startedAt.current = new Date(); statusRef.current = 'running'; setStatus('running');
     watch.current = await Location.watchPositionAsync({ accuracy: Location.Accuracy.BestForNavigation, timeInterval: 2000, distanceInterval: 3 }, (location) => {
+      if (statusRef.current !== 'running' || (location.coords.accuracy ?? 999) > 35) return;
       const next = { latitude: location.coords.latitude, longitude: location.coords.longitude };
-      if (lastPoint.current && (location.coords.accuracy ?? 999) <= 35) setDistance((value) => value + haversine(lastPoint.current!, next));
+      if (lastPoint.current) setDistance((value) => value + haversine(lastPoint.current!, next));
       lastPoint.current = next;
     });
   };
-  const togglePause = () => setStatus((value) => value === 'running' ? 'paused' : 'running');
+  const togglePause = () => {
+    const nextStatus = statusRef.current === 'running' ? 'paused' : 'running';
+    statusRef.current = nextStatus;
+    lastPoint.current = null;
+    setStatus(nextStatus);
+  };
   const finish = async () => {
+    statusRef.current = 'paused';
     watch.current?.remove(); watch.current = null;
     const km = distance / 1000; const calories = Math.round((profile?.weight || 65) * km * 1.02);
     const session: TrainingSession = { id: `run_${Date.now()}`, workoutId: 'outdoor_run', workoutName: '户外跑步', startedAt: (startedAt.current || new Date()).toISOString(), completedAt: new Date().toISOString(), durationSeconds: elapsed, exercises: [], totalReps: 0, kind: 'running', distanceKm: Number(km.toFixed(2)), calories };

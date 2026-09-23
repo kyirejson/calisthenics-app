@@ -2,12 +2,12 @@ import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { colors, radius } from '../theme';
 
-export type TabKey = 'today' | 'progress' | 'exercises' | 'profile';
+export type TabKey = 'today' | 'plans' | 'progress' | 'profile';
 
 const tabs: Array<{ key: TabKey; label: string; icon: string }> = [
   { key: 'today', label: '今日', icon: '●' },
+  { key: 'plans', label: '计划', icon: '▦' },
   { key: 'progress', label: '进阶', icon: '↗' },
-  { key: 'exercises', label: '动作', icon: '◇' },
   { key: 'profile', label: '我的', icon: '○' },
 ];
 

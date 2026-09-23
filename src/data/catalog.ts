@@ -18,6 +18,7 @@ export const categories = [
   { key: 'legRaise', label: '举腿', icon: '⌁' },
   { key: 'bridge', label: '桥', icon: '⌒' },
   { key: 'hspu', label: '倒立撑', icon: '↑' },
+  { key: 'support', label: '辅助', icon: '△' },
   { key: 'power', label: '爆发力', icon: 'ϟ' },
 ];
 
@@ -28,7 +29,8 @@ const aliases: Record<string, string[]> = {
   legRaise: ['legRaise', 'leg_raise'],
   bridge: ['bridge'],
   hspu: ['hspu', 'handstand_pushup'],
-  auxiliary: ['hang_grip', 'trifecta', 'neck'],
+  auxiliary: ['auxiliary'],
+  support: ['auxiliary', 'flag_clutch', 'flag_press', 'hang_grip', 'trifecta', 'neck'],
   power: ['power_push', 'power_pushup', 'power_jump', 'power_pull', 'kip_up', 'front_flip', 'back_flip'],
 };
 
@@ -44,21 +46,29 @@ export function categoryLabel(category: string) {
 
 export function selectExercise(category: string, profile: Profile): Exercise | undefined {
   const desiredStep = profile.levels[category] || 1;
-  const matches = exercises.filter((item) => categoryMatches(item, category));
-  return matches.find((item) => item.step === desiredStep) || matches[0];
+  const matches = exercises
+    .filter((item) => categoryMatches(item, category))
+    .sort((left, right) => (left.step || 999) - (right.step || 999));
+  const exact = matches.find((item) => item.step === desiredStep);
+  if (exact) return exact;
+  const highestStepped = [...matches].reverse().find((item) => typeof item.step === 'number');
+  if (highestStepped && desiredStep > (highestStepped.step || 0)) return highestStepped;
+  return matches[0];
 }
 
 export function getWorkout(id: string): Workout {
   return workouts[id] || workouts.fullA || Object.values(workouts)[0];
 }
 
-export function getWorkoutExercises(id: string, profile: Profile) {
+export function getWorkoutExercises(id: string, profile: Profile, setMultiplier = 1) {
   const workout = getWorkout(id);
+  const normalizedMultiplier = Number.isFinite(setMultiplier) && setMultiplier > 0 ? setMultiplier : 1;
   return workout.slots
     .map((slot) => {
       const exercise = selectExercise(slot.category, profile);
       if (!exercise) return null;
-      const sets = slot.prescription?.sets || exercise.defaultPrescription?.sets || 3;
+      const baseSets = slot.prescription?.sets || exercise.defaultPrescription?.sets || 3;
+      const sets = Math.max(1, Math.round(baseSets * normalizedMultiplier));
       return {
         ...exercise,
         targetSets: sets,
@@ -66,18 +76,4 @@ export function getWorkoutExercises(id: string, profile: Profile) {
       };
     })
     .filter(Boolean) as Array<Exercise & { targetSets: number; restSeconds: number }>;
-}
-
-export const weekdayPlans: Record<number, Record<number, string>> = {
-  1: { 6: 'fullComprehensive' },
-  2: { 1: 'fullA', 4: 'fullB' },
-  3: { 1: 'fullA', 3: 'fullB', 5: 'fullA' },
-  4: { 1: 'splitUpper', 2: 'splitLower', 4: 'splitUpper', 5: 'splitLower' },
-  5: { 1: 'pplPush', 2: 'pplPull', 3: 'pplLegs', 4: 'splitUpper', 5: 'splitLower' },
-  6: { 1: 'pplPush', 2: 'pplPull', 3: 'pplLegs', 4: 'pplPush', 5: 'pplPull', 6: 'pplLegs' },
-};
-
-export function todayWorkoutId(frequency: number, date = new Date()) {
-  const jsDay = date.getDay();
-  return weekdayPlans[frequency]?.[jsDay] || null;
 }

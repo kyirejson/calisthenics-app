@@ -33,13 +33,13 @@ jobs:
           chmod +x gradlew
           ./gradlew assembleRelease --no-daemon --max-workers=2
       - name: Stage APK
-        run: cp android/app/build/outputs/apk/release/app-release.apk zizhong-jinjie-preview.apk
+        run: cp android/app/build/outputs/apk/release/app-release.apk niepan-preview.apk
       - uses: actions/upload-artifact@v4
         with:
           name: android-preview-apk
-          path: zizhong-jinjie-preview.apk
+          path: niepan-preview.apk
       - name: Publish downloadable prerelease
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create "preview-${GITHUB_RUN_NUMBER}" zizhong-jinjie-preview.apk --prerelease --title "自重进阶 Android 测试版 ${GITHUB_RUN_NUMBER}" --notes "独立运行的 Android 测试安装包，无需 Expo Go。使用框架默认测试签名，仅用于测试；尚未完成真机验收，功能迁移仍有缺项。"
+          gh release create "preview-${GITHUB_RUN_NUMBER}" niepan-preview.apk --prerelease --title "涅槃 Android 测试版 ${GITHUB_RUN_NUMBER}" --notes "涅槃 v1.1 开发测试包，包含周期训练、动作进阶和分目标营养计划。无需 Expo Go；使用框架默认测试签名，仅用于真机验收。"

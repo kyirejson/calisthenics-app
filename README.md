@@ -1,89 +1,83 @@
 <div align="center">
 
-<img src="assets/app-icon.png" width="112" alt="自重进阶 App 图标" />
+<img src="assets/app-icon.png" width="112" alt="涅槃 App 图标" />
 
-# 自重进阶
+# 涅槃
 
-从第一次训练开始，记录你的每一步进阶。
+自重训练、周期计划、动作进阶与目标营养，集成在一个 App 里。
 
-**v1.0.0 · 首个正式发布版 · Android**
+**v1.1.0 开发版 · Android / Web**
 
-### [⬇ 下载安卓安装包（约 66 MB）](https://github.com/kyirejson/calisthenics-app/releases/download/v1.0.0/zizhong-jinjie-v1.0.0.apk)
+### [⬇ 下载 v1.0.0 安卓正式版](https://github.com/kyirejson/calisthenics-app/releases/download/v1.0.0/zizhong-jinjie-v1.0.0.apk)
 
-[版本发布页](https://github.com/kyirejson/calisthenics-app/releases/tag/v1.0.0) · [更新记录](CHANGELOG.md) · [反馈问题](https://github.com/kyirejson/calisthenics-app/issues)
-
-手机直接下载安装，安装后无需电脑或 Expo Go。
+[所有安装包与版本](https://github.com/kyirejson/calisthenics-app/releases) · [更新记录](CHANGELOG.md) · [反馈问题](https://github.com/kyirejson/calisthenics-app/issues)
 
 </div>
 
-## 安装只需三步
+> v1.0.0 是首个正式安装包，安装后显示旧名“自重进阶”。`main` 分支已进入 v1.1.0，App 名正式更改为“涅槃”；新版 APK 完成真机验收后会在 Releases 另行发布。
 
-1. 用安卓手机点击上方「下载安卓安装包」。
-2. 在浏览器下载列表或文件管理中打开下载的 APK。
-3. 如系统提示，允许该浏览器或文件管理器安装应用，然后完成安装。
-
-首次打开后填写个人资料、选择训练目标与每周频率，即可开始使用。
-
-如果下载按钮无法打开，可进入[版本发布页](https://github.com/kyirejson/calisthenics-app/releases/tag/v1.0.0)，展开 **Assets**，选择 `zizhong-jinjie-v1.0.0.apk`。Source code 是源码压缩包，不是安装包。
-
-## v1.0.0 可以做什么
+## v1.1.0 开发版已完成
 
 | 模块 | 功能 |
 | --- | --- |
-| 今日训练 | 个人建档、按每周频率安排训练、休息日临时加练 |
-| 训练记录 | 逐组填写次数、完成打卡、组间倒计时与震动反馈 |
-| 动作库 | 188 个动作，分类搜索、动作要点、常见问题和进阶标准 |
-| 训练统计 | 累计次数、时长、近七天记录与当前六艺等级展示 |
-| 户外跑步 | 前台 GPS 测距、计时、平均配速与热量估算 |
-| 能量概览 | 按个人资料与目标估算热量和三大营养素 |
-| 本地数据 | 保存档案和训练记录，通过系统分享导出 JSON 备份 |
+| 今日训练 | 根据当前计划和周期自动生成当日课程 |
+| 训练计划 | 每周 2–6 练，包含 A/B、上下肢、PPL、力量+有氧；7 天重启从启用当天起算，第 8 天恢复后自动衔接全身三练 |
+| 周期控制 | 3 周递增 + 1 周减载，自动调整组数与目标 RIR |
+| 进阶与动作 | 17 条进阶路线与 188 个动作合并，支持搜索、分类和风险提示 |
+| 晋级判定 | 按升级标准记录次数/秒数/步数/米数，连续两次稳定、无疼痛达标后才能解锁下一式 |
+| 今日能量 | 体重下降、减脂塑形、精益增肌、力量表现、健康维持五种目标 |
+| 饮食模式 | 均衡家常、高蛋白、适度低碳和生酮，分别计算宏量营养并生成四餐示例 |
+| 户外跑步 | 前台 GPS 距离、用时、配速与消耗估算，暂停期间不再累计移动 |
+| Android 返回 | 页面逐级返回；训练中先确认；首页再确认退出，不会一按就关闭 |
 
-## 数据与版本说明
+## 进阶是怎样判定的
 
-个人资料和训练记录默认保存在本机，不自动同步到云端。动作图片需要联网加载。微信小程序历史记录暂不支持直接导入。
+1. 进入“进阶”，打开当前动作。
+2. 选择“按升级标准训练此动作”，App 会自动带入目标组数与次数或时长。
+3. 训练结束时选择真实的动作质量。“有些勉强”或“出现不适”不计入进阶。
+4. 同一动作连续两次完成升级标准，进阶页才会出现“解锁下一式”。
 
-这是本项目首次正式发布。当前 APK 沿用首次构建的默认测试签名，已通过类型检查与云端 APK 构建，尚未完成真机验收。发布名称不代表已完成专属签名配置或应用商店审核。
+高风险动作会显示单独警示。空翻、高阶倒立和爆发动作应在专业指导、保护者与合适场地下练习。
 
-跑步当前仅支持前台定位，暂停计距仍有已知问题，暂不建议用于精确运动记录。原小程序的周期计划引擎、自定义计划、完整食谱、报告、备份导入和训练中断恢复尚未迁移。iOS 暂未提供安装包。
+## 安装 v1.0.0 只需三步
 
-详细信息见[版本说明](RELEASE-NOTES.md)。遇到问题可在 [Issues](https://github.com/kyirejson/calisthenics-app/issues) 中提供手机型号、系统版本和复现步骤。
+1. 用安卓手机点击顶部“下载安卓正式版”。
+2. 在浏览器下载列表或文件管理中打开 APK。
+3. 如系统提示，允许该浏览器或文件管理器安装应用。
+
+如直接下载失败，进入 [v1.0.0 发布页](https://github.com/kyirejson/calisthenics-app/releases/tag/v1.0.0)，展开 **Assets** 并选择 `zizhong-jinjie-v1.0.0.apk`。`Source code` 是源码压缩包，不是安装包。
+
+## 数据与安全说明
+
+个人档案和训练记录默认保存在本机，不自动同步云端；可通过系统分享导出 JSON 备份。营养热量、宏量营养和食谱均为估算与示例，不替代医生或注册营养师的个体化建议。生酮页面对孕期、肝肾或胰腺疾病、1 型糖尿病以及 SGLT2 类用药人群提供了专门警示。
 
 <details>
-<summary>开发者：本地运行与构建</summary>
+<summary>开发者：电脑和手机实时预览</summary>
 
 技术栈：Expo SDK 57、React Native 0.86、TypeScript。动作数据来自原小程序。
 
-### 电脑浏览器实时预览
+### 电脑浏览器
 
 ```bash
+npm ci
 npm run dev:web
 ```
 
-浏览器打开后，修改并保存 `src/screens` 中的页面，界面会自动刷新。浏览器适合调布局；GPS、震动和系统权限需要在安卓手机上检查。
+打开 `http://127.0.0.1:8081/`。修改并保存 `src/` 中的代码后，页面会自动刷新。
 
-### 安卓手机实时预览
+同一 Wi-Fi 下，也可以直接在手机浏览器打开 `http://<电脑局域网 IP>:8081/`，无需安装任何调试工具；电脑 IP 可用 Windows 的 `ipconfig` 查看。浏览器适合实时看界面，GPS、震动和 Android 返回键仍应使用 Expo Go 或 APK 验收。
 
-手机安装 Expo Go，并与电脑连接同一 Wi-Fi，然后运行：
+### Android 手机
+
+手机安装 Expo Go，并与电脑连接同一 Wi-Fi：
 
 ```bash
 npm run dev:phone
 ```
 
-用 Expo Go 扫描终端二维码。修改代码并保存后，手机会自动刷新。如果局域网连接失败，改用：
+用 Expo Go 扫描终端二维码。如局域网连接失败，改用 `npm run dev:tunnel`。Web 使用 8081 端口，Expo Go 使用 8082 端口，可以同时运行。
 
-```bash
-npm run dev:tunnel
-```
-
-Web 预览使用 8081 端口，Expo Go 使用 8082 端口，两种预览可以同时运行。
-
-主要页面源码位于 `src/screens/`，公共组件位于 `src/components/`，配色位于 `src/theme.ts`。
-
-### 安装与检查
-
-```bash
-npm ci
-```
+### 质量检查
 
 ```bash
 npm run typecheck
@@ -91,6 +85,6 @@ npx expo-doctor
 npx expo export --platform android
 ```
 
-Actions → Build Android APK 可手动生成后续测试包，该流程不会覆盖 v1.0.0 正式发布页。
+GitHub 的 **Actions → Build Android APK** 可手动生成新的独立测试安装包，不会覆盖 v1.0.0 正式发布页。
 
 </details>

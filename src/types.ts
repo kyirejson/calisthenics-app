@@ -1,4 +1,7 @@
-export type Goal = 'strength' | 'gain' | 'cut' | 'health';
+export type Goal = 'fat_loss' | 'gain' | 'strength' | 'health';
+export type NutritionGoal = 'rapid_loss' | 'fat_loss' | 'muscle_gain' | 'performance' | 'maintain';
+export type DietPattern = 'balanced_cn' | 'high_protein' | 'low_carb' | 'keto';
+export type ExperienceLevel = 'beginner' | 'intermediate' | 'advanced';
 
 export type Profile = {
   name: string;
@@ -7,8 +10,13 @@ export type Profile = {
   height: number;
   weight: number;
   goal: Goal;
+  nutritionGoal: NutritionGoal;
+  dietPattern: DietPattern;
   frequency: number;
   levels: Record<string, number>;
+  experience: ExperienceLevel;
+  planId: string;
+  planStartedAt: string;
 };
 
 export type Exercise = {
@@ -51,13 +59,19 @@ export type Workout = {
   slots: WorkoutSlot[];
 };
 
-export type SetLog = { reps: number; completed: boolean };
+export type SetLog = {
+  reps: number;
+  completed: boolean;
+  unit?: 'reps' | 'seconds' | 'steps' | 'meters';
+};
 
 export type SessionExercise = {
   exerciseId: string;
   name: string;
   category: string;
   sets: SetLog[];
+  targetSnapshot?: { sets: number; value: number; unit: 'reps' | 'seconds' | 'steps' | 'meters' };
+  constraintsConfirmed?: boolean;
 };
 
 export type TrainingSession = {
@@ -72,17 +86,18 @@ export type TrainingSession = {
   kind?: 'strength' | 'running';
   distanceKm?: number;
   calories?: number;
+  quality?: 'solid' | 'hard' | 'pain';
+  completion?: 'complete' | 'partial';
 };
 
 export type Settings = {
   vibration: boolean;
   restSeconds: number;
-  sound: boolean;
 };
 
 export type Route =
   | { name: 'tabs' }
   | { name: 'exercise'; exerciseId: string }
-  | { name: 'training'; workoutId: string }
+  | { name: 'training'; workoutId: string; exerciseId?: string; setMultiplier?: number; rirTarget?: number }
   | { name: 'run' }
-  | { name: 'plans' };
+  | { name: 'nutrition' };

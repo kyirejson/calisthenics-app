@@ -1,5 +1,7 @@
 # v1.0.0 首个正式发布版
 
+> 这是历史版本说明。当前 `main` 分支已进入 v1.1.0 开发版，App 已更名为“涅槃”；详见 [README](README.md) 和 [更新记录](CHANGELOG.md)。
+
 [下载安卓安装包](https://github.com/kyirejson/calisthenics-app/releases/download/v1.0.0/zizhong-jinjie-v1.0.0.apk)
 
 发布日期：2026-09-22。安装包沿用 preview-2 的成功构建，内容未改动。原预发布页面保留，旧下载链接继续有效。以下为当前构建与验收状态。

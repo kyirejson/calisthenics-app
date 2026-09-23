@@ -1,31 +1,29 @@
 {
   "expo": {
-    "name": "自重进阶",
-    "slug": "zizhong-jinjie",
-    "version": "1.0.0",
+    "name": "涅槃",
+    "slug": "niepan",
+    "version": "1.1.0",
     "orientation": "portrait",
     "icon": "./assets/app-icon.png",
     "userInterfaceStyle": "light",
-    "scheme": "zizhongjinjie",
+    "scheme": "niepan",
     "plugins": [
       [
         "expo-location",
         {
-          "locationWhenInUsePermission": "允许自重进阶使用位置，以记录跑步距离与配速。",
-          "locationAlwaysAndWhenInUsePermission": "允许自重进阶在训练期间持续记录跑步路线。"
+          "locationWhenInUsePermission": "允许涅槃在跑步记录页使用位置，以计算距离与配速。"
         }
       ]
     ],
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.zizhong.jinjie",
-      "infoPlist": {
-        "UIBackgroundModes": ["location"]
-      }
+      "buildNumber": "2"
     },
     "android": {
       "package": "com.zizhong.jinjie",
-      "permissions": ["ACCESS_COARSE_LOCATION", "ACCESS_FINE_LOCATION", "ACCESS_BACKGROUND_LOCATION"],
+      "versionCode": 2,
+      "permissions": ["ACCESS_COARSE_LOCATION", "ACCESS_FINE_LOCATION"],
       "adaptiveIcon": {
         "backgroundColor": "#151712",
         "foregroundImage": "./assets/app-icon.png"
