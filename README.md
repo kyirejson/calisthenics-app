@@ -6,15 +6,17 @@
 
 自重训练、周期计划、动作进阶与目标营养，集成在一个 App 里。
 
-**v1.1.0 开发版 · Android / Web**
+**v1.1.0 测试版 · Android / Web**
 
-### [⬇ 下载 v1.0.0 安卓正式版](https://github.com/kyirejson/calisthenics-app/releases/download/v1.0.0/zizhong-jinjie-v1.0.0.apk)
+### [⬇ 下载涅槃安卓测试版 APK](https://github.com/kyirejson/calisthenics-app/releases/download/preview-3/niepan-preview.apk)
+
+[首个正式版 v1.0.0](https://github.com/kyirejson/calisthenics-app/releases/download/v1.0.0/zizhong-jinjie-v1.0.0.apk) · [测试版发布说明](https://github.com/kyirejson/calisthenics-app/releases/tag/preview-3)
 
 [所有安装包与版本](https://github.com/kyirejson/calisthenics-app/releases) · [更新记录](CHANGELOG.md) · [反馈问题](https://github.com/kyirejson/calisthenics-app/issues)
 
 </div>
 
-> v1.0.0 是首个正式安装包，安装后显示旧名“自重进阶”。`main` 分支已进入 v1.1.0，App 名正式更改为“涅槃”；新版 APK 完成真机验收后会在 Releases 另行发布。
+> v1.0.0 是首个正式安装包，安装后显示旧名“自重进阶”。preview-3 是已构建的涅槃 v1.1.0 测试包，仍需真机验收；后续正式版将在 Releases 单独发布。
 
 ## v1.1.0 开发版已完成
 
