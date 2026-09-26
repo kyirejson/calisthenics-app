@@ -10,6 +10,9 @@ jobs:
   build:
     runs-on: ubuntu-latest
     timeout-minutes: 60
+    env:
+      EXPO_PROJECT_ID: ${{ vars.EXPO_PROJECT_ID }}
+      EXPO_UPDATE_CHANNEL: preview
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -26,6 +29,7 @@ jobs:
       - run: npm ci
       - run: npm run typecheck
       - run: npm run test:domain
+      - run: npm run test:updates
       - name: Generate Android project
         run: npx expo prebuild --platform android --no-install
       - name: Build standalone preview APK

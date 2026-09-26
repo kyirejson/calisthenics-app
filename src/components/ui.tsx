@@ -2,9 +2,9 @@ import React from 'react';
 import { Pressable, SafeAreaView, ScrollView, StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native';
 import { colors, radius } from '../theme';
 
-export function Page({ children, scroll = true, style }: { children: React.ReactNode; scroll?: boolean; style?: StyleProp<ViewStyle> }) {
+export function Page({ children, scroll = true, style, scrollRef }: { children: React.ReactNode; scroll?: boolean; style?: StyleProp<ViewStyle>; scrollRef?: React.Ref<ScrollView> }) {
   const content = <View style={[styles.pageInner, style]}>{children}</View>;
-  return <SafeAreaView style={styles.safe}>{scroll ? <ScrollView showsVerticalScrollIndicator={false}>{content}</ScrollView> : content}</SafeAreaView>;
+  return <SafeAreaView style={styles.safe}>{scroll ? <ScrollView ref={scrollRef} showsVerticalScrollIndicator={false}>{content}</ScrollView> : content}</SafeAreaView>;
 }
 
 export function Header({ eyebrow, title, right }: { eyebrow?: string; title: string; right?: React.ReactNode }) {

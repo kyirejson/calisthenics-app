@@ -17,7 +17,10 @@ export type NutritionPlan = {
   strategy: string;
   bmr: number;
   tdee: number;
+  weeklyMeanCalories: number;
   targetCalories: number;
+  trainingDayCalories: number;
+  restDayCalories: number;
   calorieDelta: number;
   protein: number;
   carbs: number;
@@ -33,14 +36,6 @@ export type NutritionPlan = {
   safetyMessage?: string;
   caution?: string;
 };
-
-export const nutritionGoals: Array<{ key: NutritionGoal; label: string; subtitle: string }> = [
-  { key: 'rapid_loss', label: '体重下降', subtitle: '想先瘦下来，控制节奏而非极端节食' },
-  { key: 'fat_loss', label: '减脂塑形', subtitle: '保住肌肉，同时降低体脂率' },
-  { key: 'muscle_gain', label: '精益增肌', subtitle: '轻微热量盈余，提高训练恢复' },
-  { key: 'performance', label: '力量表现', subtitle: '训练日前后增加碳水供能' },
-  { key: 'maintain', label: '健康维持', subtitle: '均衡饮食，稳定体重与精力' },
-];
 
 export const dietPatterns: Array<{ key: DietPattern; label: string; subtitle: string }> = [
   { key: 'balanced_cn', label: '均衡家常', subtitle: '谷薯、鱼禽蛋奶豆和蔬菜多样搭配' },
@@ -234,11 +229,13 @@ const goalConfig: Record<NutritionGoal, { label: string; strategy: string; prote
 };
 
 export function normalizeNutritionGoal(value: unknown): NutritionGoal {
+  if (value === 'weight_loss') return 'rapid_loss';
   if (value === 'cut') return 'fat_loss';
   if (value === 'gain') return 'muscle_gain';
   if (value === 'strength') return 'performance';
+  if (value === 'street_mastery') return 'performance';
   if (value === 'health') return 'maintain';
-  return nutritionGoals.some((item) => item.key === value) ? value as NutritionGoal : 'maintain';
+  return ['rapid_loss', 'fat_loss', 'muscle_gain', 'performance', 'maintain'].includes(String(value)) ? value as NutritionGoal : 'maintain';
 }
 
 export function normalizeDietPattern(value: unknown): DietPattern {
@@ -342,6 +339,12 @@ export function calculateNutritionPlan(profile: Profile, isTrainingDay: boolean)
     safetyLevel = 'blocked';
     safetyTitle = '当前体重偏低，已关闭减重和限制饮食';
     safetyMessage = `BMI 约 ${bmi.toFixed(1)}，当前计划已切换为均衡维持，不提供减脂、快速减重或生酮方案。建议先由医生或注册营养师评估体重偏低原因。`;
+  } else if (profile.goal === 'weight_loss' && requestedGoal === 'rapid_loss' && bmi < 22) {
+    goal = 'maintain';
+    pattern = 'balanced_cn';
+    safetyLevel = 'warning';
+    safetyTitle = '当前不自动安排热量缺口';
+    safetyMessage = `BMI 约 ${bmi.toFixed(1)}；仅凭体重无法判断需要减脂，先维持饮食与训练。若有医疗减重需要，请做个体评估。`;
   } else if (requestedPattern === 'keto') {
     safetyLevel = 'warning';
     safetyTitle = '生酮启用前必须确认禁忌';
@@ -352,26 +355,42 @@ export function calculateNutritionPlan(profile: Profile, isTrainingDay: boolean)
   const bmr = Math.round(10 * weight + 6.25 * height - 5 * age + (profile.sex === 'male' ? 5 : -161));
   const activityFactor = Math.min(1.75, 1.3 + frequency * 0.055);
   const tdee = Math.round(bmr * activityFactor);
-  const baseTarget = tdee * (1 + config.deficit);
+  const guidedWeightLoss = profile.goal === 'weight_loss' && goal === 'rapid_loss';
+  const prisoner = profile.goal === 'street_mastery';
+  const deficit = guidedWeightLoss
+    ? age >= 60 ? -0.1 : bmi >= 30 ? -0.18 : bmi >= 25 ? -0.15 : -0.1
+    : prisoner
+      ? (bmi >= 26 ? -0.12 : 0)
+      : config.deficit;
+  const baseTarget = tdee * (1 + deficit);
   const safeFloor = Math.max(profile.sex === 'male' ? 1500 : 1200, bmr * 1.05);
   const weeklyMeanTarget = Math.max(safeFloor, baseTarget);
+  if (guidedWeightLoss && weeklyMeanTarget > baseTarget + 1 && safetyLevel === 'ok') {
+    safetyLevel = 'warning';
+    safetyTitle = '已限制热量缺口';
+    safetyMessage = '按当前估算，进一步降低摄入会碰到保守能量下限。不要自行继续减餐，先观察体重趋势和训练恢复。';
+  }
   const restDays = 7 - frequency;
   const preferredTrainingBonus = Math.min(150, frequency * 25);
   const maximumFloorSafeBonus = Math.max(0, (weeklyMeanTarget - safeFloor) * restDays / frequency);
   const trainingBonus = Math.min(preferredTrainingBonus, maximumFloorSafeBonus);
   const restReduction = trainingBonus * frequency / restDays;
-  const targetCalories = Math.round(isTrainingDay ? weeklyMeanTarget + trainingBonus : weeklyMeanTarget - restReduction);
+  const trainingDayCalories = Math.round(weeklyMeanTarget + trainingBonus);
+  const restDayCalories = Math.round(weeklyMeanTarget - restReduction);
+  const targetCalories = isTrainingDay ? trainingDayCalories : restDayCalories;
   const weightAtBmi25 = 25 * ((height / 100) ** 2);
   const referenceWeight = bmi >= 30
     ? Math.min(weight, weightAtBmi25 + (weight - weightAtBmi25) * 0.25)
     : weight;
-  const proteinFactor = pattern === 'high_protein'
-    ? Math.min(2.2, config.protein + 0.3)
-    : pattern === 'low_carb'
-      ? Math.min(2.1, config.protein + 0.15)
-      : pattern === 'keto'
-        ? Math.min(1.8, Math.max(1.4, config.protein))
-        : config.protein;
+  const proteinFactor = prisoner
+    ? (bmi >= 26 ? 2.0 : 1.8)
+    : pattern === 'high_protein'
+      ? Math.min(2.2, config.protein + 0.3)
+      : pattern === 'low_carb'
+        ? Math.min(2.1, config.protein + 0.15)
+        : pattern === 'keto'
+          ? Math.min(1.8, Math.max(1.4, config.protein))
+          : config.protein;
   const proteinEnergyCap = pattern === 'high_protein' ? 0.4 : 0.35;
   const protein = Math.min(220, Math.round(referenceWeight * proteinFactor), Math.floor(targetCalories * proteinEnergyCap / 4));
   let carbs: number;
@@ -391,6 +410,13 @@ export function calculateNutritionPlan(profile: Profile, isTrainingDay: boolean)
     fat = Math.round(targetCalories * config.fatRatio / 9);
     carbs = Math.max(80, Math.round((targetCalories - protein * 4 - fat * 9) / 4));
   }
+  if (guidedWeightLoss && pattern !== 'keto') {
+    const fatMinimum = Math.ceil(referenceWeight * 0.6);
+    if (fat < fatMinimum) {
+      fat = fatMinimum;
+      carbs = Math.max(pattern === 'low_carb' ? 90 : 80, Math.round((targetCalories - protein * 4 - fat * 9) / 4));
+    }
+  }
   const distribution = mealDistributions[pattern];
   const timings = ['07:00–09:00', '11:30–13:30', '15:00–17:00', '18:00–20:00'];
   const mealNames = ['早餐', '午餐', '加餐', '晚餐'];
@@ -406,6 +432,19 @@ export function calculateNutritionPlan(profile: Profile, isTrainingDay: boolean)
     name: mealNames[index], timing: timings[index], calories: Math.round(targetCalories * distribution[index]), foods, purpose: purposes[index],
   }));
   const principles = [...patternPrinciples[pattern]];
+  if (guidedWeightLoss) {
+    principles.unshift('每餐先保证蔬菜与优质蛋白，再安排适量主食；饱腹感和长期可执行性比极端限制更重要。');
+    principles.push('运动消耗只是估算，不因完成一课就自动把消耗热量全数吃回；每周趋势比单日体重更有参考价值。');
+  }
+  if (prisoner) {
+    if (bmi >= 26) {
+      principles.unshift('【控重变强十诫】：体重是自重的杠铃。当前体脂偏高，实行温和热量赤字剥离死重，显著提升相对力量并减轻关节力矩。');
+      principles.push('【肌腱友好】：循序渐进加组、充分热身与每日饮水不少于2.5L，是保护肌腱的基础；胶原蛋白补剂的证据仍有限，可自行权衡。');
+    } else {
+      principles.unshift('六艺训练以动作质量和恢复为先；接近维持能量，不为更快解锁最终式主动制造热量缺口。');
+      principles.push('【肌腱友好】：高张力自重动作依靠循序渐进的负荷重塑结缔组织；疼痛是停止信号，补剂不是必需品。');
+    }
+  }
   if (bmi >= 30) {
     principles.push(`蛋白质与饮水按约 ${referenceWeight.toFixed(1)}kg 参考体重估算，避免直接按当前体重线性放大。`);
     if (safetyLevel === 'ok') {
@@ -416,10 +455,10 @@ export function calculateNutritionPlan(profile: Profile, isTrainingDay: boolean)
   }
   const safetyAdjusted = goal !== requestedGoal || pattern !== requestedPattern;
   return {
-    requestedGoal, requestedPattern, goal, pattern, goalLabel: `${config.label}${safetyAdjusted ? '（安全调整）' : ''}`,
-    strategy: `${config.strategy}；${patternStrategies[pattern]}`, bmr, tdee, targetCalories,
+    requestedGoal, requestedPattern, goal, pattern, goalLabel: `${prisoner && !safetyAdjusted ? '六艺训练供能' : config.label}${safetyAdjusted ? '（安全调整）' : ''}`,
+    strategy: `${guidedWeightLoss ? '温和热量缺口 + 抗阻保肌 + 日常活动' : prisoner ? '接近维持能量 + 足量蛋白与碳水 + 充分恢复' : config.strategy}；${patternStrategies[pattern]}`, bmr, tdee, weeklyMeanCalories: Math.round(weeklyMeanTarget), targetCalories, trainingDayCalories, restDayCalories,
     calorieDelta: targetCalories - tdee, protein, carbs, fat,
-    fiber: pattern === 'balanced_cn' ? 30 : pattern === 'high_protein' ? 28 : pattern === 'low_carb' ? 26 : 25,
+    fiber: guidedWeightLoss && pattern === 'high_protein' ? 30 : pattern === 'balanced_cn' ? 30 : pattern === 'high_protein' ? 28 : pattern === 'low_carb' ? 26 : 25,
     waterMl: clamp(roundTo(referenceWeight * 32 + (isTrainingDay ? 400 : 0), 50), 1500, 4000),
     meals, principles, bmi: Number(bmi.toFixed(1)), referenceWeight: Number(referenceWeight.toFixed(1)),
     safetyLevel, safetyTitle, safetyMessage,

@@ -1,7 +1,7 @@
-export type Goal = 'fat_loss' | 'gain' | 'strength' | 'health';
+export type Goal = 'weight_loss' | 'fat_loss' | 'gain' | 'strength' | 'street_mastery';
 export type NutritionGoal = 'rapid_loss' | 'fat_loss' | 'muscle_gain' | 'performance' | 'maintain';
 export type DietPattern = 'balanced_cn' | 'high_protein' | 'low_carb' | 'keto';
-export type ExperienceLevel = 'beginner' | 'intermediate' | 'advanced';
+export type ExperienceLevel = 'beginner' | 'intermediate' | 'advanced' | 'elite' | 'supermax';
 
 export type Profile = {
   name: string;
@@ -9,11 +9,16 @@ export type Profile = {
   age: number;
   height: number;
   weight: number;
+  weightHistory?: Array<{ date: string; kg: number }>;
   goal: Goal;
   nutritionGoal: NutritionGoal;
   dietPattern: DietPattern;
   frequency: number;
+  sessionMinutes?: number;
   levels: Record<string, number>;
+  planLevels?: Record<string, number>;
+  trainingRestSeconds?: number;
+  neckBridgeConsent?: boolean;
   experience: ExperienceLevel;
   planId: string;
   planStartedAt: string;
@@ -42,6 +47,7 @@ export type Exercise = {
   };
   image?: string;
   realImage?: string;
+  isHold?: boolean;
 };
 
 export type WorkoutSlot = {
@@ -63,6 +69,7 @@ export type SetLog = {
   reps: number;
   completed: boolean;
   unit?: 'reps' | 'seconds' | 'steps' | 'meters';
+  completedAt?: string;
 };
 
 export type SessionExercise = {
@@ -88,7 +95,10 @@ export type TrainingSession = {
   calories?: number;
   quality?: 'solid' | 'hard' | 'pain';
   completion?: 'complete' | 'partial';
+  trainingDate?: string;
 };
+
+export type DailyWorkoutEdits = Record<string, { date: string; workoutId: string; exerciseIds: string[] }>;
 
 export type Settings = {
   vibration: boolean;

@@ -1,186 +1,122 @@
-/**
- * 《囚徒健身》现代运动科学周期化训练日程模板 (支持每周 1 - 6 次自由选择)
- */
-
-const templates = {
-  schedules: {
-    week1: {
-      id: 'week1',
-      name: '每周一次 (单日全能特训)',
-      description: '适合时间极度紧张、重度出差或作为其他主项的体能补充',
-      sessionsPerWeek: 1,
-      defaultDays: [6], // 周六
-      workouts: ['fullComprehensive']
-    },
-    week2: {
-      id: 'week2',
-      name: '每周两次 (A/B全身轮替)',
-      description: '适合完全零基础、重塑关节柔韧与稳妥入门践行者',
-      sessionsPerWeek: 2,
-      defaultDays: [1, 4], // 周一、周四
-      workouts: ['fullA', 'fullB']
-    },
-    week3: {
-      id: 'week3',
-      name: '每周三次 (A-B-A / B-A-B 双周轮替)',
-      description: '现代自重力量黄金频率，双周轮替杜绝推拉肌群失衡，兼顾高频刺激与充分超量恢复',
-      sessionsPerWeek: 3,
-      defaultDays: [1, 3, 5], // 周一、周三、周五
-      workouts: ['fullA', 'fullB', 'fullA'],
-      altWorkouts: ['fullB', 'fullA', 'fullB']
-    },
-    week4: {
-      id: 'week4',
-      name: '每周四次 (上下肢分化 Upper/Lower)',
-      description: '推拉平衡与上下身彻底分离，72小时黄金超量恢复窗口，适合中高级训练者',
-      sessionsPerWeek: 4,
-      defaultDays: [1, 2, 4, 5], // 周一、二、四、五
-      workouts: ['splitUpper', 'splitLower', 'splitUpper', 'splitLower']
-    },
-    week5: {
-      id: 'week5',
-      name: '每周五次 (现代 PPL + 上下肢进阶)',
-      description: '高频推拉腿分化，彻底杜绝单一部位低效孤立，肌肉刺激频率与容量最大化',
-      sessionsPerWeek: 5,
-      defaultDays: [1, 2, 3, 4, 5], // 周一至周五
-      workouts: ['pplPush', 'pplPull', 'pplLegs', 'splitUpper', 'splitLower']
-    },
-    week6: {
-      id: 'week6',
-      name: '每周六次 (高频推拉腿 PPL × 2 循环)',
-      description: '高阶自重修炼者专用！每周双循环刺激全身主要动力链，深度打磨爆发力与神技',
-      sessionsPerWeek: 6,
-      defaultDays: [1, 2, 3, 4, 5, 6], // 周一至周六
-      workouts: ['pplPush', 'pplPull', 'pplLegs', 'pplPush', 'pplPull', 'pplLegs']
-    }
-  },
-
+/** Automatic courses: weight-loss full-body work and the six classic prisoner arts. */
+module.exports = {
   workouts: {
-    // 1. 全身 A (推 + 蹲 + 桥 + 举腿)
     fullA: {
-      id: 'fullA',
-      name: '基础全身课 A',
-      description: '水平推 + 双腿深蹲 + 脊柱大桥 + 腹壁举腿',
-      estimatedMinutes: 30,
+      id: 'fullA', name: '全身保肌 A', description: '下肢与推力优先，兼顾拉力和后链', estimatedMinutes: 45,
       slots: [
-        { id: 'push_slot', category: 'push', priority: 1, prescription: { sets: 3, restSeconds: 60 } },
-        { id: 'squat_slot', category: 'squat', priority: 1, prescription: { sets: 3, restSeconds: 60 } },
-        { id: 'bridge_slot', category: 'bridge', priority: 2, prescription: { sets: 2, restSeconds: 60 } },
-        { id: 'leg_slot', category: 'legRaise', priority: 3, prescription: { sets: 2, restSeconds: 45 } }
-      ]
+        { id: 'squat_slot', category: 'squat', priority: 1 },
+        { id: 'push_slot', category: 'push', priority: 1 },
+        { id: 'pull_slot', category: 'pull', priority: 2 },
+        { id: 'bridge_slot', category: 'bridge', priority: 2 },
+        { id: 'leg_slot', category: 'legRaise', priority: 2 },
+        { id: 'aux_slot', category: 'auxiliary', priority: 3 },
+      ],
     },
-    // 2. 全身 B (拉 + 倒立撑 + 蹲 + 辅助)
     fullB: {
-      id: 'fullB',
-      name: '基础全身课 B',
-      description: '垂直拉 + 倒立推力 + 深蹲巩固 + 辅助悬垂',
-      estimatedMinutes: 30,
+      id: 'fullB', name: '全身保肌 B', description: '拉力与后链优先，兼顾下肢和推力', estimatedMinutes: 45,
       slots: [
-        { id: 'pull_slot', category: 'pull', priority: 1, prescription: { sets: 3, restSeconds: 90 } },
-        { id: 'hspu_slot', category: 'hspu', priority: 2, prescription: { sets: 2, restSeconds: 90 } },
-        { id: 'squat_slot', category: 'squat', priority: 1, prescription: { sets: 3, restSeconds: 60 } },
-        { id: 'aux_slot', category: 'auxiliary', priority: 3, prescription: { sets: 2, restSeconds: 45 } }
-      ]
+        { id: 'pull_slot', category: 'pull', priority: 1 },
+        { id: 'bridge_slot', category: 'bridge', priority: 1 },
+        { id: 'squat_slot', category: 'squat', priority: 2 },
+        { id: 'push_slot', category: 'push', priority: 2 },
+        { id: 'leg_slot', category: 'legRaise', priority: 2 },
+        { id: 'aux_slot', category: 'auxiliary', priority: 3 },
+      ],
     },
-    // 3. 全身单日全能课
     fullComprehensive: {
-      id: 'fullComprehensive',
-      name: '周末六艺精选课',
-      description: '单日巡礼：俯卧撑 + 引体 + 深蹲 + 举腿 + 桥',
-      estimatedMinutes: 45,
+      id: 'fullComprehensive', name: '全身保肌 C', description: '全身动作模式巩固', estimatedMinutes: 60,
       slots: [
-        { id: 'push_slot', category: 'push', priority: 1, prescription: { sets: 3, restSeconds: 60 } },
-        { id: 'pull_slot', category: 'pull', priority: 1, prescription: { sets: 3, restSeconds: 90 } },
-        { id: 'squat_slot', category: 'squat', priority: 1, prescription: { sets: 3, restSeconds: 60 } },
-        { id: 'leg_slot', category: 'legRaise', priority: 2, prescription: { sets: 2, restSeconds: 45 } },
-        { id: 'bridge_slot', category: 'bridge', priority: 2, prescription: { sets: 2, restSeconds: 60 } }
-      ]
+        { id: 'squat_slot', category: 'squat', priority: 1 },
+        { id: 'push_slot', category: 'push', priority: 1 },
+        { id: 'pull_slot', category: 'pull', priority: 1 },
+        { id: 'leg_slot', category: 'legRaise', priority: 2 },
+        { id: 'bridge_slot', category: 'bridge', priority: 2 },
+        { id: 'aux_slot', category: 'auxiliary', priority: 3 },
+      ],
     },
-    // 4. 四日分化：上肢推拉
-    splitUpper: {
-      id: 'splitUpper',
-      name: '上肢力量分化',
-      description: '水平推 + 垂直拉 + 垂直推 + 抓握辅助',
-      estimatedMinutes: 35,
+    prisonerA: {
+      id: 'prisonerA', name: '六艺 A · 推力与前链', description: '两练/三练时练俯卧撑与举腿；六练时练推力、腹部与小腿提踵', estimatedMinutes: 25,
       slots: [
-        { id: 'push_slot', category: 'push', priority: 1, prescription: { sets: 3, restSeconds: 60 } },
-        { id: 'pull_slot', category: 'pull', priority: 1, prescription: { sets: 3, restSeconds: 90 } },
-        { id: 'hspu_slot', category: 'hspu', priority: 2, prescription: { sets: 2, restSeconds: 90 } },
-        { id: 'aux_slot', category: 'auxiliary', priority: 3, prescription: { sets: 2, restSeconds: 45 } }
-      ]
+        { id: 'push', category: 'push', priority: 1 },
+        { id: 'legRaise', category: 'legRaise', priority: 1 },
+        { id: 'calf', category: 'calf', priority: 2 },
+      ],
     },
-    // 5. 四日分化：下肢核心
-    splitLower: {
-      id: 'splitLower',
-      name: '下肢与核心分化',
-      description: '深蹲 + 举腿 + 桥 + 提踵',
-      estimatedMinutes: 35,
+    prisonerB: {
+      id: 'prisonerB', name: '六艺 B · 拉力与下肢', description: '两练/三练时练引体与深蹲；六练时练拉力、深蹲与悬挂抓握', estimatedMinutes: 25,
       slots: [
-        { id: 'squat_slot', category: 'squat', priority: 1, prescription: { sets: 3, restSeconds: 60 } },
-        { id: 'leg_slot', category: 'legRaise', priority: 1, prescription: { sets: 3, restSeconds: 60 } },
-        { id: 'bridge_slot', category: 'bridge', priority: 2, prescription: { sets: 2, restSeconds: 60 } },
-        { id: 'calf_slot', category: 'auxiliary', priority: 3, prescription: { sets: 2, restSeconds: 45 } }
-      ]
+        { id: 'pull', category: 'pull', priority: 1 },
+        { id: 'squat', category: 'squat', priority: 1 },
+        { id: 'hang_grip', category: 'hang_grip', priority: 2 },
+      ],
     },
-    // 6. 现代 PPL 核心分化课
-    pplPush: {
-      id: 'pplPush',
-      name: 'PPL：推力专项 (Push)',
-      description: '水平俯卧撑 + 垂直倒立撑 + 核心抗伸展',
-      estimatedMinutes: 30,
+    prisonerC: {
+      id: 'prisonerC', name: '六艺 C · 垂直推与后链', description: '三练时练倒立撑与桥；六练时练倒立撑、桥与颈部力量', estimatedMinutes: 25,
       slots: [
-        { id: 'push_slot', category: 'push', priority: 1, prescription: { sets: 4, restSeconds: 60 } },
-        { id: 'hspu_slot', category: 'hspu', priority: 1, prescription: { sets: 3, restSeconds: 90 } },
-        { id: 'leg_slot', category: 'legRaise', priority: 2, prescription: { sets: 2, restSeconds: 45 } }
-      ]
+        { id: 'hspu', category: 'hspu', priority: 1 },
+        { id: 'bridge', category: 'bridge', priority: 1 },
+        { id: 'neck', category: 'neck', priority: 2 },
+      ],
     },
-    pplPull: {
-      id: 'pplPull',
-      name: 'PPL：拉力专项 (Pull)',
-      description: '垂直引体 + 水平拉力 + 悬垂抓握',
-      estimatedMinutes: 30,
+    prisonerD: {
+      id: 'prisonerD', name: '六艺 D · 闭关拉力与下肢', description: '闭关修炼轮次二：引体、深蹲与悬挂抓握', estimatedMinutes: 35,
       slots: [
-        { id: 'pull_slot', category: 'pull', priority: 1, prescription: { sets: 4, restSeconds: 90 } },
-        { id: 'aux_slot', category: 'auxiliary', priority: 2, prescription: { sets: 3, restSeconds: 45 } }
-      ]
+        { id: 'pull', category: 'pull', priority: 1 },
+        { id: 'squat', category: 'squat', priority: 1 },
+        { id: 'hang_grip', category: 'hang_grip', priority: 2 },
+      ],
     },
-    pplLegs: {
-      id: 'pplLegs',
-      name: 'PPL：下肢与后链 (Legs & Bridge)',
-      description: '全幅度深蹲 + 脊柱大桥 + 腹壁举腿',
-      estimatedMinutes: 30,
+    prisonerE: {
+      id: 'prisonerE', name: '六艺 E · 闭关推力与前链', description: '闭关修炼轮次二：俯卧撑、举腿与小腿提踵', estimatedMinutes: 35,
       slots: [
-        { id: 'squat_slot', category: 'squat', priority: 1, prescription: { sets: 4, restSeconds: 60 } },
-        { id: 'bridge_slot', category: 'bridge', priority: 1, prescription: { sets: 3, restSeconds: 60 } },
-        { id: 'leg_slot', category: 'legRaise', priority: 2, prescription: { sets: 2, restSeconds: 45 } }
-      ]
+        { id: 'push', category: 'push', priority: 1 },
+        { id: 'legRaise', category: 'legRaise', priority: 1 },
+        { id: 'calf', category: 'calf', priority: 2 },
+      ],
     },
-
-    // 7. 工作日每日打卡兼容课
-    dailyPush: { id: 'dailyPush', name: '俯卧撑专注课', description: '俯卧撑 + 核心控制', estimatedMinutes: 20, slots: [{ id: 'push_slot', category: 'push', priority: 1, prescription: { sets: 4, restSeconds: 60 } }, { id: 'leg_slot', category: 'legRaise', priority: 2, prescription: { sets: 2, restSeconds: 45 } }] },
-    dailyPull: { id: 'dailyPull', name: '引体向上专注课', description: '引体向上 + 握力抓握', estimatedMinutes: 20, slots: [{ id: 'pull_slot', category: 'pull', priority: 1, prescription: { sets: 4, restSeconds: 90 } }, { id: 'aux_slot', category: 'auxiliary', priority: 2, prescription: { sets: 2, restSeconds: 45 } }] },
-    dailySquat: { id: 'dailySquat', name: '深蹲专注课', description: '全幅度深蹲 + 小腿提踵', estimatedMinutes: 20, slots: [{ id: 'squat_slot', category: 'squat', priority: 1, prescription: { sets: 4, restSeconds: 60 } }, { id: 'calf_slot', category: 'auxiliary', priority: 2, prescription: { sets: 2, restSeconds: 45 } }] },
-    dailyCore: { id: 'dailyCore', name: '躯干举腿专注课', description: '举腿 + 悬垂抗摆动', estimatedMinutes: 20, slots: [{ id: 'leg_slot', category: 'legRaise', priority: 1, prescription: { sets: 4, restSeconds: 60 } }, { id: 'aux_slot', category: 'auxiliary', priority: 2, prescription: { sets: 2, restSeconds: 45 } }] },
-    dailyBridge: { id: 'dailyBridge', name: '脊柱桥梁专注课', description: '后侧链大桥 + 倒立顶立', estimatedMinutes: 20, slots: [{ id: 'bridge_slot', category: 'bridge', priority: 1, prescription: { sets: 4, restSeconds: 60 } }, { id: 'hspu_slot', category: 'hspu', priority: 2, prescription: { sets: 2, restSeconds: 60 } }] },
-    
-    // 8. 六艺专项分化课
-    six_push: { id: 'six_push', name: '六艺之一：俯卧撑日', description: '俯卧撑深度专项修行', estimatedMinutes: 25, slots: [{ id: 'push_slot', category: 'push', priority: 1, prescription: { sets: 4, restSeconds: 60 } }] },
-    six_pull: { id: 'six_pull', name: '六艺之二：引体向上日', description: '垂直拉力专项修行', estimatedMinutes: 25, slots: [{ id: 'pull_slot', category: 'pull', priority: 1, prescription: { sets: 4, restSeconds: 90 } }] },
-    six_squat: { id: 'six_squat', name: '六艺之三：深蹲日', description: '下肢深蹲专项修行', estimatedMinutes: 25, slots: [{ id: 'squat_slot', category: 'squat', priority: 1, prescription: { sets: 4, restSeconds: 60 } }] },
-    six_legRaise: { id: 'six_legRaise', name: '六艺之四：举腿日', description: '中段腹壁专项修行', estimatedMinutes: 25, slots: [{ id: 'leg_slot', category: 'legRaise', priority: 1, prescription: { sets: 4, restSeconds: 60 } }] },
-    six_bridge: { id: 'six_bridge', name: '六艺之五：桥日', description: '脊柱龙骨专项修行', estimatedMinutes: 25, slots: [{ id: 'bridge_slot', category: 'bridge', priority: 1, prescription: { sets: 4, restSeconds: 60 } }] },
-    six_hspu: { id: 'six_hspu', name: '六艺之六：倒立撑日', description: '倒立推力专项修行', estimatedMinutes: 25, slots: [{ id: 'hspu_slot', category: 'hspu', priority: 1, prescription: { sets: 4, restSeconds: 90 } }] }
+    prisonerF: {
+      id: 'prisonerF', name: '六艺 F · 闭关垂直推与后链', description: '闭关修炼轮次二：倒立撑、桥与颈部力量', estimatedMinutes: 35,
+      slots: [
+        { id: 'hspu', category: 'hspu', priority: 1 },
+        { id: 'bridge', category: 'bridge', priority: 1 },
+        { id: 'neck', category: 'neck', priority: 2 },
+      ],
+    },
+    // Application recovery courses inspired by CC2, not the CC1 weekly tables.
+    prisoner_recovery_phase1: {
+      id: 'prisoner_recovery_phase1',
+      name: '初试身手 · 主动恢复与关节养护',
+      description: '短桥、屈膝辅助支撑与舒适扭转；初阶、轻量、可跳过',
+      estimatedMinutes: 10,
+      slots: [
+        { id: 'short_bridge', category: 'recovery_shortBridge', priority: 1 },
+        { id: 'bent_hold', category: 'recovery_bentHold', priority: 1 },
+        { id: 'easy_twist', category: 'recovery_easyTwist', priority: 1 },
+      ],
+    },
+    prisoner_recovery_trifecta: {
+      id: 'prisoner_recovery_trifecta',
+      name: '关节三诀 · 深度张力平衡与脊柱减压',
+      description: '原著标准死悬垂与关节三诀保持，消除推拉训练后的剪切应力，保持关节健康',
+      estimatedMinutes: 12,
+      slots: [
+        { id: 'hang_slot', category: 'dead_hang', priority: 1 },
+        { id: 'trifecta_bridge_slot', category: 'trifecta_bridge', priority: 1 },
+        { id: 'trifecta_lHold_slot', category: 'trifecta_lHold', priority: 1 },
+        { id: 'trifecta_twist_slot', category: 'trifecta_twist', priority: 1 },
+      ],
+    },
+    prisoner_recovery_elite: {
+      id: 'prisoner_recovery_elite',
+      name: '闭关极效 · 深度物理牵引与系统排空',
+      description: '大容量六艺轰炸后的深层神经与关节减压：双组死悬垂牵引与三诀深层张力平衡',
+      estimatedMinutes: 15,
+      slots: [
+        { id: 'hang_slot', category: 'dead_hang', priority: 1 },
+        { id: 'trifecta_bridge_slot', category: 'trifecta_bridge', priority: 1 },
+        { id: 'trifecta_lHold_slot', category: 'trifecta_lHold', priority: 1 },
+        { id: 'trifecta_twist_slot', category: 'trifecta_twist', priority: 1 },
+      ],
+    },
   },
-
-  getShortWorkout(workoutId, availableMinutes) {
-    const workout = this.workouts[workoutId] || this.workouts['fullA'];
-    const keptSlots = (workout.slots || []).filter(s => s.priority === 1).map(s => s.id);
-    return {
-      workoutId,
-      keptSlots,
-      estimatedMinutes: Math.min(availableMinutes || 15, 15)
-    };
-  }
 };
-
-module.exports = templates;

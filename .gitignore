@@ -39,3 +39,15 @@ yarn-error.*
 # generated native folders
 /ios
 /android
+
+# User-supplied book excerpts and attachments for local debugging only.
+# Do not upload without confirming publication rights.
+/src/data/private/
+/assets/original-images/
+/assets/skills-images/
+/assets/demon-images/
+/assets/raw-sources/
+__pycache__/
+.env
+.env.*
+*.keystore

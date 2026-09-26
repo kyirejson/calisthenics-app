@@ -1,28 +1,44 @@
 import { StatusBar } from 'expo-status-bar';
-import React, { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, BackHandler, Linking, Platform, StyleSheet, View } from 'react-native';
+import React, { useCallback, useEffect, useLayoutEffect, useState } from 'react';
+import { ActivityIndicator, Alert, BackHandler, Platform, StyleSheet, View } from 'react-native';
 import { TabBar, type TabKey } from './src/components/TabBar';
+import { ConfirmHost } from './src/components/ConfirmHost';
 import { AppStoreProvider, useAppStore } from './src/store/AppStore';
+import { DataScreen } from './src/screens/DataScreen';
 import { ExerciseDetailScreen } from './src/screens/ExerciseDetailScreen';
 import { NutritionScreen } from './src/screens/NutritionScreen';
 import { OnboardingScreen } from './src/screens/OnboardingScreen';
-import { PlansScreen } from './src/screens/PlansScreen';
 import { ProfileScreen } from './src/screens/ProfileScreen';
 import { ProgressScreen } from './src/screens/ProgressScreen';
 import { RunScreen } from './src/screens/RunScreen';
 import { TodayScreen } from './src/screens/TodayScreen';
 import { TrainingScreen } from './src/screens/TrainingScreen';
 import { colors } from './src/theme';
-import { checkForUpdates, markUpdatePrompted } from './src/services/updateChecker';
+import { AppUpdatesProvider, useAppUpdates } from './src/components/AppUpdates';
 import type { Route } from './src/types';
 import { confirmAction } from './src/utils/confirm';
 
 export default function App() {
-  return <AppStoreProvider><StatusBar style="dark" /><AppShell /></AppStoreProvider>;
+  useWebDocumentSetup();
+  return <AppStoreProvider><StatusBar style="dark" /><AppUpdatesProvider><AppShell /></AppUpdatesProvider><ConfirmHost /></AppStoreProvider>;
+}
+
+// web 端文档级修正：body 背景跟随屏幕主色（防深色屏露出白边）、
+// 输入框聚焦描边换成主题色（覆盖浏览器默认橙黄 outline）。
+function useWebDocumentSetup() {
+  React.useEffect(() => {
+    if (Platform.OS !== 'web' || typeof document === 'undefined') return;
+    const style = document.createElement('style');
+    style.id = 'uncover-web-fixes';
+    style.textContent = 'input:focus, textarea:focus { outline: 2px solid #9ABB31; outline-offset: 1px; }';
+    document.head.appendChild(style);
+    return () => { style.remove(); };
+  }, []);
 }
 
 function AppShell() {
   const { ready, profile } = useAppStore();
+  const { setSafeScreen } = useAppUpdates();
   const [tab, setTab] = useState<TabKey>('today');
   const [route, setRoute] = useState<Route>({ name: 'tabs' });
 
@@ -42,24 +58,10 @@ function AppShell() {
     });
   }, [returnFromActiveSession]);
 
-  useEffect(() => {
-    if (Platform.OS !== 'android' || !ready || !profile || route.name !== 'tabs') return;
-    let active = true;
-    void checkForUpdates().then(async (available) => {
-      if (!active || !available || !await markUpdatePrompted(available.tag) || !active) return;
-      Alert.alert(
-        'Uncover 有新版本',
-        `v${available.version} 已发布。建议先在“我的”导出备份，再下载 APK 覆盖安装。`,
-        [
-          { text: '稍后', style: 'cancel' },
-          { text: '前往下载', onPress: () => { void Linking.openURL(available.apkUrl).catch(() => Alert.alert('无法打开下载页', '请在“我的”页面重试。')); } },
-        ],
-      );
-    }).catch(() => {
-      // Offline use remains available; Profile offers a manual retry.
-    });
-    return () => { active = false; };
-  }, [ready, Boolean(profile), route.name]);
+  useLayoutEffect(() => {
+    setSafeScreen(ready && Boolean(profile) && route.name === 'tabs');
+    return () => setSafeScreen(false);
+  }, [ready, Boolean(profile), route.name, setSafeScreen]);
 
   useEffect(() => {
     if (Platform.OS !== 'android' || !ready) return;
@@ -71,7 +73,9 @@ function AppShell() {
         ]);
         return true;
       }
-      if (route.name === 'training' || route.name === 'run') {
+      // TrainingScreen owns its exit guard and saves checked sets before leaving.
+      if (route.name === 'training') return false;
+      if (route.name === 'run') {
         leaveActiveSession();
         return true;
       }
@@ -92,19 +96,26 @@ function AppShell() {
     return () => subscription.remove();
   }, [leaveActiveSession, profile, ready, returnToTabs, route.name, tab]);
 
+  useEffect(() => {
+    // web 端滚动回弹会露出 body 背景；让 body 始终跟随当前屏的主色，避免深色屏底部出现白条。
+    if (Platform.OS !== 'web' || typeof document === 'undefined') return;
+    const bg = !profile ? colors.ink : route.name === 'run' ? '#151712' : colors.paper;
+    document.body.style.backgroundColor = bg;
+  }, [profile, route.name]);
+
   if (!ready) return <View style={styles.loading}><ActivityIndicator color={colors.ink} size="large" /></View>;
   if (!profile) return <><StatusBar style="light" /><OnboardingScreen /></>;
 
   if (route.name === 'exercise') return <><StatusBar style="light" /><ExerciseDetailScreen exerciseId={route.exerciseId} onBack={returnToTabs} onStart={(exerciseId) => setRoute({ name: 'training', workoutId: `single_${exerciseId}`, exerciseId })} /></>;
-  if (route.name === 'training') return <><StatusBar style="light" /><TrainingScreen workoutId={route.workoutId} exerciseId={route.exerciseId} setMultiplier={route.setMultiplier} rirTarget={route.rirTarget} onBack={returnFromActiveSession} onComplete={() => { setTab('progress'); returnToTabs(); }} /></>;
-  if (route.name === 'run') return <><StatusBar style="light" /><RunScreen onBack={leaveActiveSession} onComplete={() => { setTab('progress'); returnToTabs(); }} /></>;
+  if (route.name === 'training') return <><StatusBar style="light" /><TrainingScreen workoutId={route.workoutId} exerciseId={route.exerciseId} setMultiplier={route.setMultiplier} rirTarget={route.rirTarget} onBack={returnFromActiveSession} onComplete={() => { setTab('today'); returnToTabs(); }} /></>;
+  if (route.name === 'run') return <><StatusBar style="light" /><RunScreen onBack={leaveActiveSession} onComplete={() => { setTab('today'); returnToTabs(); }} /></>;
   if (route.name === 'nutrition') return <NutritionScreen onBack={returnToTabs} />;
 
   return <View style={styles.root}>
-    {tab === 'today' ? <TodayScreen onStart={(workoutId, setMultiplier, rirTarget) => setRoute({ name: 'training', workoutId, setMultiplier, rirTarget })} onRun={() => setRoute({ name: 'run' })} onPlans={() => setTab('plans')} onNutrition={() => setRoute({ name: 'nutrition' })} /> : null}
-    {tab === 'plans' ? <PlansScreen onStart={(workoutId, setMultiplier, rirTarget) => setRoute({ name: 'training', workoutId, setMultiplier, rirTarget })} onRun={() => setRoute({ name: 'run' })} /> : null}
+    {tab === 'today' ? <TodayScreen onStart={(workoutId, setMultiplier, rirTarget) => setRoute({ name: 'training', workoutId, setMultiplier, rirTarget })} onRun={() => setRoute({ name: 'run' })} onNutrition={() => setRoute({ name: 'nutrition' })} onOpenExercise={(exerciseId) => setRoute({ name: 'exercise', exerciseId })} /> : null}
     {tab === 'progress' ? <ProgressScreen onOpen={(exerciseId) => setRoute({ name: 'exercise', exerciseId })} /> : null}
-    {tab === 'profile' ? <ProfileScreen onPlans={() => setTab('plans')} onNutrition={() => setRoute({ name: 'nutrition' })} /> : null}
+    {tab === 'data' ? <DataScreen onOpenExercise={(exerciseId) => setRoute({ name: 'exercise', exerciseId })} /> : null}
+    {tab === 'profile' ? <ProfileScreen onNutrition={() => setRoute({ name: 'nutrition' })} onOpenExercise={(exerciseId) => setRoute({ name: 'exercise', exerciseId })} /> : null}
     <TabBar active={tab} onChange={setTab} />
   </View>;
 }

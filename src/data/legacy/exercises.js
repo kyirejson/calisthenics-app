@@ -10,6 +10,7 @@
 const exercisesCC1 = require('./exercises-cc1.js');
 const exercisesCC2 = require('./exercises-cc2.js');
 const exercisesCC3 = require('./exercises-cc3.js');
+const exercisesSkills = require('./exercises-skills.js');
 
 const CATEGORY_IMAGE_MAP = {
   'push': '/assets/images/push.svg',
@@ -32,14 +33,20 @@ const CATEGORY_IMAGE_MAP = {
   'power_pull': '/assets/images/power.svg',
   'kip_up': '/assets/images/power.svg',
   'front_flip': '/assets/images/power.svg',
-  'back_flip': '/assets/images/power.svg'
+  'back_flip': '/assets/images/power.svg',
+  'front_lever': '/assets/images/pull.svg',
+  'planche': '/assets/images/push.svg',
+  'back_lever': '/assets/images/pull.svg',
+  'muscle_up': '/assets/images/pull.svg',
+  'l_sit': '/assets/images/leg.svg',
+  'human_flag': '/assets/images/flag.svg'
 };
 
 // 动作配图 CDN 基地址 (基于 GitHub + jsDelivr 免费全球加速 CDN)
 // 仓库: https://github.com/kyirejson/calisthenics-assets
 const CDN_IMAGE_BASE = 'https://cdn.jsdelivr.net/gh/kyirejson/calisthenics-assets@main/images';
 
-const rawExercises = [...exercisesCC1, ...exercisesCC2, ...exercisesCC3];
+const rawExercises = [...exercisesCC1, ...exercisesCC2, ...exercisesCC3, ...exercisesSkills];
 
 const exercises = rawExercises.map(ex => {
   const fallbackSvg = CATEGORY_IMAGE_MAP[ex.category] || '/assets/images/default_exercise.svg';
