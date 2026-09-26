@@ -1,4 +1,4 @@
-// No account identifiers or credentials are invented. OTA stays disabled until linked.
+// The linked project ID is public metadata; credentials never belong in app config.
 module.exports = ({ config }) => {
   const projectId = process.env.EXPO_PROJECT_ID || config.extra?.eas?.projectId;
   const channel = process.env.EAS_BUILD_PROFILE === 'production' ? 'production' : (process.env.EXPO_UPDATE_CHANNEL || 'preview');

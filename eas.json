@@ -1,7 +1,7 @@
 {
   "cli": { "version": ">= 18.0.0", "appVersionSource": "local" },
   "build": {
-    "preview": { "distribution": "internal", "channel": "preview", "android": { "buildType": "apk" } },
-    "production": { "channel": "production", "android": { "buildType": "apk" } }
+    "preview": { "distribution": "internal", "channel": "preview", "environment": "preview", "env": { "EXPO_UPDATE_CHANNEL": "preview" }, "credentialsSource": "remote", "android": { "buildType": "apk" } },
+    "production": { "channel": "production", "environment": "production", "env": { "EXPO_UPDATE_CHANNEL": "production" }, "credentialsSource": "remote", "android": { "buildType": "apk" } }
   }
 }

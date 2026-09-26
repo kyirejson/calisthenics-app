@@ -1,4 +1,4 @@
-name: Build Android APK
+name: Build signed Android release
 
 on:
   workflow_dispatch:
@@ -9,45 +9,42 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    timeout-minutes: 90
+    environment: production
     env:
+      EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
       EXPO_PROJECT_ID: ${{ vars.EXPO_PROJECT_ID }}
-      EXPO_UPDATE_CHANNEL: preview
+      EXPO_UPDATE_CHANNEL: production
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 24
           cache: npm
-      - uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: '17'
-      - uses: android-actions/setup-android@v3
-        with:
-          packages: platform-tools
+      - name: Require Expo access
+        run: test -n "$EXPO_TOKEN" || { echo 'Configure EXPO_TOKEN first; default debug signing is not allowed'; exit 1; }
       - run: npm ci
       - run: npm run typecheck
       - run: npm run test:domain
       - run: npm run test:updates
-      - name: Generate Android project
-        run: npx expo prebuild --platform android --no-install
-      - name: Build standalone preview APK
-        working-directory: android
+      - name: Build with existing dedicated signing credentials
+        run: npx eas-cli@24.8.0 build --platform android --profile production --non-interactive --freeze-credentials --wait --json > build-result.json
+      - name: Download completed APK
         run: |
-          chmod +x gradlew
-          ./gradlew assembleRelease --no-daemon --max-workers=2
-      - name: Stage APK
-        run: cp android/app/build/outputs/apk/release/app-release.apk uncover-preview.apk
-      - uses: actions/upload-artifact@v4
-        with:
-          name: android-preview-apk
-          path: uncover-preview.apk
-      - name: Publish downloadable prerelease
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const value = JSON.parse(fs.readFileSync('build-result.json', 'utf8'));
+          const build = Array.isArray(value) ? value[0] : value;
+          if (build.status !== 'FINISHED' || build.appIdentifier !== 'com.zizhong.jinjie') throw Error('Build did not finish for the intended app');
+          const url = build.artifacts?.applicationArchiveUrl || build.artifacts?.buildUrl;
+          if (!url || new URL(url).hostname !== 'expo.dev' || new URL(url).protocol !== 'https:') throw Error('Unexpected APK artifact URL');
+          fs.writeFileSync('apk-url.txt', url);
+          NODE
+          APP_VERSION=$(node -p "require('./app.json').expo.version")
+          curl --fail --location --proto '=https' --proto-redir '=https' "$(cat apk-url.txt)" --output "uncover-v${APP_VERSION}.apk"
+      - name: Publish official APK
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           APP_VERSION=$(node -p "require('./app.json').expo.version")
-          ANDROID_CODE=$(node -p "require('./app.json').expo.android.versionCode")
-          NOTES=$(printf 'Uncover v%s Android 测试包：训练目标、每日计划、动作指导与进阶路线整合。无需 Expo Go；测试签名，仅用于真机验收。\n\nApp version: %s\nAndroid versionCode: %s\n' "$APP_VERSION" "$APP_VERSION" "$ANDROID_CODE")
-          gh release create "preview-${GITHUB_RUN_NUMBER}" uncover-preview.apk --prerelease --title "Uncover Android 测试版 ${GITHUB_RUN_NUMBER}" --notes "$NOTES"
+          gh release create "v${APP_VERSION}" "uncover-v${APP_VERSION}.apk" --target "$GITHUB_SHA" --title "Uncover v${APP_VERSION}" --notes-file RELEASE-NOTES.md --latest

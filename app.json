@@ -8,7 +8,10 @@
     "userInterfaceStyle": "light",
     "scheme": "uncover",
     "extra": {
-      "updateChannel": "preview"
+      "updateChannel": "preview",
+      "eas": {
+        "projectId": "f6e5af9d-46ec-4f38-be5e-ec267e071eb7"
+      }
     },
     "plugins": [
       [
@@ -26,7 +29,10 @@
     "android": {
       "package": "com.zizhong.jinjie",
       "versionCode": 4,
-      "permissions": ["ACCESS_COARSE_LOCATION", "ACCESS_FINE_LOCATION"],
+      "permissions": [
+        "ACCESS_COARSE_LOCATION",
+        "ACCESS_FINE_LOCATION"
+      ],
       "adaptiveIcon": {
         "backgroundColor": "#151712",
         "foregroundImage": "./assets/app-icon.png"
@@ -35,6 +41,7 @@
     },
     "web": {
       "favicon": "./assets/favicon.png"
-    }
+    },
+    "owner": "kyirechou"
   }
 }

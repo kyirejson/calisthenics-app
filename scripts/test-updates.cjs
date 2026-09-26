@@ -12,6 +12,12 @@ function load(filename, dependencies = {}, extra = {}) {
 }
 const policy = load('src/services/updatePolicy.ts');
 const release = (code = 5) => ({ tag_name: 'v1.3.1', name: 'Uncover', body: `App version: 1.3.1\nAndroid versionCode: ${code}`, draft: false, prerelease: false, assets: [{ name: 'uncover.apk', browser_download_url: 'https://github.com/kyirejson/calisthenics-app/releases/download/v1.3.1/uncover.apk' }] });
+test('EAS builds use managed app signing rather than the old local debug key', () => {
+  const { build } = require('../eas.json');
+  assert.equal(build.preview.credentialsSource, 'remote');
+  assert.equal(build.production.credentialsSource, 'remote');
+  assert.equal(build.preview.distribution, 'internal');
+});
 test('release metadata, version and trusted download origin are required', () => {
   assert.equal(policy.parseRelease(release(), 4, true).versionCode, 5);
   for (const item of [release(4), release(2), { ...release(), draft: true }, { ...release(), prerelease: true }, { ...release(), body: '' }, { ...release(), assets: [] }, { ...release(), assets: [{ name: 'x.apk', browser_download_url: 'https://evil.example/x.apk' }] }]) assert.equal(policy.parseRelease(item, 4, true), null);
@@ -58,4 +64,42 @@ test('OTA configuration is opt-in and never automatically reloads at startup', (
     assert.equal(linked.updates.checkAutomatically, 'NEVER');
     assert.equal(linked.runtimeVersion.policy, 'fingerprint');
   } finally { if (old !== undefined) process.env.EXPO_PROJECT_ID = old; }
+});
+test('linked app resolves the confirmed personal project and matching update channels', () => {
+  const resolve = require('../app.config.js');
+  const app = require('../app.json').expo;
+  const keys = ['EXPO_PROJECT_ID', 'EAS_BUILD_PROFILE', 'EXPO_UPDATE_CHANNEL'];
+  const previous = Object.fromEntries(keys.map(key => [key, process.env[key]]));
+  for (const key of keys) delete process.env[key];
+  try {
+    assert.equal(app.owner, 'kyirechou');
+    assert.equal(app.extra.eas.projectId, 'f6e5af9d-46ec-4f38-be5e-ec267e071eb7');
+    const preview = resolve({ config: app });
+    assert.equal(preview.updates.enabled, true);
+    assert.equal(preview.updates.url, `https://u.expo.dev/${app.extra.eas.projectId}`);
+    assert.equal(preview.updates.requestHeaders['expo-channel-name'], 'preview');
+    assert.equal(preview.extra.updateChannel, 'preview');
+    assert.equal(preview.updates.checkAutomatically, 'NEVER');
+    process.env.EAS_BUILD_PROFILE = 'production';
+    const production = resolve({ config: app });
+    assert.equal(production.updates.requestHeaders['expo-channel-name'], 'production');
+    assert.equal(production.extra.updateChannel, 'stable');
+    assert.equal(production.updates.url, preview.updates.url);
+    // EAS_BUILD_PROFILE is set remotely but is not guaranteed during local hashing.
+    // Explicit profile env must produce exactly the same config in both places.
+    const profiles = require('../eas.json').build;
+    for (const name of ['preview', 'production']) {
+      delete process.env.EAS_BUILD_PROFILE;
+      process.env.EXPO_UPDATE_CHANNEL = profiles[name].env.EXPO_UPDATE_CHANNEL;
+      assert.equal(process.env.EXPO_UPDATE_CHANNEL, name);
+      const local = resolve({ config: app });
+      process.env.EAS_BUILD_PROFILE = name;
+      assert.deepEqual(resolve({ config: app }), local, `${name}: local/cloud config must agree`);
+    }
+  } finally {
+    for (const key of keys) {
+      if (previous[key] === undefined) delete process.env[key];
+      else process.env[key] = previous[key];
+    }
+  }
 });

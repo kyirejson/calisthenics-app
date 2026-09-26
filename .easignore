@@ -1,15 +1,10 @@
-# Learn more https://docs.github.com/en/get-started/getting-started-with-git/ignoring-files
-
-# dependencies
+# Mirrors .gitignore; additional exclusions keep cloud builds free of local research.
 node_modules/
-
-# Expo
+.git
 .expo/
 dist/
 web-build/
 expo-env.d.ts
-
-# Native
 .kotlin/
 *.orig.*
 *.jks
@@ -17,42 +12,38 @@ expo-env.d.ts
 *.p12
 *.key
 *.mobileprovision
-
-# Metro
 .metro-health-check*
-
-# debug
 npm-debug.*
 yarn-debug.*
 yarn-error.*
-
-# macOS
 .DS_Store
 *.pem
-
-# local env files
-.env*.local
-
-# typescript
+.env*
 *.tsbuildinfo
-
-# generated native folders
 /ios
 /android
-
-# User-supplied book excerpts and attachments for local debugging only.
-# Do not upload without confirming publication rights.
 /src/data/private/
 /assets/original-images/
 /assets/skills-images/
 /assets/demon-images/
 /assets/raw-sources/
 __pycache__/
-.env
-.env.*
-*.keystore
 credentials.json
 /build-result.json
 /apk-url.txt
 /*.apk
 /*.aab
+*.keystore
+/docs/
+/*.md
+/.github/
+/scripts/*.py
+/scripts/*.json
+/scripts/*.md
+/scripts/*subagent*
+/scripts/*demon*
+/scripts/*book*
+/scripts/audit*
+/scripts/*original*
+/assets/training-demos/*-v1.png
+/assets/training-demos/*.md
