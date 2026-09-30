@@ -12,6 +12,9 @@ const { getProgressionStatus, getProgressionStageState, getAllProgressionStatuse
 const { getExerciseArtwork, rejectedArtwork } = require('../src/data/exerciseArtwork.ts');
 const { getOriginalActionFrames, getOriginalActionImage } = require('../src/data/originalResources.ts');
 const { originalTexts } = require('../src/data/private/originalTexts.ts');
+const { originalImageMap } = require('../src/data/private/imageMap.ts');
+const privateBookTest = { skip: Object.keys(originalTexts).length === 0 || Object.keys(originalImageMap).length === 0 ? 'Private book resources are not distributed in public checkouts' : false };
+const reviewedPhotoTest = { skip: privateBookTest.skip || !fs.existsSync(path.join(__dirname, '../assets/skills-images')) ? 'Private reviewed photos are not distributed in public checkouts' : false };
 const { loadedImageDimensions } = require('../src/utils/imageDimensions.ts');
 const { getSubjectFrame, fitSubjectFrame, photoAspect } = require('../src/utils/exerciseFraming.ts');
 const profile = { levels: { push: 5 }, planLevels: { push: 5 } };
@@ -152,13 +155,13 @@ test('all explicitly rejected pictures are absent from the rendering resolver', 
     assert.equal(artwork.cover, undefined, id); assert.deepEqual(artwork.frames, [], id); assert.ok(artwork.missingReason);
   }
 });
-test('replaced photos use the reviewed sources, not a different movement', () => {
+test('replaced photos use the reviewed sources, not a different movement', reviewedPhotoTest, () => {
   for (const [id, filename] of [['pl_02', 'pl_02_reviewed.jpeg'], ['bl_04', 'bl_04_reviewed.jpeg'], ['mu_01', 'image01454.jpeg'], ['mu_02', 'image01471.jpeg'], ['legRaise_demon_05', 'image00653.jpeg']]) {
     const artwork = getExerciseArtwork(exercises.find(exercise => exercise.id === id));
     assert.equal(path.basename(artwork.cover.source), filename);
   }
 });
-test('the final banner is never presented as an action frame', () => {
+test('the final banner is never presented as an action frame', privateBookTest, () => {
   for (const key of ['push', 'pull', 'squat', 'legRaise', 'bridge', 'hspu']) {
     const frames = getOriginalActionFrames(key + '_10');
     assert.ok(frames.length >= 2); assert.ok(frames.every(frame => frame.key !== 'image00568.jpeg'));
@@ -173,7 +176,7 @@ test('a filtered banner or later chapter example cannot return through the cover
     assert.equal(getOriginalActionImage(id), undefined);
   } finally { delete originalTexts[id]; }
 });
-test('a mini-program supplemental picture never claims to be an original book photo', () => {
+test('a mini-program supplemental picture never claims to be an original book photo', privateBookTest, () => {
   const id = '__artwork_supplement_fixture';
   originalTexts[id] = { title: '补充来源验证', kind: 'mini_program', scope: 'supplement', sourceFile: null,
     primaryImageName: 'image00558.jpeg', markdown: '补充资料' };
@@ -183,13 +186,13 @@ test('a mini-program supplemental picture never claims to be an original book ph
     assert.equal(artwork.cover.caption, '补充资料配图');
   } finally { delete originalTexts[id]; }
 });
-test('book figures remain separate files and the cover matches the distinguishing action phase', () => {
+test('book figures remain separate files and the cover matches the distinguishing action phase', privateBookTest, () => {
   const artwork = getExerciseArtwork(exercises.find(exercise => exercise.id === 'bridge_06'));
   assert.equal(path.basename(artwork.cover.source), 'image00670.jpeg');
   assert.deepEqual(artwork.frames.map(frame => frame.key), ['image00669.jpeg', 'image00670.jpeg']);
   assert.equal(new Set(artwork.frames.map(frame => frame.source)).size, 2);
 });
-test('flying pushup stages and different kip stages no longer use identical generic start covers', () => {
+test('flying pushup stages and different kip stages no longer use identical generic start covers', privateBookTest, () => {
   const covers = ids => ids.map(id => fs.readFileSync(getExerciseArtwork(exercises.find(exercise => exercise.id === id)).cover.source).toString('base64'));
   assert.equal(new Set(covers(['pPush_08', 'pPush_10'])).size, 2);
   assert.equal(new Set(covers(['pKip_05', 'pKip_06', 'pKip_07'])).size, 3);
@@ -217,7 +220,7 @@ test('missing or invalid load dimensions never throw or invent an aspect ratio',
   for (const event of [null, {}, { nativeEvent: {} }, { nativeEvent: { source: { width: 0, height: 1 } } }, { nativeEvent: { source: { width: Infinity, height: 1 } } }]) assert.equal(loadedImageDimensions(event), undefined);
 });
 
-test('all sixty core cover crops are reviewed, normalized and fitted without stretching', () => {
+test('all sixty core cover crops are reviewed, normalized and fitted without stretching', privateBookTest, () => {
   const seen = new Set();
   for (const key of ['push', 'pull', 'squat', 'legRaise', 'bridge', 'hspu']) for (let level = 1; level <= 10; level++) {
     const id = `${key}_${String(level).padStart(2, '0')}`;
