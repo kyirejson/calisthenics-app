@@ -1,23 +1,26 @@
-import React, { useRef, useState } from 'react';
-import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import React, { useEffect, useRef, useState } from 'react';
+import { Modal, Pressable, SafeAreaView, ScrollView, StyleSheet, Text, View, type NativeScrollEvent, type NativeSyntheticEvent } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Button, Card, Page, ProgressBar, SectionTitle } from '../components/ui';
+import { Button, Page, ProgressBar } from '../components/ui';
 import { RecoveryDayContent } from '../components/RecoveryGuide';
-import { PrehabGuideModal } from '../components/PrehabGuide';
 import { ExercisePicker } from '../components/ExercisePicker';
 import { ScheduleDayDetail } from '../components/ScheduleDayDetail';
-import { ExercisePhoto } from '../components/ExerciseResource';
+import { ExerciseMedia } from '../components/ExerciseResource';
+import { YearSchedule } from '../components/YearSchedule';
+import { AppGlyph } from '../components/AppGlyph';
 import { canPlanNeckBridges, getWorkout, getWorkoutExercises, workoutDisplayTitle } from '../data/catalog';
-import { calculateNutritionPlan } from '../data/nutritionPlanner';
 import { getDayTrainingState, getDisplayedSchedule, localDateKey } from '../data/planProgress';
 import { getPlanDay, getWeekSchedule, recommendPlanId, RETIRED_PLAN_ID, weightLossWeekSummary } from '../data/trainingPlans';
 import { estimateStrengthSession, preferredSessionMinutes } from '../data/trainingPrescription';
 import { buildPlanDraft, generatePersonalPlan, type PersonalPlanSummary, type PlanGenerationStep } from '../data/personalPlan';
 import { useAppStore } from '../store/AppStore';
-import { colors, radius } from '../theme';
+import { appPalette, fitnessColors as colors, progressPageLayout } from '../theme';
 import { dailyWorkoutKey, headstandReadiness, sessionDateKey, trainingDateKey, usesHeadstandGate } from '../data/sessionRecords';
 import { confirmAction } from '../utils/confirm';
+import { groupHistoryByDay } from '../data/trainingHistory';
 import type { ExperienceLevel, Goal } from '../types';
+import { NutritionScreen } from './NutritionScreen';
+import { RunningSession } from './RunScreen';
 
 type Props = {
   onStart: (workoutId: string, setMultiplier?: number, rirTarget?: number) => void;
@@ -28,9 +31,67 @@ type Props = {
 
 const weekdayLabels = ['日', '一', '二', '三', '四', '五', '六'];
 
-export function TodayScreen({ onStart, onRun, onNutrition, onOpenExercise }: Props) {
+export function TodayScreen(props: Props) {
+  const pager = useRef<ScrollView>(null);
+  const [pageWidth, setPageWidth] = useState(0);
+  const [selectedPage, setSelectedPage] = useState<0 | 1 | 2>(0);
+  const selectedRef = useRef<0 | 1 | 2>(0);
+  const scrollTarget = useRef<0 | 1 | 2 | null>(null);
+  const resizing = useRef(false);
+
+  useEffect(() => {
+    if (!pageWidth) return;
+    let restoreFrame = 0;
+    const layoutFrame = requestAnimationFrame(() => {
+      pager.current?.scrollTo({ x: selectedRef.current * pageWidth, animated: false });
+      restoreFrame = requestAnimationFrame(() => { resizing.current = false; });
+    });
+    return () => { cancelAnimationFrame(layoutFrame); cancelAnimationFrame(restoreFrame); };
+  }, [pageWidth]);
+
+  const selectPage = (page: 0 | 1 | 2) => {
+    scrollTarget.current = page === selectedRef.current ? null : page;
+    selectedRef.current = page;
+    setSelectedPage(page);
+    pager.current?.scrollTo({ x: page * pageWidth, animated: true });
+  };
+  const readPage = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+    if (!pageWidth || resizing.current) return;
+    const offset = event.nativeEvent.contentOffset.x;
+    if (scrollTarget.current !== null) {
+      if (Math.abs(offset - scrollTarget.current * pageWidth) > 2) return;
+      scrollTarget.current = null;
+    }
+    const page = Math.max(0, Math.min(2, Math.round(offset / pageWidth))) as 0 | 1 | 2;
+    selectedRef.current = page;
+    setSelectedPage(page);
+  };
+
+  return <SafeAreaView style={styles.todayRoot}>
+    <View style={styles.todayHeader}>
+      <View style={styles.todayHeading}><Text style={styles.todayTitle}>今日</Text><Text style={styles.wordmark}>Uncover</Text></View>
+      <View accessibilityRole="tablist" style={styles.todayTabs}>
+        {(['训练', '饮食', '跑步'] as const).map((label, index) => <Pressable key={label} accessibilityRole="tab" accessibilityLabel={'切换到' + label} accessibilityState={{ selected: selectedPage === index }} aria-selected={selectedPage === index} onPress={() => selectPage(index as 0 | 1 | 2)} style={[styles.todayTab, selectedPage === index && styles.todayTabActive]}><Text style={[styles.todayTabText, selectedPage === index && styles.todayTabTextActive]}>{label}</Text></Pressable>)}
+      </View>
+    </View>
+    <View style={styles.todayPagerFrame} onLayout={event => {
+      const width = event.nativeEvent.layout.width;
+      if (width > 0 && width !== pageWidth) { resizing.current = true; scrollTarget.current = null; setPageWidth(width); }
+    }}>
+      {pageWidth > 0 ? <ScrollView ref={pager} horizontal pagingEnabled directionalLockEnabled showsHorizontalScrollIndicator={false} scrollEventThrottle={16} onScroll={readPage} onMomentumScrollEnd={readPage} onScrollBeginDrag={() => { scrollTarget.current = null; }} onTouchStart={() => { scrollTarget.current = null; }} style={styles.todayPager} contentContainerStyle={styles.todayPagerContent}>
+        <View testID="today-training-page" accessibilityElementsHidden={selectedPage !== 0} importantForAccessibility={selectedPage === 0 ? 'auto' : 'no-hide-descendants'} aria-hidden={selectedPage !== 0} style={[styles.todayPage, { width: pageWidth }]}><TrainingTodayScreen {...props} onNutrition={() => selectPage(1)} /></View>
+        <View testID="today-nutrition-page" accessibilityElementsHidden={selectedPage !== 1} importantForAccessibility={selectedPage === 1 ? 'auto' : 'no-hide-descendants'} aria-hidden={selectedPage !== 1} style={[styles.todayPage, { width: pageWidth }]}><NutritionScreen embedded onBack={() => selectPage(0)} /></View>
+        <View testID="today-running-page" accessibilityElementsHidden={selectedPage !== 2} importantForAccessibility={selectedPage === 2 ? 'auto' : 'no-hide-descendants'} aria-hidden={selectedPage !== 2} style={[styles.todayPage, { width: pageWidth }]}><RunningSession embedded /></View>
+      </ScrollView> : null}
+    </View>
+  </SafeAreaView>;
+}
+
+function TrainingTodayScreen({ onStart, onRun, onOpenExercise }: Props) {
   const { profile, sessions, saveProfile, dailyEdits, addDailyExercise, removeDailyExercise, resetTrainingDay } = useAppStore();
   const [showExercisePicker, setShowExercisePicker] = useState(false);
+  const [showGoal, setShowGoal] = useState(false);
+  const [showCalendar, setShowCalendar] = useState(false);
   const [dayEditError, setDayEditError] = useState('');
   const [resetting, setResetting] = useState(false);
   const [savingNeck, setSavingNeck] = useState(false);
@@ -50,15 +111,14 @@ export function TodayScreen({ onStart, onRun, onNutrition, onOpenExercise }: Pro
   const [draftRest, setDraftRest] = useState(120);
   const [generationStep, setGenerationStep] = useState<PlanGenerationStep | null>(null);
   const [generationSummary, setGenerationSummary] = useState<PersonalPlanSummary | null>(null);
-  const [showPrehab, setShowPrehab] = useState(false);
   const [selectedDate, setSelectedDate] = useState<string>(() => localDateKey(new Date()));
   // 日期条详情默认收起：点选中的日期展开/收起，点新日期切换并展开。
   const [dayDetailOpen, setDayDetailOpen] = useState(false);
   if (!profile) return null;
 
   const selectGoal = async (goal: Goal) => {
-    if (savingGoal) return;
-    if (goal === profile.goal && profile.planId !== RETIRED_PLAN_ID) return;
+    if (savingGoal) return false;
+    if (goal === profile.goal && profile.planId !== RETIRED_PLAN_ID) return true;
     setSavingGoal(true);
     setGoalError('');
     try {
@@ -72,14 +132,16 @@ export function TodayScreen({ onStart, onRun, onNutrition, onOpenExercise }: Pro
         trainingRestSeconds: goal === 'street_mastery' ? 180 : profile.trainingRestSeconds,
         planStartedAt: new Date().toISOString(),
       });
+      return true;
     } catch {
       setGoalError('切换失败，请重试。');
+      return false;
     } finally {
       setSavingGoal(false);
     }
   };
 
-  if ((profile.goal !== 'weight_loss' && profile.goal !== 'street_mastery') || profile.planId === RETIRED_PLAN_ID) return <Page>
+  if ((profile.goal !== 'weight_loss' && profile.goal !== 'street_mastery') || profile.planId === RETIRED_PLAN_ID) return <Page tone="dark">
     <View style={styles.unavailableCard}>
       <Text style={styles.unavailableEyebrow}>训练计划已移除</Text>
       <Text style={styles.unavailableTitle}>当前目标暂无课程</Text>
@@ -109,8 +171,12 @@ export function TodayScreen({ onStart, onRun, onNutrition, onOpenExercise }: Pro
   const gate = headstandReadiness(sessions, now);
   const todayRecordCount = sessions.filter((session) => sessionDateKey(session) === todayKey).length;
   const hasDayEdits = Object.values(dailyEdits).some((edit) => edit.date === todayKey);
-  const nutrition = calculateNutritionPlan(profile, resolved.day.type !== 'recovery');
   const prisoner = profile.goal === 'street_mastery';
+  const recordedDays = new Set(groupHistoryByDay(sessions, now).map(day => localDateKey(day.date)));
+  const streakDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 12);
+  if (!recordedDays.has(localDateKey(streakDate))) streakDate.setDate(streakDate.getDate() - 1);
+  let streakDays = 0;
+  while (recordedDays.has(localDateKey(streakDate))) { streakDays++; streakDate.setDate(streakDate.getDate() - 1); }
   const previewProfile = buildPlanDraft(profile, draftFrequency || profile.frequency, draftMinutes || preferredSessionMinutes(profile), draftExperience || profile.experience, draftRest, draftBaseline);
   const previewDay = getPlanDay({ ...previewProfile, planStartedAt: now.toISOString() }, now);
   const previewItems = showFrequency && previewDay.day.workoutId ? getWorkoutExercises(previewDay.day.workoutId, previewProfile, previewDay.cycle.setMultiplier, previewDay.cycle.dupDay, previewDay.cycle.week, { sessions }) : [];
@@ -165,9 +231,13 @@ export function TodayScreen({ onStart, onRun, onNutrition, onOpenExercise }: Pro
     void resetTrainingDay(todayKey).catch(() => setDayEditError('重置失败，记录未更新，请重试。')).finally(() => setResetting(false));
   }, { confirmLabel: '重置今天', destructive: true });
 
-  return <Page scrollRef={pageScroll}>
+  return <Page tone="dark" testID="today-training-content" scrollRef={pageScroll}>
+    <View style={styles.goalRow}>
+      <Pressable accessibilityRole="button" accessibilityLabel="选择训练目标" onPress={() => setShowGoal(true)} style={styles.goalSelector}><Text style={styles.goalText}>{prisoner ? '囚徒健身' : '减肥控重'}</Text><Text style={styles.goalChevron}>⌄</Text></Pressable>
+      <View accessibilityLabel={'连续训练' + streakDays + '天'} style={styles.streak}><AppGlyph name="flame" color={streakDays ? colors.lime : appPalette.faint} size={20} /><Text style={styles.streakText}>连续 <Text style={styles.streakNumber}>{streakDays}</Text> 天</Text></View>
+    </View>
     {/* 今日安排、训练进度与动作详情合为一张卡 */}
-    <LinearGradient colors={todayState.complete ? ['#244E3C', '#193428'] : ['#1C1E19', '#2D3321']} style={styles.heroCard}>
+    <LinearGradient colors={todayState.complete ? ['#202E23', '#1B2420'] : ['#242D22', '#1B2028']} style={styles.heroCard}>
       <Pressable accessibilityRole="button" accessibilityState={{ expanded: showTodayDetails }} onPress={() => setShowTodayDetails((value) => !value)}>
         <View style={styles.heroTop}>
           <View style={styles.heroKickerGroup}>
@@ -184,7 +254,7 @@ export function TodayScreen({ onStart, onRun, onNutrition, onOpenExercise }: Pro
           </View>
           <Text style={styles.heroBadge}>{resolved.cycle.label}</Text>
         </View>
-        <Text style={styles.heroTitle}>{todayState.complete ? '今天的训练已完成' : workoutDisplayTitle(resolved.day.title, workoutExercises)}</Text>
+        <View style={styles.heroIntro}><View style={styles.heroIntroCopy}><Text style={styles.heroTitle}>{todayState.complete ? '今天的训练已完成' : workoutDisplayTitle(resolved.day.title, workoutExercises)}</Text></View>{workoutExercises[0] ? <ExerciseMedia exercise={workoutExercises[0]} width={100} minHeight={64} maxHeight={100} /> : null}</View>
         <Text style={styles.heroDesc}>{todayState.complete && todayState.session ? `${Math.max(1, Math.ceil(todayState.session.durationSeconds / 60))} 分钟 · ${todayState.session.kind === 'running' ? '有氧训练' : todayState.session.workoutName}` : workout && workoutEstimate ? `${workoutExercises.length} 个动作 · 预计 ${workoutEstimate.totalMinutes} 分钟 · 含热身与休息` : resolved.day.tip}</Text>
         <View style={styles.heroProgressHead}><Text style={styles.heroProgressLabel}>本周训练进度</Text><Text style={styles.heroProgressValue}>{completedDays} / {plannedDays.length} 课</Text></View>
         <View style={styles.heroProgressTrack}><View style={[styles.heroProgressFill, { width: `${plannedDays.length ? completedDays / plannedDays.length * 100 : 0}%` }]} /></View>
@@ -199,39 +269,6 @@ export function TodayScreen({ onStart, onRun, onNutrition, onOpenExercise }: Pro
           </View>
         ) : null}
         {workoutEstimate ? <Text style={styles.heroDetailText}>预计：热身 {workoutEstimate.warmupSeconds / 60} 分钟 · 动作与转换 {Math.ceil((workoutEstimate.workSeconds + workoutEstimate.transitionsSeconds) / 60)} 分钟 · 组间休息 {Math.ceil(workoutEstimate.restSeconds / 60)} 分钟 · 整理 {workoutEstimate.cooldownSeconds / 60} 分钟</Text> : null}
-        {workoutExercises.map((exercise, index) => (
-          <View key={`${exercise.id}-${index}`}>
-          <Pressable
-            key={`${exercise.id}-${index}`}
-            accessibilityRole="button"
-            accessibilityLabel={`查看${exercise.name}动作指导`}
-            onPress={() => onOpenExercise(exercise.id)}
-            style={styles.heroExerciseRow}
-          >
-            <View style={styles.heroExerciseImage}>
-              <ExercisePhoto
-                exercise={exercise}
-                resizeMode="contain"
-                showShade={false}
-                showTag={false}
-                compact
-                style={styles.heroExercisePhoto}
-              />
-            </View>
-            <View style={styles.heroExerciseContent}>
-              <View style={styles.heroExerciseNameRow}>
-                <Text style={styles.heroExerciseIndex}>{String(index + 1).padStart(2, '0')}</Text>
-                <Text style={styles.heroExerciseName}>{exercise.name}</Text>
-              </View>
-              <Text style={styles.heroExerciseMeta}>
-                {exercise.targetSets} 组 × {exercise.targetValue} {exercise.targetUnit === 'seconds' ? '秒' : exercise.targetUnit === 'meters' ? '米' : exercise.targetUnit === 'steps' ? '步' : '次'}{exercise.id === 'aux_singleLegCalf' ? '（左右合计）' : ''} · 休息 {exercise.restSeconds} 秒
-              </Text>
-            </View>
-            <Text style={styles.heroExerciseArrow}>›</Text>
-          </Pressable>
-          {addedIds.includes(exercise.id) ? <Pressable onPress={() => { void removeDailyExercise(todayKey, editableWorkoutId, exercise.id).catch(() => setDayEditError('移除失败，请重试。')); }} style={styles.daySmallAction}><Text style={styles.daySmallActionText}>移除自加动作</Text></Pressable> : null}
-          </View>
-        ))}
         {resolved.day.type === 'cardio' ? <Text style={styles.heroDetailText}>{profile.goal === 'weight_loss' ? '以能正常交谈为准；疲劳时缩短或休息，不补偿性加练。' : '以能够正常交谈的轻松强度完成；疲劳时改为快走。'}</Text> : null}
       </View> : null}
       {usesHeadstandGate(profile) ? <View style={styles.gateBox}>
@@ -268,6 +305,7 @@ export function TodayScreen({ onStart, onRun, onNutrition, onOpenExercise }: Pro
             ) : `每周 ${profile.frequency} 天 ▾`}
           </Text>
         </Pressable>
+        <Pressable accessibilityRole="button" accessibilityLabel="查看全年训练日历" onPress={() => setShowCalendar(true)} style={styles.calendarDetails}><AppGlyph name="chevron" size={18} color={colors.ink} /></Pressable>
       </View>
     </View>
     {weightLossWeek ? <View style={styles.weightLossSchedule}>
@@ -286,6 +324,7 @@ export function TodayScreen({ onStart, onRun, onNutrition, onOpenExercise }: Pro
             key={dayKey}
             accessibilityRole="button"
             accessibilityLabel={`${day.date.getMonth() + 1}月${day.date.getDate()}日 周${weekdayLabels[day.date.getDay()]}`}
+            accessibilityState={{ selected: isSelected }}
             onPress={() => {
               const same = dayKey === (selectedDate || localDateKey(now));
               if (same) setDayDetailOpen((value) => !value);
@@ -313,36 +352,19 @@ export function TodayScreen({ onStart, onRun, onNutrition, onOpenExercise }: Pro
           onOpenExercise={onOpenExercise}
         />
       </View>
-    ) : null}
+    ) : workoutExercises.length ? <View testID="today-workout-list" style={styles.todayWorkoutList}>
+      {workoutExercises.map((exercise, index) => <View key={exercise.id}>
+        <Pressable accessibilityRole="button" accessibilityLabel={`查看${exercise.name}动作指导`} onPress={() => onOpenExercise(exercise.id)} style={styles.heroExerciseRow}>
+          <ExerciseMedia exercise={exercise} width={82} minHeight={56} maxHeight={96} />
+          <View style={styles.heroExerciseContent}><Text style={styles.heroExerciseName}>{exercise.name}</Text><Text style={styles.heroExerciseMeta}>{exercise.targetSets} 组 × {exercise.targetValue} {exercise.targetUnit === 'seconds' ? '秒' : exercise.targetUnit === 'meters' ? '米' : exercise.targetUnit === 'steps' ? '步' : '次'}{exercise.id === 'aux_singleLegCalf' ? '（左右合计）' : ''} · 休息 {exercise.restSeconds} 秒</Text></View><AppGlyph name="chevron" size={16} />
+        </Pressable>
+        {addedIds.includes(exercise.id) ? <Pressable accessibilityRole="button" accessibilityLabel={'移除' + exercise.name} onPress={() => void removeDailyExercise(todayKey, editableWorkoutId, exercise.id).catch(() => setDayEditError('移除失败，请重试。'))} style={styles.daySmallAction}><Text style={styles.daySmallActionText}>移除自加动作</Text></Pressable> : null}
+      </View>)}
+    </View> : null}
 
-    <SectionTitle title="今日能量" action="查看饮食安排" onAction={onNutrition} />
-    <Pressable onPress={onNutrition}><Card>
-      {nutrition.safetyLevel === 'blocked' ? <>
-        <Text style={styles.nutritionLabel}>饮食建议</Text>
-        <Text style={styles.safetyTitle}>{nutrition.safetyTitle || '请核对身体资料'}</Text>
-        <Text style={styles.safetyBody}>{nutrition.safetyMessage}</Text>
-      </> : <>
-        <View style={styles.nutritionTop}><View><Text style={styles.nutritionLabel}>{nutrition.goalLabel} · 今日计划摄入</Text><Text style={styles.calorie}>{nutrition.targetCalories}<Text style={styles.calorieUnit}> kcal</Text></Text></View><Text style={styles.nutritionArrow}>›</Text></View>
-        <View style={styles.macroRow}><Macro label="蛋白质" value={`${nutrition.protein}g`} color={colors.orange} /><Macro label="碳水" value={`${nutrition.carbs}g`} color={colors.blue} /><Macro label="脂肪" value={`${nutrition.fat}g`} color={colors.green} /></View>
-        {profile.goal === 'weight_loss' && nutrition.goal === 'rapid_loss' ? <Text style={styles.nutritionWeekNote}>温和缺口 · 周平均约 {nutrition.weeklyMeanCalories} kcal；训练消耗不自动加回餐单。</Text> : null}
-        {nutrition.safetyLevel === 'warning' ? <Text style={styles.nutritionWarning}>⚠ {nutrition.safetyTitle} · 查看说明</Text> : null}
-      </>}
-    </Card></Pressable>
+    {showCalendar ? <YearSchedule profile={profile} sessions={sessions} anchor={now} onSelect={() => {}} onOpenExercise={id => { setShowCalendar(false); onOpenExercise(id); }} onClose={() => setShowCalendar(false)} /> : null}
+    <Modal transparent visible={showGoal} animationType="fade" onRequestClose={() => setShowGoal(false)}><View style={styles.frequencyBackdrop}><Pressable accessibilityRole="button" accessibilityLabel="关闭训练目标" onPress={() => setShowGoal(false)} style={StyleSheet.absoluteFill} /><View style={[styles.frequencyCard, { padding: 20, gap: 12 }]}><Text style={styles.frequencyTitle}>训练目标</Text>{([['street_mastery', '囚徒健身', '按六艺阶数循序训练，逐步掌握最终式。'], ['weight_loss', '减肥控重', '力量保肌与低冲击有氧结合，配合饮食控重。']] as const).map(([goal, title, description]) => <Pressable key={goal} accessibilityRole="button" accessibilityLabel={'选择' + title} disabled={savingGoal} onPress={() => void selectGoal(goal).then(saved => { if (saved) setShowGoal(false); })} style={[styles.goalOption, profile.goal === goal && styles.goalOptionActive]}><Text style={styles.goalText}>{title}</Text><Text style={styles.frequencyInfo}>{description}</Text></Pressable>)}{goalError ? <Text style={styles.frequencyError}>{goalError}</Text> : null}<Button label="关闭" variant="ghost" onPress={() => setShowGoal(false)} /></View></View></Modal>
 
-    <SectionTitle title="健康与康复" action="查看指南" onAction={() => setShowPrehab(true)} />
-    <Pressable accessibilityRole="button" accessibilityLabel="查看健康与康复指南" onPress={() => setShowPrehab(true)} style={styles.prehabCard}>
-      <View style={styles.prehabHeader}><View style={styles.prehabLabel}><Text style={styles.prehabLabelText}>{profile.goal === 'weight_loss' ? '减重期恢复' : '六艺恢复'}</Text></View><Text style={styles.prehabArrow}>↗</Text></View>
-      <Text style={styles.prehabTitle}>{profile.goal === 'weight_loss' ? '保住力量，留出恢复' : '先练质量，再谈晋级'}</Text>
-      <View style={styles.prehabSteps}>
-        <View style={styles.prehabStep}><Text style={styles.prehabStepLabel}>{profile.goal === 'weight_loss' ? '力量日' : '训练前'}</Text><Text style={styles.prehabStepValue}>{profile.goal === 'weight_loss' ? '质量优先' : '逐步热身'}</Text></View>
-        <View style={styles.prehabStep}><Text style={styles.prehabStepLabel}>{profile.goal === 'weight_loss' ? '有氧日' : '组间'}</Text><Text style={styles.prehabStepValue}>{profile.goal === 'weight_loss' ? '可交谈' : '按需休息'}</Text></View>
-        <View style={styles.prehabStep}><Text style={styles.prehabStepLabel}>{profile.goal === 'weight_loss' ? '疲劳时' : '疼痛时'}</Text><Text style={styles.prehabStepValue}>{profile.goal === 'weight_loss' ? '主动减量' : '停止动作'}</Text></View>
-      </View>
-    </Pressable>
-
-    <SectionTitle title="其他训练" />
-    <Pressable onPress={onRun} style={styles.runCard}><View style={styles.runIcon}><Text style={styles.runIconText}>↗</Text></View><View style={styles.runInfo}><Text style={styles.runTitle}>{profile.goal === 'weight_loss' ? '户外快走或骑行' : '户外跑步'}</Text><Text style={styles.runSub}>{profile.goal === 'weight_loss' ? '记录时间和路线，不估算饮食补偿' : '记录路线、距离和配速'}</Text></View><Text style={styles.chevron}>›</Text></Pressable>
-    <PrehabGuideModal visible={showPrehab} onClose={() => setShowPrehab(false)} profile={profile} />
     <Modal transparent visible={showGateDetails} animationType="none" onRequestClose={() => setShowGateDetails(false)}>
       <View style={styles.frequencyBackdrop}>
         <Pressable accessibilityRole="button" accessibilityLabel="关闭倒立训练条件" onPress={() => setShowGateDetails(false)} style={StyleSheet.absoluteFill} />
@@ -502,168 +524,51 @@ export function TodayScreen({ onStart, onRun, onNutrition, onOpenExercise }: Pro
   </Page>;
 }
 
-/* ━━ Helpers ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
 
-function Macro({ label, value, color }: { label: string; value: string; color: string }) {
-  return <View style={styles.macro}><View style={[styles.macroDot, { backgroundColor: color }]} /><Text style={styles.macroLabel}>{label}</Text><Text style={styles.macroValue}>{value}</Text></View>;
-}
 
 /* ━━ Styles ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
 
 const styles = StyleSheet.create({
-  dayTools: { flexDirection: 'row', gap: 10, marginTop: 14 }, dayTool: { flex: 1, borderWidth: 1, borderColor: '#58634C', paddingVertical: 12, borderRadius: 12, alignItems: 'center' }, dayToolText: { color: '#E5EBCF', fontSize: 13, fontWeight: '800' },
-  daySmallAction: { alignSelf: 'flex-end', padding: 9 }, daySmallActionText: { color: '#BBC5A5', fontSize: 11 }, dayError: { color: '#FFB7A6', marginTop: 10 },
-  gateBox: { backgroundColor: 'rgba(255,255,255,0.06)', borderRadius: 12, paddingLeft: 12, paddingRight: 4, marginTop: 14, flexDirection: 'row', alignItems: 'center', gap: 8 },
-  gateTitle: { flex: 1, color: '#D7E7AC', fontSize: 12, fontWeight: '800' },
-  gateLink: { minHeight: 44, justifyContent: 'center', paddingHorizontal: 8 },
-  gateLinkText: { color: '#D7E7AC', fontSize: 11, fontWeight: '700' },
-  gateDetailSection: { paddingVertical: 16, borderBottomWidth: 1, borderBottomColor: colors.line, marginBottom: 12 },
-  gateDetailTitle: { color: colors.ink, fontSize: 14, fontWeight: '800' },
-  gateDetailText: { color: colors.inkMuted, fontSize: 13, lineHeight: 21, marginTop: 8 },
-  gateDetailNote: { color: colors.inkMuted, fontSize: 11, lineHeight: 18, marginTop: 8 },
-  unavailableCard: { marginTop: 28, backgroundColor: colors.card, borderColor: colors.line, borderWidth: 1, borderRadius: radius.lg, padding: 20, gap: 12 },
-  unavailableEyebrow: { color: colors.green, fontSize: 11, fontWeight: '900' },
-  unavailableTitle: { color: colors.ink, fontSize: 23, fontWeight: '900' },
-  unavailableBody: { color: colors.inkMuted, fontSize: 13, lineHeight: 21 },
-  unavailableError: { color: colors.danger, fontSize: 12 },
-  /* ── Hero ── */
-  heroCard: { borderRadius: radius.lg, padding: 20, overflow: 'hidden' },
-  heroTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  heroKickerGroup: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  heroKicker: { color: colors.lime, fontSize: 11, fontWeight: '900' },
-  dupTag: { paddingHorizontal: 7, paddingVertical: 2, borderRadius: radius.pill, borderWidth: 1 },
-  dupVol: { backgroundColor: 'rgba(200, 240, 77, 0.15)', borderColor: colors.limeDark },
-  dupTagText: { color: '#FFFFFF', fontSize: 9, fontWeight: '800' },
-  heroBadge: { color: '#C7CAC0', fontSize: 11, fontWeight: '700' },
-  heroTitle: { color: '#FFFFFF', fontSize: 25, lineHeight: 31, fontWeight: '900', letterSpacing: -0.6, marginTop: 15 },
-  heroDesc: { color: '#BFC2B7', fontSize: 13, lineHeight: 20, marginTop: 8 },
-  heroProgressHead: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 18, marginBottom: 7 },
-  heroProgressLabel: { color: '#BFC2B7', fontSize: 11, fontWeight: '700' },
-  heroProgressValue: { color: colors.lime, fontSize: 11, fontWeight: '900' },
-  heroProgressTrack: { height: 6, borderRadius: 3, backgroundColor: '#485040', overflow: 'hidden' },
-  heroProgressFill: { height: 6, borderRadius: 3, backgroundColor: colors.lime },
-  heroExpandRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 14 },
-  heroExpandText: { color: '#DDE2D0', fontSize: 11, fontWeight: '800' },
-  heroExpandArrow: { color: colors.lime, fontSize: 16 },
-  heroDetails: { borderTopWidth: 1, borderTopColor: '#485040', marginTop: 14, paddingTop: 14 },
-  heroDetailLabel: { color: colors.lime, fontSize: 11, fontWeight: '900' },
-  heroDetailText: { color: '#DDE2D0', fontSize: 12, lineHeight: 18, marginTop: 5 },
-  heroExerciseRow: { flexDirection: 'row', paddingVertical: 9, alignItems: 'center', borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: 'rgba(255,255,255,0.12)' },
-  heroExerciseImage: { width: 56, height: 50, borderRadius: 8, overflow: 'hidden', backgroundColor: 'rgba(0,0,0,0.3)', marginRight: 11 },
-  heroExercisePhoto: { backgroundColor: 'transparent' },
-  heroExerciseContent: { flex: 1 },
-  heroExerciseNameRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  heroExerciseIndex: { color: colors.lime, fontSize: 11, fontWeight: '900' },
-  heroExerciseName: { color: '#FFFFFF', fontSize: 13, fontWeight: '800' },
-  heroExerciseMeta: { color: '#AEB7A5', fontSize: 10, marginTop: 2 },
-  heroExerciseArrow: { color: colors.lime, fontSize: 18, marginLeft: 6 },
-  heroAction: { marginTop: 16 },
-
-  /* ── 日历与所选日期详情 ── */
-  scheduleHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 25, marginBottom: 12 },
-  scheduleTitle: { color: colors.ink, fontSize: 20, fontWeight: '900' },
-  scheduleActions: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  scheduleDetailWrap: { marginTop: 6, marginBottom: 14 },
-  weightLossSchedule: { backgroundColor: '#EEF4E1', borderRadius: radius.md, padding: 13, marginBottom: 12 },
-  weightLossScheduleTitle: { color: colors.green, fontSize: 10, fontWeight: '900' },
-  weightLossScheduleMain: { color: colors.ink, fontSize: 12, lineHeight: 18, fontWeight: '900', marginTop: 4 },
-  routeGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 10, marginBottom: 5 },
-  routeItem: { width: '32%', minWidth: 83, flexGrow: 1, borderRadius: 10, backgroundColor: '#F9FBF3', paddingHorizontal: 9, paddingVertical: 8 },
-  routeName: { color: colors.ink, fontSize: 10, fontWeight: '800' },
-  routeStep: { color: colors.green, fontSize: 10, fontWeight: '900', marginTop: 3 },
-  weightLossScheduleSep: { color: colors.limeDark },
-  weightLossScheduleNote: { color: colors.inkMuted, fontSize: 10, lineHeight: 16, marginTop: 5 },
-  frequencyTrigger: { minHeight: 32, borderRadius: radius.pill, backgroundColor: colors.card, borderWidth: 1, borderColor: colors.line, paddingHorizontal: 11, alignItems: 'center', justifyContent: 'center' },
-  frequencyTriggerText: { color: colors.ink, fontSize: 11, fontWeight: '800' },
-  calendarRow: { flexDirection: 'row', gap: 3, marginBottom: 10 },
-  calendarDay: { flex: 1, minWidth: 0, height: 72, borderRadius: 12, backgroundColor: colors.card, borderWidth: 1, borderColor: colors.line, alignItems: 'center', justifyContent: 'center' },
-  calendarDayToday: { borderColor: colors.limeDark },
-  calendarDayActive: { backgroundColor: colors.ink, borderColor: colors.ink },
-  calendarWeek: { color: colors.inkMuted, fontSize: 10, fontWeight: '700' },
-  calendarDate: { color: colors.ink, fontSize: 17, fontWeight: '900', marginTop: 2 },
-  calendarTextActive: { color: '#FFFFFF' },
-  calendarKind: { color: colors.inkMuted, fontSize: 9, fontWeight: '800', marginTop: 5 },
-  calendarKindStrength: { color: colors.limeDark },
-  calendarKindCardio: { color: colors.blue },
-  frequencyBackdrop: { flex: 1, backgroundColor: 'rgba(12,15,10,0.65)', alignItems: 'center', justifyContent: 'center', padding: 20 },
-  frequencyCard: { width: '100%', maxWidth: 420, maxHeight: '92%', backgroundColor: colors.paper, borderRadius: radius.lg },
-  frequencyScroll: { flexShrink: 1 },
-  frequencyContent: { padding: 20 },
-  planPreview: { backgroundColor: '#F2F5E8', borderRadius: radius.md, padding: 14, marginTop: 18 },
-  planPreviewTitle: { color: colors.ink, fontSize: 13, fontWeight: '900' },
-  planPreviewMeta: { color: colors.inkMuted, fontSize: 11, lineHeight: 17, marginTop: 5, marginBottom: 7 },
-  planPreviewItem: { color: colors.ink, fontSize: 12, lineHeight: 22 },
-  frequencyFooter: { paddingHorizontal: 20, paddingBottom: 13, paddingTop: 9, borderTopWidth: 1, borderTopColor: colors.line },
-  frequencyTitle: { color: colors.ink, fontSize: 22, fontWeight: '900' },
-  frequencyInfo: { color: colors.inkMuted, fontSize: 12, lineHeight: 18, marginTop: 7 },
-  frequencyOptions: { flexDirection: 'row', gap: 7, marginTop: 20 },
-  frequencySection: { color: colors.ink, fontSize: 12, fontWeight: '900', marginTop: 15 },
-  frequencyOption: { flex: 1, minWidth: 0, height: 63, borderRadius: 12, backgroundColor: colors.card, borderWidth: 1, borderColor: colors.line, alignItems: 'center', justifyContent: 'center' },
-  frequencyOptionActive: { backgroundColor: colors.lime, borderColor: colors.limeDark },
-  frequencyNumber: { color: colors.ink, fontSize: 20, fontWeight: '900' },
-  frequencyUnit: { color: colors.inkMuted, fontSize: 10 },
-  frequencyUnitActive: { color: colors.ink },
-  frequencyFootnote: { color: colors.inkMuted, fontSize: 11, lineHeight: 17, marginTop: 14 },
-  experienceOptions: { flexDirection: 'row', gap: 7, marginTop: 9 },
-  experienceOption: { flex: 1, minHeight: 39, alignItems: 'center', justifyContent: 'center', borderRadius: 10, backgroundColor: colors.card, borderWidth: 1, borderColor: colors.line },
-  experienceText: { color: colors.ink, fontSize: 11, fontWeight: '800' },
-  prisonerStageList: { gap: 8, marginTop: 10 },
-  prisonerStageCard: { backgroundColor: colors.card, borderRadius: 12, borderWidth: 1.5, borderColor: colors.line, padding: 12 },
-  prisonerStageCardActive: { borderColor: colors.limeDark, backgroundColor: '#F5F8EC' },
-  prisonerStageHead: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  prisonerStageTag: { backgroundColor: '#E2E5D8', borderRadius: 6, paddingHorizontal: 7, paddingVertical: 2 },
-  prisonerStageTagActive: { backgroundColor: colors.limeDark },
-  prisonerStageTagText: { color: colors.ink, fontSize: 10, fontWeight: '900' },
-  prisonerStageTagTextActive: { color: '#0F1109' },
-  prisonerStageName: { color: colors.ink, fontSize: 13, fontWeight: '900' },
-  prisonerStageNameActive: { color: colors.limeDark },
-  prisonerStageDesc: { color: colors.inkMuted, fontSize: 11, lineHeight: 16, marginTop: 4 },
-  coachNoticeBox: { backgroundColor: '#F0F4E6', borderRadius: 10, padding: 12, marginTop: 10, borderWidth: 1, borderColor: '#DCE4CA' },
-  coachNoticeText: { color: colors.ink, fontSize: 11, lineHeight: 17, fontWeight: '600' },
-  coachSafetyWarning: { color: '#8F3212', fontSize: 11, lineHeight: 17, fontWeight: '700', marginTop: 6 },
-  generationBox: { marginTop: 16, marginBottom: 12, gap: 8 }, generationLabel: { color: colors.ink, fontSize: 11, fontWeight: '800' },
-  frequencyError: { color: colors.danger, fontSize: 11, marginTop: 8 },
-  frequencyClose: { alignItems: 'center', paddingVertical: 11, marginTop: 10 },
-  frequencyCloseText: { color: colors.inkMuted, fontSize: 12, fontWeight: '800' },
-
-  /* ── Nutrition ── */
-  nutritionTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  nutritionLabel: { color: colors.inkMuted, fontSize: 11, fontWeight: '700' },
-  calorie: { color: colors.ink, fontSize: 30, fontWeight: '900', marginTop: 4 },
-  calorieUnit: { color: colors.inkMuted, fontSize: 12 },
-  nutritionArrow: { color: colors.inkMuted, fontSize: 26 },
-  macroRow: { flexDirection: 'row', marginTop: 14, paddingTop: 13, borderTopWidth: 1, borderTopColor: colors.line },
-  macro: { flex: 1 },
-  macroDot: { width: 6, height: 6, borderRadius: 3, marginBottom: 5 },
-  macroLabel: { color: colors.inkMuted, fontSize: 10 },
-  macroValue: { color: colors.ink, fontWeight: '800', fontSize: 12, marginTop: 2 },
-  nutritionWarning: { color: colors.danger, fontSize: 10, marginTop: 12 },
-  nutritionWeekNote: { color: colors.green, fontSize: 10, lineHeight: 16, fontWeight: '800', marginTop: 12 },
-  safetyTitle: { color: colors.ink, fontSize: 16, fontWeight: '900', marginTop: 7 },
-  safetyBody: { color: colors.inkMuted, fontSize: 11, lineHeight: 17, marginTop: 6 },
-
-  /* ── Run card ── */
-  runCard: { backgroundColor: colors.card, borderRadius: radius.md, borderWidth: 1, borderColor: colors.line, padding: 14, flexDirection: 'row', alignItems: 'center', gap: 12 },
-  runIcon: { width: 42, height: 42, borderRadius: 13, backgroundColor: '#E7EDFF', alignItems: 'center', justifyContent: 'center' },
-  runIconText: { color: colors.blue, fontSize: 20, fontWeight: '900' },
-  runInfo: { flex: 1 },
-  runTitle: { color: colors.ink, fontSize: 14, fontWeight: '800' },
-  runSub: { color: colors.inkMuted, fontSize: 11, marginTop: 3 },
-  chevron: { color: colors.inkMuted, fontSize: 25 },
-
-  /* ── Prehab card ── */
-  prehabCard: { backgroundColor: colors.ink, borderRadius: radius.lg, padding: 18, marginBottom: 12 },
-  prehabHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  prehabLabel: { backgroundColor: '#34392B', borderRadius: radius.pill, paddingHorizontal: 10, paddingVertical: 5 },
-  prehabLabelText: { color: colors.lime, fontSize: 10, fontWeight: '900' },
-  prehabArrow: { color: colors.lime, fontSize: 21, fontWeight: '700' },
-  prehabTitle: { color: '#FFFFFF', fontSize: 18, fontWeight: '900', marginTop: 11 },
-  prehabSteps: { flexDirection: 'row', borderTopWidth: 1, borderTopColor: '#41453A', marginTop: 15, paddingTop: 13 },
-  prehabStep: { flex: 1, minWidth: 0 },
-  prehabStepLabel: { color: '#9BA08F', fontSize: 10 },
-  prehabStepValue: { color: '#FFFFFF', fontSize: 11, fontWeight: '800', marginTop: 5 },
-
-  /* ── Recovery wraps ── */
-  recoveryWrap: { marginTop: 12, borderRadius: radius.md, overflow: 'hidden', maxHeight: 360 },
-  selectedRecoveryWrap: { marginTop: 12, borderRadius: radius.md, overflow: 'hidden', maxHeight: 360 },
+  todayRoot: { flex: 1, minWidth: 0, backgroundColor: appPalette.background },
+  todayHeader: { paddingHorizontal: 16, paddingTop: 8, paddingBottom: 8, maxWidth: 440, width: '100%', alignSelf: 'center' },
+  todayHeading: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', minHeight: 40, marginBottom: 10 },
+  todayTitle: { ...progressPageLayout.title, color: appPalette.text }, wordmark: { color: appPalette.muted, fontSize: 13, fontWeight: '800', letterSpacing: -.3 },
+  todayTabs: { width: '100%', flexDirection: 'row', padding: 3, gap: 3, borderRadius: 16, borderWidth: 1, borderColor: appPalette.border, backgroundColor: appPalette.card },
+  todayTab: { flex: 1, minHeight: 44, borderRadius: 13, justifyContent: 'center', alignItems: 'center' },
+  todayTabActive: { backgroundColor: appPalette.lime }, todayTabText: { color: appPalette.muted, fontSize: 13, fontWeight: '800' }, todayTabTextActive: { color: appPalette.onLime },
+  todayPagerFrame: { flex: 1, minWidth: 0, overflow: 'hidden', maxWidth: 440, width: '100%', alignSelf: 'center' },
+  todayPager: { flex: 1, minWidth: 0 }, todayPagerContent: { alignItems: 'stretch' }, todayPage: { height: '100%', minWidth: 0, flexShrink: 0, overflow: 'hidden' },
+  goalRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginBottom: 12 },
+  goalSelector: { minHeight: 44, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 20, borderRadius: 14, paddingHorizontal: 14, borderWidth: 1, borderColor: appPalette.border, backgroundColor: appPalette.card },
+  goalText: { color: appPalette.text, fontSize: 13, fontWeight: '800' }, goalChevron: { color: appPalette.muted, fontSize: 16 },
+  streak: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 6 }, streakText: { color: appPalette.muted, fontSize: 12 }, streakNumber: { color: appPalette.text, fontWeight: '800', fontVariant: ['tabular-nums'] },
+  goalOption: { padding: 14, borderWidth: 1, borderColor: appPalette.border, borderRadius: 16, backgroundColor: appPalette.card }, goalOptionActive: { borderColor: appPalette.lime, backgroundColor: appPalette.olive },
+  dayTools: { flexDirection: 'row', gap: 8, marginTop: 10 }, dayTool: { flex: 1, minHeight: 44, borderWidth: 1, borderColor: appPalette.border, borderRadius: 14, alignItems: 'center', justifyContent: 'center' }, dayToolText: { color: appPalette.muted, fontSize: 12, fontWeight: '700' },
+  daySmallAction: { alignSelf: 'flex-end', minHeight: 44, justifyContent: 'center', paddingHorizontal: 10 }, daySmallActionText: { color: appPalette.muted, fontSize: 11 }, dayError: { color: appPalette.danger, fontSize: 12, lineHeight: 19, marginTop: 10 },
+  gateBox: { borderTopWidth: 1, borderTopColor: appPalette.border, marginTop: 10, flexDirection: 'row', alignItems: 'center', gap: 8 }, gateTitle: { flex: 1, color: appPalette.muted, fontSize: 11, fontWeight: '700' }, gateLink: { minHeight: 44, justifyContent: 'center', paddingHorizontal: 8 }, gateLinkText: { color: appPalette.lime, fontSize: 11, fontWeight: '700' },
+  gateDetailSection: { paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: appPalette.border, marginBottom: 12 }, gateDetailTitle: { color: appPalette.text, fontSize: 14, fontWeight: '800' }, gateDetailText: { color: appPalette.muted, fontSize: 13, lineHeight: 21, marginTop: 8 }, gateDetailNote: { color: appPalette.muted, fontSize: 11, lineHeight: 18, marginTop: 8 },
+  unavailableCard: { marginTop: 18, backgroundColor: appPalette.card, borderColor: appPalette.border, borderWidth: 1, borderRadius: 20, padding: 16, gap: 12 }, unavailableEyebrow: { color: appPalette.lime, fontSize: 11, fontWeight: '800' }, unavailableTitle: { ...progressPageLayout.title, color: appPalette.text }, unavailableBody: { color: appPalette.muted, fontSize: 13, lineHeight: 21 }, unavailableError: { color: appPalette.danger, fontSize: 12 },
+  heroCard: { borderRadius: 20, borderWidth: 1, borderColor: '#4A5C37', padding: 16, overflow: 'hidden' },
+  heroTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 8 }, heroKickerGroup: { flexDirection: 'row', alignItems: 'center', gap: 6, flexShrink: 1 }, heroKicker: { color: appPalette.lime, fontSize: 11, fontWeight: '800' },
+  dupTag: { paddingHorizontal: 6, paddingVertical: 2, borderRadius: 8, borderWidth: 1 }, dupVol: { backgroundColor: '#2D3C23', borderColor: '#506936' }, dupTagText: { color: '#C9DCA7', fontSize: 9, fontWeight: '700' }, heroBadge: { color: appPalette.muted, fontSize: 10, flexShrink: 1, textAlign: 'right' },
+  heroIntro: { flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 12 }, heroIntroCopy: { flex: 1, minWidth: 0 }, heroTitle: { color: appPalette.text, fontSize: 18, lineHeight: 25, fontWeight: '900', letterSpacing: -.4 },
+  heroDesc: { color: appPalette.muted, fontSize: 12, lineHeight: 19, marginTop: 10 }, heroProgressHead: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 14, marginBottom: 7 }, heroProgressLabel: { color: appPalette.muted, fontSize: 11 }, heroProgressValue: { color: appPalette.lime, fontSize: 11, fontWeight: '800' },
+  heroProgressTrack: { height: 5, borderRadius: 3, backgroundColor: appPalette.border, overflow: 'hidden' }, heroProgressFill: { height: 5, borderRadius: 3, backgroundColor: appPalette.lime },
+  heroExpandRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', minHeight: 44 }, heroExpandText: { color: appPalette.muted, fontSize: 11, fontWeight: '700' }, heroExpandArrow: { color: appPalette.lime, fontSize: 16 },
+  heroDetails: { borderTopWidth: 1, borderTopColor: appPalette.border, paddingTop: 12, marginBottom: 8 }, heroDetailLabel: { color: appPalette.lime, fontSize: 11, fontWeight: '800' }, heroDetailText: { color: appPalette.muted, fontSize: 12, lineHeight: 20, marginTop: 6 },
+  todayWorkoutList: { gap: 8, marginTop: 4 }, heroExerciseRow: { flexDirection: 'row', padding: 10, alignItems: 'center', gap: 12, borderWidth: 1, borderColor: appPalette.border, backgroundColor: appPalette.card, borderRadius: 16 },
+  heroExerciseContent: { flex: 1, minWidth: 0 }, heroExerciseName: { ...progressPageLayout.actionTitle, color: appPalette.text, fontSize: 14, lineHeight: 20 }, heroExerciseMeta: { color: appPalette.muted, fontSize: 11, lineHeight: 17, marginTop: 5 }, heroAction: { marginTop: 6 },
+  scheduleHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 6, marginTop: 18, marginBottom: 10 }, scheduleTitle: { ...progressPageLayout.sectionTitle, color: appPalette.text }, scheduleActions: { flexDirection: 'row', alignItems: 'center', gap: 3 }, calendarDetails: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: appPalette.border, backgroundColor: appPalette.card },
+  scheduleDetailWrap: { marginTop: 4, marginBottom: 14 }, frequencyTrigger: { minHeight: 44, borderRadius: 22, backgroundColor: appPalette.card, borderWidth: 1, borderColor: appPalette.border, paddingHorizontal: 10, alignItems: 'center', justifyContent: 'center', flexShrink: 1 }, frequencyTriggerText: { color: appPalette.muted, fontSize: 10, fontWeight: '700' },
+  weightLossSchedule: { backgroundColor: appPalette.olive, borderRadius: 16, padding: 12, marginBottom: 12 }, weightLossScheduleTitle: { color: appPalette.lime, fontSize: 10, fontWeight: '800' }, weightLossScheduleMain: { color: appPalette.text, fontSize: 12, lineHeight: 19, fontWeight: '700', marginTop: 4 }, weightLossScheduleSep: { color: appPalette.muted }, weightLossScheduleNote: { color: appPalette.muted, fontSize: 10, lineHeight: 16, marginTop: 5 },
+  calendarRow: { flexDirection: 'row', gap: 4, marginBottom: 10 }, calendarDay: { flex: 1, minWidth: 0, height: 70, borderRadius: 12, backgroundColor: appPalette.card, borderWidth: 1, borderColor: appPalette.border, alignItems: 'center', justifyContent: 'center' }, calendarDayToday: { borderColor: appPalette.oliveBorder }, calendarDayActive: { backgroundColor: appPalette.lime, borderColor: appPalette.lime }, calendarWeek: { color: appPalette.muted, fontSize: 10, fontWeight: '700' }, calendarDate: { color: appPalette.text, fontSize: 17, fontWeight: '900', marginTop: 2 }, calendarTextActive: { color: appPalette.onLime }, calendarKind: { color: appPalette.muted, fontSize: 9, fontWeight: '700', marginTop: 5 }, calendarKindStrength: { color: appPalette.lime }, calendarKindCardio: { color: colors.blue },
+  frequencyBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,.72)', alignItems: 'center', justifyContent: 'center', padding: 16 }, frequencyCard: { width: '100%', maxWidth: 440, maxHeight: '92%', backgroundColor: appPalette.background, borderWidth: 1, borderColor: appPalette.border, borderRadius: 20, overflow: 'hidden' }, frequencyScroll: { flexShrink: 1 }, frequencyContent: { padding: 16 },
+  planPreview: { backgroundColor: appPalette.card, borderRadius: 16, padding: 14, marginTop: 16 }, planPreviewTitle: { color: appPalette.text, fontSize: 13, fontWeight: '800' }, planPreviewMeta: { color: appPalette.muted, fontSize: 11, lineHeight: 18, marginTop: 5, marginBottom: 7 }, planPreviewItem: { color: appPalette.text, fontSize: 12, lineHeight: 22 },
+  frequencyFooter: { paddingHorizontal: 16, paddingBottom: 13, paddingTop: 12, borderTopWidth: 1, borderTopColor: appPalette.border }, frequencyTitle: { ...progressPageLayout.title, color: appPalette.text }, frequencyInfo: { color: appPalette.muted, fontSize: 12, lineHeight: 19, marginTop: 7 }, frequencyOptions: { flexDirection: 'row', gap: 7, marginTop: 14 }, frequencySection: { color: appPalette.text, fontSize: 12, fontWeight: '800', marginTop: 15 },
+  frequencyOption: { flex: 1, minWidth: 0, height: 63, borderRadius: 12, backgroundColor: appPalette.card, borderWidth: 1, borderColor: appPalette.border, alignItems: 'center', justifyContent: 'center' }, frequencyOptionActive: { backgroundColor: appPalette.olive, borderColor: appPalette.lime }, frequencyNumber: { color: appPalette.text, fontSize: 20, fontWeight: '900' }, frequencyUnit: { color: appPalette.muted, fontSize: 10 }, frequencyUnitActive: { color: appPalette.lime },
+  experienceOptions: { flexDirection: 'row', gap: 7, marginTop: 9 }, experienceOption: { flex: 1, minHeight: 44, alignItems: 'center', justifyContent: 'center', borderRadius: 12, backgroundColor: appPalette.card, borderWidth: 1, borderColor: appPalette.border }, experienceText: { color: appPalette.text, fontSize: 11, fontWeight: '800' },
+  prisonerStageList: { gap: 8, marginTop: 12 }, prisonerStageCard: { backgroundColor: appPalette.card, borderRadius: 16, borderWidth: 1, borderColor: appPalette.border, padding: 14 }, prisonerStageCardActive: { borderColor: appPalette.lime, backgroundColor: appPalette.olive }, prisonerStageHead: { flexDirection: 'row', alignItems: 'center', gap: 8 }, prisonerStageTag: { backgroundColor: appPalette.raised, borderRadius: 6, paddingHorizontal: 7, paddingVertical: 3 }, prisonerStageTagActive: { backgroundColor: appPalette.lime }, prisonerStageTagText: { color: appPalette.muted, fontSize: 10, fontWeight: '800' }, prisonerStageTagTextActive: { color: appPalette.onLime }, prisonerStageName: { color: appPalette.text, fontSize: 13, fontWeight: '800', flexShrink: 1 }, prisonerStageNameActive: { color: appPalette.lime }, prisonerStageDesc: { color: appPalette.muted, fontSize: 11, lineHeight: 18, marginTop: 7 },
+  coachNoticeBox: { backgroundColor: appPalette.card, borderRadius: 12, padding: 12, marginTop: 10, borderWidth: 1, borderColor: appPalette.border }, coachNoticeText: { color: appPalette.muted, fontSize: 11, lineHeight: 18 }, coachSafetyWarning: { color: appPalette.warning, fontSize: 11, lineHeight: 18, fontWeight: '700', marginTop: 8 },
+  generationBox: { marginTop: 16, marginBottom: 12, gap: 8 }, generationLabel: { color: appPalette.text, fontSize: 11, fontWeight: '800' }, frequencyError: { color: appPalette.danger, fontSize: 11, lineHeight: 18, marginTop: 8 }, frequencyClose: { alignItems: 'center', minHeight: 44, justifyContent: 'center', marginTop: 8 }, frequencyCloseText: { color: appPalette.muted, fontSize: 12, fontWeight: '700' },
+  recoveryWrap: { marginTop: 12, borderRadius: 16, overflow: 'hidden', maxHeight: 360 },
 });

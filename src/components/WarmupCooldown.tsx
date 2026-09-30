@@ -1,9 +1,9 @@
 import React from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { colors, radius } from '../theme';
+import { appPalette, radius, progressPageLayout } from '../theme';
 import type { Exercise } from '../types';
 import { getWarmupActions } from '../data/trainingWarmup';
-import { ExercisePhoto } from './ExerciseResource';
+import { ExerciseMedia } from './ExerciseResource';
 
 type Phase = { title: string; minutes: number; details: string };
 
@@ -40,7 +40,7 @@ export function WarmupGuide({ minutes, items = [], onSkip, onComplete }: { minut
   return <View style={styles.container}><ScrollView contentContainerStyle={styles.content}>
     <Text style={styles.title}>训练前热身</Text><Text style={styles.subtitle}>约 {Math.ceil(minutes)} 分钟 · 已计入课程估时；热身不计入正式训练量</Text>
     {actions.map((action, index) => <View key={action.id} style={styles.warmupCard}>
-      {action.exercise ? <View style={styles.warmupPhoto}><ExercisePhoto exercise={action.exercise} resizeMode="contain" showShade={false} showTag={false} compact /></View> : null}
+      {action.exercise ? <ExerciseMedia exercise={action.exercise} framing="full" minHeight={100} maxHeight={220} /> : null}
       <View style={styles.cardBody}><Text style={styles.duration}>{String(index + 1).padStart(2, '0')} · {action.dose}</Text><Text style={[styles.phaseTitle, { marginTop: 8 }]}>{action.title}</Text><Text style={[styles.details, { marginTop: 8 }]}>{action.detail}</Text></View>
     </View>)}
     <Text style={styles.details}>热身次数为轻量起点，可按当天状态减少；不要把热身做成力竭测试。</Text>
@@ -58,21 +58,21 @@ export function CooldownGuide({ minutes, onComplete }: { minutes: number; onComp
 }
 
 const styles = StyleSheet.create({
-  warmupCard: { backgroundColor: colors.ink, borderRadius: radius.md, marginBottom: 12, overflow: 'hidden' }, warmupPhoto: { height: 150, backgroundColor: '#E9EDE1' },
-  container: { flex: 1, backgroundColor: '#0F1109' },
-  content: { padding: 20, paddingTop: 36, paddingBottom: 30, maxWidth: 720, width: '100%', alignSelf: 'center' },
-  title: { fontSize: 26, fontWeight: '900', color: colors.paper },
-  subtitle: { fontSize: 13, color: '#AAB59D', lineHeight: 20, marginTop: 8, marginBottom: 22 },
-  card: { flexDirection: 'row', backgroundColor: colors.ink, borderRadius: radius.md, marginBottom: 12, overflow: 'hidden' },
-  accent: { width: 4, backgroundColor: colors.lime },
+  warmupCard: { backgroundColor: appPalette.card, borderRadius: radius.md, marginBottom: 12, overflow: 'hidden' },
+  container: { flex: 1, backgroundColor: appPalette.background },
+  content: { padding: 16, paddingTop: 16, paddingBottom: 30, maxWidth: progressPageLayout.content.maxWidth, width: '100%', alignSelf: 'center' },
+  title: { fontSize: progressPageLayout.title.fontSize, fontWeight: '900', color: appPalette.text },
+  subtitle: { fontSize: 13, color: appPalette.muted, lineHeight: 20, marginTop: 8, marginBottom: 22 },
+  card: { flexDirection: 'row', backgroundColor: appPalette.card, borderRadius: radius.md, marginBottom: 12, overflow: 'hidden' },
+  accent: { width: 4, backgroundColor: appPalette.lime },
   cardBody: { flex: 1, padding: 16 },
   cardHead: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8, gap: 12 },
-  phaseTitle: { fontSize: 16, fontWeight: '800', color: colors.paper },
-  duration: { fontSize: 13, fontWeight: '800', color: colors.lime },
-  details: { fontSize: 13, lineHeight: 20, color: '#C9CBC5' },
-  footer: { flexDirection: 'row', padding: 18, paddingBottom: 34, gap: 10, borderTopWidth: 1, borderTopColor: '#34372F' },
-  secondary: { flex: 1, height: 48, borderRadius: radius.md, borderWidth: 1, borderColor: '#56594D', alignItems: 'center', justifyContent: 'center' },
-  secondaryText: { color: colors.paper, fontSize: 13, fontWeight: '700' },
-  primary: { flex: 2, height: 48, borderRadius: radius.md, backgroundColor: colors.lime, alignItems: 'center', justifyContent: 'center' },
-  primaryText: { color: '#0F1109', fontSize: 14, fontWeight: '900' },
+  phaseTitle: { fontSize: 16, fontWeight: '800', color: appPalette.text },
+  duration: { fontSize: 13, fontWeight: '800', color: appPalette.lime },
+  details: { fontSize: 13, lineHeight: 20, color: appPalette.muted },
+  footer: { width: '100%', maxWidth: progressPageLayout.content.maxWidth, alignSelf: 'center', flexDirection: 'row', padding: 16, paddingBottom: 24, gap: 10, borderTopWidth: 1, borderTopColor: appPalette.border },
+  secondary: { flex: 1, height: 48, borderRadius: radius.md, borderWidth: 1, borderColor: appPalette.border, alignItems: 'center', justifyContent: 'center' },
+  secondaryText: { color: appPalette.text, fontSize: 13, fontWeight: '700' },
+  primary: { flex: 2, height: 48, borderRadius: radius.md, backgroundColor: appPalette.lime, alignItems: 'center', justifyContent: 'center' },
+  primaryText: { color: appPalette.onLime, fontSize: 14, fontWeight: '900' },
 });

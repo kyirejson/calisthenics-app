@@ -6,6 +6,7 @@ node_modules/
 # Expo
 .expo/
 dist/
+/dist-release-check/
 web-build/
 expo-env.d.ts
 
@@ -56,3 +57,5 @@ credentials.json
 /apk-url.txt
 /*.apk
 /*.aab
+# Local book retrieval index; do not publish copyrighted source text.
+/server/private/

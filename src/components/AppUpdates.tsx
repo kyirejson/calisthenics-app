@@ -7,7 +7,7 @@ import { Button, ProgressBar } from './ui';
 import { colors } from '../theme';
 
 type Phase = 'idle' | 'checking' | 'available' | 'downloading' | 'ready' | 'current' | 'error';
-type UpdateContext = { phase: Phase; status: string; open: () => void; setSafeScreen: (safe: boolean) => void };
+type UpdateContext = { phase: Phase; status: string; open: () => void; setSafeScreen: (safe: boolean) => void; blockUpdates: () => () => void };
 const Context = createContext<UpdateContext | null>(null);
 export function useAppUpdates() { const value = useContext(Context); if (!value) throw new Error('Missing AppUpdatesProvider'); return value; }
 
@@ -22,11 +22,20 @@ export function AppUpdatesProvider({ children }: { children: React.ReactNode }) 
   const [message, setMessage] = useState('');
   const [foreground, setForeground] = useState(AppState.currentState === 'active');
   const safeRef = useRef(false);
+  const updateBlocks = useRef(new Set<symbol>());
+  const [blockCount, setBlockCount] = useState(0);
   const busy = useRef(false);
   const downloaded = useRef(false);
   const lastCheck = useRef(0);
   const prompted = useRef(new Set<string>());
   const setSafeScreen = useCallback((safe: boolean) => { safeRef.current = safe; setSafe(safe); }, []);
+  // Embedded editors can protect unsaved work without overriding the route's safety state.
+  const blockUpdates = useCallback(() => {
+    const token = Symbol('unsaved-editor');
+    updateBlocks.current.add(token);
+    setBlockCount(updateBlocks.current.size);
+    return () => { updateBlocks.current.delete(token); setBlockCount(updateBlocks.current.size); };
+  }, []);
 
   const check = useCallback(async (manual: boolean) => {
     if (!native || busy.current) return;
@@ -62,7 +71,7 @@ export function AppUpdatesProvider({ children }: { children: React.ReactNode }) 
     const listener = AppState.addEventListener('change', (state) => setForeground(state === 'active'));
     return () => listener.remove();
   }, []);
-  useEffect(() => { if (safeScreen && foreground) void check(false); }, [safeScreen, foreground, check]);
+  useEffect(() => { if (safeScreen && !blockCount && foreground) void check(false); }, [safeScreen, blockCount, foreground, check]);
   useEffect(() => {
     if (otaEnabled && updateState.isUpdatePending) { downloaded.current = true; setPhase('ready'); }
   }, [otaEnabled, updateState.isUpdatePending]);
@@ -83,7 +92,7 @@ export function AppUpdatesProvider({ children }: { children: React.ReactNode }) 
     finally { busy.current = false; }
   };
   const apply = async () => {
-    if (!canReloadUpdate(downloaded.current, safeRef.current, AppState.currentState === 'active') || busy.current) return;
+    if (!canReloadUpdate(downloaded.current, safeRef.current && updateBlocks.current.size === 0, AppState.currentState === 'active') || busy.current) return;
     busy.current = true;
     try { await Updates.reloadAsync(); }
     catch { busy.current = false; setPhase('error'); setMessage('重新加载失败，可关闭应用后重新打开，或稍后重试。'); }
@@ -91,9 +100,9 @@ export function AppUpdatesProvider({ children }: { children: React.ReactNode }) 
   const status = phase === 'checking' ? '正在检查…' : phase === 'downloading' ? '正在下载更新…' : phase === 'ready' ? '更新已下载，等待重新打开' : phase === 'available' ? apk ? `可更新到 v${apk.version}` : '发现内容更新' : phase === 'error' ? '检查或下载失败，点击重试' : !native ? '浏览器为本地开发预览' : !otaEnabled ? '安装包检查可用 · 热更新待连接服务／正式构建' : phase === 'current' ? '已是最新版本' : '检查安装包与内容更新';
   const title = phase === 'ready' ? '更新已准备好' : phase === 'available' ? '发现新版本' : phase === 'downloading' ? '正在下载更新' : phase === 'checking' ? '正在检查版本' : phase === 'error' ? '更新暂未完成' : '应用更新';
   const progress = updateState.downloadProgress;
-  return <Context.Provider value={{ phase, status, setSafeScreen, open: () => { if (phase === 'available' || phase === 'ready' || phase === 'downloading') setVisible(true); else void check(true); } }}>
+  return <Context.Provider value={{ phase, status, setSafeScreen, blockUpdates, open: () => { if (phase === 'available' || phase === 'ready' || phase === 'downloading') setVisible(true); else void check(true); } }}>
     {children}
-    <Modal visible={native && visible && safeScreen && foreground} transparent animationType="fade" onRequestClose={() => setVisible(false)}>
+    <Modal visible={native && visible && safeScreen && !blockCount && foreground} transparent animationType="fade" onRequestClose={() => setVisible(false)}>
       <View style={styles.backdrop}><View style={styles.card}>
         <Text style={styles.kicker}>UNCOVER · 应用更新</Text><Text style={styles.title}>{title}</Text>
         <Text style={styles.body}>{message || (phase === 'ready' ? '训练记录保留在本机。点击后重新打开应用，使更新生效。' : phase === 'available' ? apk ? `v${apk.version} · 此次需下载新版安装包。请先导出备份，再由系统确认覆盖安装，不要卸载旧版。` : '有适用于此安装包的内容更新。下载完成后，由你决定何时重新打开。' : status)}</Text>

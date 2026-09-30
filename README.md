@@ -41,6 +41,8 @@
 
 ## 本地开发
 
+`main` 分支还包含待发布的新版界面、营养助手与拍照记餐代码；上方 APK 链接仍指向已发布的 v1.3.0。新版需先完成公网营养服务验收，部署步骤见 [Render 部署说明](docs/RENDER-DEPLOY.md)。
+
 在现有项目 `calisthenics-app` 中运行：
 
 ```bash

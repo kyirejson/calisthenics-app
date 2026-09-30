@@ -66,15 +66,22 @@ export function getFinalFormProgress(statuses: ProgressionStatus[]) {
   return { unlocked, total, percent: total ? Math.round(unlocked / total * 100) : 0 };
 }
 
+/** Choosing a higher current level acknowledges earlier levels as passed. */
+export function getProgressionStageState(status: ProgressionStatus, index: number): 'passed' | 'current' | 'upcoming' {
+  return status.complete || index < status.level - 1 ? 'passed' : index === status.level - 1 ? 'current' : 'upcoming';
+}
+
 export function applyProgressionUnlock(profile: Profile, status: ProgressionStatus): Profile {
   const key = status.series.key;
+  // Reject stale / ineligible confirmations, but preserve freely chosen levels.
+  if (!status.eligible || status.complete || normalizedLevel(profile.levels[key], status.totalLevels) !== status.level) return profile;
   const nextLevel = status.level + 1;
   const chosenLevel = profile.planLevels?.[key];
   return {
     ...profile,
     levels: { ...profile.levels, [key]: nextLevel },
     // An explicit choice at another step belongs to the user. A choice that
-    // still matches the verified step can follow the newly unlocked route.
+    // still matches the current step can follow the newly unlocked route.
     planLevels: status.next && chosenLevel === status.level
       ? { ...profile.planLevels, [key]: nextLevel }
       : profile.planLevels,
@@ -115,31 +122,57 @@ export function parseMasteryCriteria(exercise: Exercise): MasteryCriteria {
   return { sets: exercise.defaultPrescription?.sets || 2, value: fallback, unit: 'reps', display, manual: true };
 }
 
+function normalizedLevel(value: number | undefined, totalLevels: number): number {
+  return Number.isInteger(value) && Number.isFinite(value) && Number(value) > 0 ? Math.min(Number(value), totalLevels + 1) : 1;
+}
+
 function sessionQualifies(session: TrainingSession, exercise: Exercise, criteria: MasteryCriteria) {
-  if (session.quality !== 'solid' || session.completion === 'partial') return false;
+  if (session.quality !== 'solid' || session.completion !== 'complete') return false;
   if (session.workoutId !== `single_${exercise.id}` || session.exercises.length !== 1) return false;
-  const logged = session.exercises.find((item) => item.exerciseId === exercise.id);
+  const logged = session.exercises.find((item) => item?.exerciseId === exercise.id);
   if (!logged) return false;
-  if (criteria.manual && !logged.constraintsConfirmed) return false;
-  const completed = logged.sets.filter((set) => set.completed && (set.unit || criteria.unit) === criteria.unit);
+  if (criteria.manual && logged.constraintsConfirmed !== true) return false;
+  if (!Array.isArray(logged.sets)) return false;
+  const completedAt = Date.parse(session.completedAt);
+  const startedAt = session.startedAt ? Date.parse(session.startedAt) : 0;
+  const completed = logged.sets.filter(set => {
+    if (!set || set.completed !== true) return false;
+    const unit = set.unit || logged.targetSnapshot?.unit || 'reps';
+    if (unit !== criteria.unit || !Number.isFinite(set.reps) || set.reps <= 0 || (unit !== 'meters' && !Number.isInteger(set.reps))) return false;
+    if (set.completedAt) {
+      const at = Date.parse(set.completedAt);
+      if (!Number.isFinite(at) || at > completedAt || at < startedAt) return false;
+    }
+    return true;
+  });
   return completed.length >= criteria.sets && completed.slice(0, criteria.sets).every((set) => set.reps >= criteria.value);
 }
 
-export function getProgressionStatus(seriesKey: string, profile: Profile, sessions: TrainingSession[]): ProgressionStatus | null {
+export function getProgressionStatus(seriesKey: string, profile: Pick<Profile, 'levels'>, sessions: TrainingSession[], now = new Date()): ProgressionStatus | null {
   const series = progressionSeries.find((item) => item.key === seriesKey);
   const seriesExercises = getSeriesExercises(seriesKey);
   if (!series || !seriesExercises.length) return null;
   const finalStep = coreFinalSteps[seriesKey];
   const terminalIndex = finalStep ? seriesExercises.findIndex((exercise) => exercise.step === finalStep) + 1 : seriesExercises.length;
   const totalLevels = terminalIndex > 0 ? terminalIndex : seriesExercises.length;
-  const storedLevel = Math.max(1, profile.levels[seriesKey] || 1);
+  const storedLevel = normalizedLevel(profile.levels[seriesKey], totalLevels);
   const complete = storedLevel > totalLevels;
   const level = Math.min(storedLevel, totalLevels);
   const current = seriesExercises[level - 1];
   const criteria = parseMasteryCriteria(current);
-  const recent = sessions
-    .filter((session) => session.kind !== 'running' && session.workoutId === `single_${current.id}` && session.exercises.length === 1)
-    .sort((left, right) => new Date(right.completedAt).getTime() - new Date(left.completedAt).getTime());
+  const unique = new Map<string, TrainingSession>();
+  for (const session of sessions) {
+    if (!session || session.kind === 'running' || session.workoutId !== `single_${current.id}`
+      || !Array.isArray(session.exercises) || session.exercises.length !== 1 || typeof session.id !== 'string' || !session.id.trim()) continue;
+    const previous = unique.get(session.id);
+    const at = Date.parse(session.completedAt);
+    if (!previous || (Number.isFinite(at) && (!Number.isFinite(Date.parse(previous.completedAt)) || at > Date.parse(previous.completedAt)))) unique.set(session.id, session);
+  }
+  const recent = [...unique.values()].filter(session => {
+    const at = Date.parse(session.completedAt);
+    const start = session.startedAt ? Date.parse(session.startedAt) : at;
+    return Number.isFinite(at) && Number.isFinite(start) && start <= at && at <= now.getTime();
+  }).sort((left, right) => Date.parse(right.completedAt) - Date.parse(left.completedAt));
   let qualifiedSessions = 0;
   let lastCountedAt = Number.POSITIVE_INFINITY;
   for (const session of recent) {

@@ -27,6 +27,11 @@ jobs:
       - run: npm run typecheck
       - run: npm run test:domain
       - run: npm run test:updates
+      - run: npm run test:history
+      - run: npm run test:run
+      - run: npm run test:weight
+      - run: npm run test:nutrition
+      - run: npm run test:nutrition-service
       - name: Build with existing dedicated signing credentials
         run: npx eas-cli@24.8.0 build --platform android --profile production --non-interactive --freeze-credentials --wait --json > build-result.json
       - name: Download completed APK

@@ -3,6 +3,7 @@ node_modules/
 .git
 .expo/
 dist/
+/dist-release-check/
 web-build/
 expo-env.d.ts
 .kotlin/
@@ -35,11 +36,15 @@ credentials.json
 /*.aab
 *.keystore
 /docs/
+/server/
 /*.md
 /.github/
 /scripts/*.py
 /scripts/*.json
 /scripts/*.md
+/scripts/test-*.cjs
+/scripts/smoke-*.cjs
+/scripts/nutrition-smoke-utils.cjs
 /scripts/*subagent*
 /scripts/*demon*
 /scripts/*book*

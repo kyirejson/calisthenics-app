@@ -1,6 +1,6 @@
 import React from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { colors, radius } from '../theme';
+import { fitnessColors as colors, appPalette, radius, progressPageLayout } from '../theme';
 import type { Profile } from '../types';
 
 const tips = [
@@ -36,23 +36,23 @@ export function PrehabGuideModal({ visible, onClose, profile }: { visible: boole
 }
 
 const styles = StyleSheet.create({
-  backdrop: { flex: 1, backgroundColor: 'rgba(12,15,10,0.65)', justifyContent: 'flex-end' },
-  sheet: { backgroundColor: colors.paper, borderTopLeftRadius: radius.lg, borderTopRightRadius: radius.lg, maxHeight: '84%', paddingBottom: 22 },
-  handle: { width: 38, height: 4, borderRadius: 2, backgroundColor: '#C7C7BE', alignSelf: 'center', marginTop: 10 },
+  backdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.72)', justifyContent: 'flex-end', alignItems: 'center' },
+  sheet: { width: '100%', maxWidth: progressPageLayout.content.maxWidth, backgroundColor: colors.paper, borderTopLeftRadius: radius.lg, borderTopRightRadius: radius.lg, maxHeight: '84%', paddingBottom: 22 },
+  handle: { width: 38, height: 4, borderRadius: 2, backgroundColor: colors.line, alignSelf: 'center', marginTop: 10 },
   header: { flexDirection: 'row', alignItems: 'flex-start', paddingHorizontal: 20, paddingTop: 20, paddingBottom: 17 },
   eyebrow: { color: colors.green, fontSize: 10, fontWeight: '900', letterSpacing: 1 },
   title: { color: colors.ink, fontSize: 21, fontWeight: '900', marginTop: 6 },
   subtitle: { color: colors.inkMuted, fontSize: 11, lineHeight: 17, marginTop: 5 },
-  close: { width: 35, height: 35, borderRadius: 18, backgroundColor: colors.card, alignItems: 'center', justifyContent: 'center' },
+  close: { width: 44, height: 44, borderRadius: 22, backgroundColor: colors.card, alignItems: 'center', justifyContent: 'center' },
   closeText: { fontSize: 25, color: colors.inkMuted },
   content: { paddingHorizontal: 18, paddingBottom: 12, gap: 9 },
   card: { backgroundColor: colors.card, borderRadius: radius.md, borderWidth: 1, borderColor: colors.line, padding: 15, flexDirection: 'row', gap: 11 },
   cardNumber: { color: colors.green, fontSize: 12, fontWeight: '900', width: 22, marginTop: 2 },
   cardContent: { flex: 1 }, cardTitle: { color: colors.ink, fontSize: 14, fontWeight: '900' },
   cardBody: { color: colors.inkMuted, fontSize: 12, lineHeight: 19, marginTop: 6 },
-  notice: { borderRadius: radius.md, backgroundColor: '#EBEEE3', padding: 14 },
+  notice: { borderRadius: radius.md, backgroundColor: appPalette.raised, padding: 14 },
   noticeTitle: { color: colors.ink, fontSize: 11, fontWeight: '900' },
   noticeText: { color: colors.inkMuted, fontSize: 11, lineHeight: 17, marginTop: 5 },
   action: { marginHorizontal: 18, marginTop: 6, height: 48, backgroundColor: colors.lime, borderRadius: radius.md, alignItems: 'center', justifyContent: 'center' },
-  actionText: { color: colors.ink, fontSize: 14, fontWeight: '900' },
+  actionText: { color: appPalette.onLime, fontSize: 14, fontWeight: '900' },
 });

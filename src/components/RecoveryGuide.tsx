@@ -1,6 +1,6 @@
 import React from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
-import { colors, radius } from '../theme';
+import { fitnessColors as colors, appPalette, radius } from '../theme';
 import type { Profile } from '../types';
 
 export function RecoveryDayContent({
@@ -61,11 +61,11 @@ export function RecoveryDayContent({
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F7F8F3' },
+  container: { flex: 1, backgroundColor: colors.paper },
   content: { padding: 14, gap: 10 },
   card: { backgroundColor: colors.card, borderRadius: radius.md, borderWidth: 1, borderColor: colors.line, padding: 14 },
   title: { color: colors.ink, fontSize: 14, fontWeight: '900' },
   body: { color: colors.inkMuted, fontSize: 12, lineHeight: 19, marginTop: 6 },
-  notice: { padding: 14, borderRadius: radius.md, backgroundColor: '#FFF5DF' },
-  noticeText: { color: '#715A31', fontSize: 12, lineHeight: 19 },
+  notice: { padding: 14, borderRadius: radius.md, backgroundColor: appPalette.warningBackground },
+  noticeText: { color: appPalette.warning, fontSize: 12, lineHeight: 19 },
 });

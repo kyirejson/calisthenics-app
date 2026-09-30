@@ -1,0 +1,16 @@
+services:
+  - type: web
+    name: uncover-nutrition-api
+    runtime: node
+    plan: free
+    buildCommand: node --version
+    startCommand: node server/index.mjs
+    healthCheckPath: /health
+    autoDeployTrigger: off
+    envVars:
+      - key: NODE_VERSION
+        value: 24.15.0
+      - key: NUTRITION_DEPLOYMENT
+        value: render
+      - key: DEEPSEEK_API_KEY
+        sync: false

@@ -19,7 +19,6 @@ const plans = require('../src/data/trainingPlans.ts');
 const { estimateStrengthSession } = require('../src/data/trainingPrescription.ts');
 const { buildPlanDraft, generatePersonalPlan } = require('../src/data/personalPlan.ts');
 const { getCalendarMonths, getDayTrainingState, getDisplayedSchedule } = require('../src/data/planProgress.ts');
-const { calculateNutritionPlan } = require('../src/data/nutritionPlanner.ts');
 const { trainingGoals } = require('../src/data/trainingGoals.ts');
 const { recordWeight, suggestedPlanningWeight, summarizeWeightTrend } = require('../src/data/weightTrend.ts');
 const { headstandReadiness, cleanSession, normalizeTrainingSessions, dailyWorkoutKey, withoutTrainingDay, trainingDateKey } = require('../src/data/sessionRecords.ts');
@@ -301,7 +300,13 @@ test('unilateral actions require explicit full-standard confirmation', () => {
 });
 
 test('verified progression advances only the matching training variant', () => {
-  const status = progression.getProgressionStatus('push', { ...profile, planLevels: { push: 1 } }, []);
+  const current = progression.getProgressionStatus('push', profile, []);
+  const records = ['2026-09-21T09:00:00Z', '2026-09-22T10:00:00Z'].map(at => ({
+    id: at, completedAt: at, kind: 'strength', workoutId: `single_${current.current.id}`, quality: 'solid', completion: 'complete',
+    exercises: [{ exerciseId: current.current.id, constraintsConfirmed: true, sets: Array.from({ length: current.criteria.sets }, () => ({ reps: current.criteria.value, unit: current.criteria.unit, completed: true })) }],
+  }));
+  const status = progression.getProgressionStatus('push', { ...profile, planLevels: { push: 1 } }, records);
+  assert.equal(status.eligible, true);
   const next = progression.applyProgressionUnlock({ ...profile, planLevels: { push: 1 } }, status);
   assert.equal(next.levels.push, 2);
   assert.equal(next.planLevels.push, 2);
@@ -615,7 +620,7 @@ test('plan uses practical doses, adequate rest and independent variant selection
   assert.equal(getWorkoutExercises('fullA', manual).find((item) => item.category === 'squat').name, '标准深蹲');
   assert.equal(getWorkoutExercises('fullB', manual).find((item) => item.category === 'pull').step, 2);
   assert.ok(getWorkoutExercises('fullB', manual).every((item) => item.restSeconds >= 180));
-  assert.equal(progression.getProgressionStatus('push', manual, []).current.step, 1, 'manual selection must not fake mastery');
+  assert.equal(progression.getProgressionStatus('push', manual, []).current.step, 1, 'a plan-only action choice does not change the current progression level');
   assert.equal(getWorkoutExercises('fullB', { ...beginner, planLevels: { hspu: 1, planche: 1 }, sessionMinutes: 60 }).some((item) => ['hspu', 'planche'].includes(item.category)), false, 'removed skill plans must not reappear in weight-loss courses');
 });
 
@@ -683,36 +688,6 @@ test('session estimate counts warmup, work, rest, transitions and cooldown', () 
   assert.equal(estimate.totalSeconds, estimate.warmupSeconds + estimate.workSeconds + estimate.restSeconds + estimate.transitionsSeconds + estimate.cooldownSeconds);
   assert.ok(estimate.restSeconds > 0);
   assert.equal(estimate.totalMinutes, Math.ceil(estimate.totalSeconds / 60));
-});
-
-test('nutrition blocks restrictive targets for minors and low BMI', () => {
-  assert.equal(calculateNutritionPlan({ ...profile, age: 16, nutritionGoal: 'rapid_loss' }, true).safetyLevel, 'blocked');
-  assert.equal(calculateNutritionPlan({ ...profile, weight: 45, dietPattern: 'keto' }, false).safetyLevel, 'blocked');
-});
-
-test('nutrition day comparison uses the same personalized calorie targets shown for each day', () => {
-  const training = calculateNutritionPlan({ ...profile, nutritionGoal: 'performance', frequency: 4 }, true);
-  const recovery = calculateNutritionPlan({ ...profile, nutritionGoal: 'performance', frequency: 4 }, false);
-  assert.equal(training.targetCalories, training.trainingDayCalories);
-  assert.equal(recovery.targetCalories, recovery.restDayCalories);
-  assert.equal(training.trainingDayCalories, recovery.trainingDayCalories);
-  assert.equal(training.restDayCalories, recovery.restDayCalories);
-  assert.ok(training.trainingDayCalories >= training.restDayCalories);
-});
-
-test('weight-loss energy uses a modest BMI and age-sensitive deficit with safety guards', () => {
-  const base = { ...profile, goal: 'weight_loss', nutritionGoal: 'rapid_loss', dietPattern: 'balanced_cn', frequency: 4 };
-  const nearNormal = calculateNutritionPlan(base, true);
-  const higherBmi = calculateNutritionPlan({ ...base, weight: 105 }, true);
-  const older = calculateNutritionPlan({ ...base, weight: 105, age: 65 }, true);
-  const lean = calculateNutritionPlan({ ...base, weight: 65 }, true);
-  assert.ok(nearNormal.weeklyMeanCalories <= nearNormal.tdee * 0.91 && nearNormal.weeklyMeanCalories >= nearNormal.tdee * 0.89);
-  assert.ok(higherBmi.weeklyMeanCalories <= higherBmi.tdee * 0.83 && higherBmi.weeklyMeanCalories >= higherBmi.tdee * 0.81);
-  assert.ok(older.weeklyMeanCalories >= older.tdee * 0.89);
-  assert.equal(lean.goal, 'maintain');
-  assert.equal(lean.safetyLevel, 'warning');
-  assert.ok(higherBmi.protein >= 1.3 * higherBmi.referenceWeight);
-  assert.ok(higherBmi.fat >= 0.6 * higherBmi.referenceWeight);
 });
 
 test('weight trend replaces same-day entries and waits for two reliable weeks', () => {

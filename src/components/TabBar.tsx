@@ -56,9 +56,9 @@ export function TabBar({ active, onChange }: { active: TabKey; onChange: (tab: T
 }
 
 const styles = StyleSheet.create({
-  wrap: { position: 'absolute', left: 16, right: 16, bottom: 12 },
-  bar: { height: 74, borderRadius: radius.lg, backgroundColor: '#171914', flexDirection: 'row', paddingHorizontal: 8, alignItems: 'center', shadowColor: '#000', shadowOpacity: 0.22, shadowRadius: 18, shadowOffset: { width: 0, height: 8 }, elevation: 10 },
-  item: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 3 },
+  wrap: { position: 'absolute', left: 0, right: 0, bottom: 12, paddingHorizontal: 16, alignItems: 'center', pointerEvents: 'box-none' },
+  bar: { width: '100%', maxWidth: 408, height: 74, borderRadius: radius.lg, backgroundColor: '#171C20', borderWidth: 1, borderColor: '#343C48', flexDirection: 'row', paddingHorizontal: 8, alignItems: 'center', shadowColor: '#000', shadowOpacity: 0.22, shadowRadius: 18, shadowOffset: { width: 0, height: 8 }, elevation: 10 },
+  item: { flex: 1, minHeight: 54, alignItems: 'center', justifyContent: 'center', gap: 3 },
   icon: { width: 30, height: 26, alignItems: 'center', justifyContent: 'center', borderRadius: 12 },
   iconActive: { backgroundColor: colors.lime },
   label: { color: '#8E9188', fontSize: 11, fontWeight: '700' },

@@ -13,7 +13,7 @@ import { ProgressScreen } from './src/screens/ProgressScreen';
 import { RunScreen } from './src/screens/RunScreen';
 import { TodayScreen } from './src/screens/TodayScreen';
 import { TrainingScreen } from './src/screens/TrainingScreen';
-import { colors } from './src/theme';
+import { colors, progressPageLayout } from './src/theme';
 import { AppUpdatesProvider, useAppUpdates } from './src/components/AppUpdates';
 import type { Route } from './src/types';
 import { confirmAction } from './src/utils/confirm';
@@ -99,9 +99,9 @@ function AppShell() {
   useEffect(() => {
     // web 端滚动回弹会露出 body 背景；让 body 始终跟随当前屏的主色，避免深色屏底部出现白条。
     if (Platform.OS !== 'web' || typeof document === 'undefined') return;
-    const bg = !profile ? colors.ink : route.name === 'run' ? '#151712' : colors.paper;
+    const bg = !profile ? colors.ink : progressPageLayout.background;
     document.body.style.backgroundColor = bg;
-  }, [profile, route.name]);
+  }, [profile, route.name, tab]);
 
   if (!ready) return <View style={styles.loading}><ActivityIndicator color={colors.ink} size="large" /></View>;
   if (!profile) return <><StatusBar style="light" /><OnboardingScreen /></>;
@@ -109,9 +109,10 @@ function AppShell() {
   if (route.name === 'exercise') return <><StatusBar style="light" /><ExerciseDetailScreen exerciseId={route.exerciseId} onBack={returnToTabs} onStart={(exerciseId) => setRoute({ name: 'training', workoutId: `single_${exerciseId}`, exerciseId })} /></>;
   if (route.name === 'training') return <><StatusBar style="light" /><TrainingScreen workoutId={route.workoutId} exerciseId={route.exerciseId} setMultiplier={route.setMultiplier} rirTarget={route.rirTarget} onBack={returnFromActiveSession} onComplete={() => { setTab('today'); returnToTabs(); }} /></>;
   if (route.name === 'run') return <><StatusBar style="light" /><RunScreen onBack={leaveActiveSession} onComplete={() => { setTab('today'); returnToTabs(); }} /></>;
-  if (route.name === 'nutrition') return <NutritionScreen onBack={returnToTabs} />;
+  if (route.name === 'nutrition') return <><StatusBar style="light" /><NutritionScreen onBack={returnToTabs} /></>;
 
-  return <View style={styles.root}>
+  return <View style={[styles.root, { backgroundColor: progressPageLayout.background }]}>
+    <StatusBar style="light" />
     {tab === 'today' ? <TodayScreen onStart={(workoutId, setMultiplier, rirTarget) => setRoute({ name: 'training', workoutId, setMultiplier, rirTarget })} onRun={() => setRoute({ name: 'run' })} onNutrition={() => setRoute({ name: 'nutrition' })} onOpenExercise={(exerciseId) => setRoute({ name: 'exercise', exerciseId })} /> : null}
     {tab === 'progress' ? <ProgressScreen onOpen={(exerciseId) => setRoute({ name: 'exercise', exerciseId })} /> : null}
     {tab === 'data' ? <DataScreen onOpenExercise={(exerciseId) => setRoute({ name: 'exercise', exerciseId })} /> : null}

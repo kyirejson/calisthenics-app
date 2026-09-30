@@ -4,9 +4,9 @@ import { getWorkout, getWorkoutExercises, workoutDisplayTitle } from '../data/ca
 import type { ScheduledDay } from '../data/planProgress';
 import { getPlanDay, plannedCardioMinutes } from '../data/trainingPlans';
 import { estimateStrengthSession, preferredSessionMinutes } from '../data/trainingPrescription';
-import { colors, radius } from '../theme';
+import { appPalette, fitnessColors as colors, radius } from '../theme';
 import type { Profile, TrainingSession } from '../types';
-import { ExercisePhoto } from './ExerciseResource';
+import { ExerciseMedia } from './ExerciseResource';
 import { RecoveryDayContent } from './RecoveryGuide';
 import { dailyWorkoutKey, trainingDateKey } from '../data/sessionRecords';
 import { useAppStore } from '../store/AppStore';
@@ -26,7 +26,7 @@ export function ScheduleDayDetail({ profile, day, sessions, onOpenExercise }: {
   const exercises = workout && cycle ? getWorkoutExercises(workout.id, profile, cycle.setMultiplier, cycle.dupDay, cycle.week, { sessions, date: at, addedExerciseIds: addedIds }) : [];
   const estimate = workout ? estimateStrengthSession(exercises, preferredSessionMinutes(profile), profile.goal === 'street_mastery') : null;
 
-  return <View style={styles.card}>
+  return <View testID="schedule-day-detail" style={styles.card}>
     <Text style={styles.title}>{workoutDisplayTitle(day.title, exercises)}</Text>
     {estimate ? <Text style={styles.meta}>{exercises.length} 个动作 · 预计 {estimate.totalMinutes} 分钟 · 点击动作查看图解与技巧</Text> : null}
     <View style={styles.tip}><Text style={styles.tipLabel}>{day.type === 'recovery' ? '恢复建议' : '注意事项'}</Text><Text style={styles.tipText}>{day.tip}</Text></View>
@@ -36,26 +36,24 @@ export function ScheduleDayDetail({ profile, day, sessions, onOpenExercise }: {
       <View style={styles.exerciseMain}><Text style={styles.exerciseOrder}>轻松活动</Text><Text style={styles.exerciseName}>{profile.goal === 'weight_loss' || profile.goal === 'street_mastery' ? '快走或舒适骑行' : '快走或轻松跑'}</Text><Text style={styles.exerciseMeta}>活动 {day.targetMinutes || plannedCardioMinutes(profile)} 分钟 · 另留 8 分钟热身与整理</Text></View>
     </View> : null}
     {exercises.map((exercise, index) => <Pressable accessibilityRole="button" accessibilityLabel={`查看${exercise.name}动作指导`} onPress={() => onOpenExercise(exercise.id)} key={`${exercise.id}-${index}`} style={styles.exercise}>
-      <View style={styles.exerciseImage}><ExercisePhoto exercise={exercise} resizeMode="contain" showShade={false} showTag={false} compact style={styles.exercisePhoto} /></View>
+      <ExerciseMedia exercise={exercise} width={82} minHeight={56} maxHeight={96} />
       <View style={styles.exerciseMain}><Text style={styles.exerciseOrder}>动作 {String(index + 1).padStart(2, '0')}</Text><Text style={styles.exerciseName}>{exercise.name}</Text><Text style={styles.exerciseMeta}>{exercise.targetSets} 组 × {exercise.targetValue} {exercise.targetUnit === 'seconds' ? '秒' : exercise.targetUnit === 'meters' ? '米' : exercise.targetUnit === 'steps' ? '步' : '次'}{exercise.id === 'aux_singleLegCalf' ? '（左右合计）' : ''} · 休息 {exercise.restSeconds} 秒</Text></View><Text style={styles.exerciseArrow}>›</Text>
     </Pressable>)}
   </View>;
 }
 
 const styles = StyleSheet.create({
-  card: { backgroundColor: colors.card, borderWidth: 1, borderColor: colors.line, borderRadius: radius.md, padding: 16 },
-  title: { color: colors.ink, fontSize: 18, fontWeight: '900' },
+  card: { backgroundColor: colors.card, borderWidth: 1, borderColor: colors.line, borderRadius: 20, padding: 14 },
+  title: { color: colors.ink, fontSize: 16, fontWeight: '800', lineHeight: 23 },
   meta: { color: colors.inkMuted, fontSize: 11, marginTop: 4 },
-  tip: { backgroundColor: '#F2F5E8', borderRadius: radius.sm, padding: 11, marginTop: 12 },
+  tip: { backgroundColor: appPalette.olive, borderRadius: radius.sm, padding: 11, marginTop: 12 },
   tipLabel: { color: colors.green, fontSize: 10, fontWeight: '900' },
   tipText: { color: colors.ink, fontSize: 11, lineHeight: 17, marginTop: 4 },
   recoveryWrap: { marginTop: 10 },
-  exercise: { flexDirection: 'row', alignItems: 'center', borderTopWidth: 1, borderTopColor: colors.line, marginTop: 12, paddingTop: 12 },
-  exerciseImage: { width: 78, height: 72, borderRadius: 12, overflow: 'hidden', backgroundColor: '#F0F0EA', marginRight: 12 },
-  cardioImage: { width: 78, height: 72, borderRadius: 12, backgroundColor: '#E9F3E5', marginRight: 12, alignItems: 'center', justifyContent: 'center' },
+  exercise: { flexDirection: 'row', alignItems: 'center', gap: 10, borderTopWidth: 1, borderTopColor: colors.line, marginTop: 12, paddingTop: 12 },
+  cardioImage: { width: 78, height: 72, borderRadius: 12, backgroundColor: appPalette.olive, alignItems: 'center', justifyContent: 'center' },
   cardioIcon: { fontSize: 34 },
-  exercisePhoto: { backgroundColor: '#F0F0EA' },
-  exerciseMain: { flex: 1 },
+  exerciseMain: { flex: 1, minWidth: 0 },
   exerciseOrder: { color: colors.limeDark, fontSize: 9, fontWeight: '900' },
   exerciseName: { color: colors.ink, fontSize: 13, fontWeight: '900', marginTop: 4 },
   exerciseMeta: { color: colors.inkMuted, fontSize: 10, lineHeight: 15, marginTop: 4 },

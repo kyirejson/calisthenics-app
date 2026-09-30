@@ -1,282 +1,270 @@
-import React, { useState } from 'react';
-import { Linking, Pressable, SafeAreaView, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
-import { calculateNutritionPlan, dietPatterns } from '../data/nutritionPlanner';
-import { getPlanDay, RETIRED_PLAN_ID } from '../data/trainingPlans';
-import { recordWeight, suggestedPlanningWeight, summarizeWeightTrend } from '../data/weightTrend';
+import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { AppState, Linking, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import Svg, { Circle } from 'react-native-svg';
+import { Card, Page } from '../components/ui';
+import { AppGlyph, type GlyphName } from '../components/AppGlyph';
+import { NutritionSetupModal } from '../components/nutrition/NutritionSetupModal';
+import { IntakeEditor } from '../components/nutrition/IntakeEditor';
+import { FoodCameraModal } from '../components/nutrition/FoodCameraModal';
+import { PhotoIntakeEditor } from '../components/nutrition/PhotoIntakeEditor';
+import { NutritionAgentModal } from '../components/nutrition/NutritionAgentModal';
+import { LoggingCompletenessControls } from '../components/nutrition/NutritionLoopCards';
+import { MealArtwork } from '../components/nutrition/MealArtwork';
+import { mealFoodArtwork } from '../nutrition/foodArtwork';
+import { WeightTrendChart } from '../components/nutrition/WeightTrendChart';
+import { photoPortionSummary, photoUsesOnlyLabels, summarizePhotoEstimate, type PhotoEstimate } from '../nutrition/vision';
+import { withCapturedPhoto, type CapturedNutritionPhoto } from '../nutrition/photoStorage';
+import { NutritionPhotoView } from '../components/nutrition/NutritionPhotoView';
+import { useAppUpdates } from '../components/AppUpdates';
+import { localWeightDate, recordWeight, suggestedPlanningWeight, summarizeWeightTrend } from '../data/weightTrend';
+import { FOODS, FOOD_DATA_VERSION } from '../nutrition/catalog';
+import { sumNutrients } from '../nutrition/engine';
+import { buildNutritionMenu, prepareMealAdjustment } from '../nutrition/adjustments';
+import { getNutritionTrainingContext, trainingTimeLabels } from '../nutrition/training';
+import { latestNutritionTarget, summarizeNutritionWeek } from '../nutrition/timeline';
+import { MEAL_SLOTS } from '../nutrition/state';
+import { summarizeMealSlots } from '../nutrition/presentation';
+import { offsetDate } from '../nutrition/validation';
+import { NUTRITION_KNOWLEDGE, OBJECTIVE_EXPLANATIONS } from '../nutrition/knowledge';
+import { objectiveLabels, patternLabels, slotLabels } from '../nutrition/labels';
+import type { IntakeEntry, MealSlot, NutritionAgentAction, NutritionTargetSnapshot } from '../nutrition/types';
 import { useAppStore } from '../store/AppStore';
-import { colors, radius } from '../theme';
-import type { DietPattern } from '../types';
+import { appPalette, fitnessColors as colors, progressPageLayout } from '../theme';
 import { confirmAction, showMessage } from '../utils/confirm';
 
-export function NutritionScreen({ onBack }: { onBack: () => void }) {
-  const { profile, saveProfile } = useAppStore();
-  const [pattern, setPattern] = useState<DietPattern>(profile?.dietPattern || 'balanced_cn');
-  const [showEvidence, setShowEvidence] = useState(false);
-  const latestRecordedWeight = profile?.weightHistory?.[profile.weightHistory.length - 1]?.kg;
-  const [weightEntry, setWeightEntry] = useState(latestRecordedWeight ? String(latestRecordedWeight) : profile?.weight ? String(profile.weight) : '');
-  const [savingWeight, setSavingWeight] = useState(false);
-  if (!profile) return null;
-  if ((profile.goal !== 'weight_loss' && profile.goal !== 'street_mastery') || profile.planId === RETIRED_PLAN_ID) return <SafeAreaView style={styles.safe}>
-    <View style={styles.top}><Pressable onPress={onBack} style={styles.back}><Text style={styles.backText}>‹</Text></Pressable><Text style={styles.title}>今日能量</Text><View style={{ width: 42 }} /></View>
-    <View style={styles.unavailable}><Text style={styles.unavailableTitle}>当前目标暂无今日能量计划</Text><Text style={styles.unavailableText}>旧训练计划已移除，原档案仍保留。请返回今日页，主动选择减肥控重或囚徒健身六艺专题。</Text></View>
-  </SafeAreaView>;
-  const prisoner = profile.goal === 'street_mastery';
-  const activeNutritionGoal = prisoner ? 'performance' as const : 'rapid_loss' as const;
-  const todayPlan = getPlanDay(profile);
-  const today = todayPlan.day;
-  const isTrainingDay = today.type === 'strength' || today.type === 'cardio';
-  const draftProfile = { ...profile, frequency: todayPlan.plan.frequency, nutritionGoal: activeNutritionGoal, dietPattern: pattern };
-  const plan = calculateNutritionPlan(draftProfile, isTrainingDay);
-  const dayDifference = plan.trainingDayCalories - plan.restDayCalories;
-  const weightLossView = profile.age >= 18 && plan.goal === 'rapid_loss' && plan.safetyLevel !== 'blocked';
-  const trend = weightLossView ? summarizeWeightTrend(profile.weightHistory) : null;
-  const baselineCandidate = trend ? suggestedPlanningWeight(profile.weight, trend) : null;
-  const persistWeight = async (kg: number) => {
-    setSavingWeight(true);
-    try {
-      await saveProfile({ ...profile, weightHistory: recordWeight(profile.weightHistory, kg) });
-      setWeightEntry(String(kg));
-    } catch {
-      showMessage('保存失败', '今日体重没有保存，请稍后重试。');
-    } finally {
-      setSavingWeight(false);
-    }
+const rounded = (value: number) => Math.round(value);
+
+export function NutritionScreen({ onBack, embedded = false }: { onBack: () => void; embedded?: boolean }) {
+  const { profile, sessions, dailyEdits, nutritionJournal, nutritionStorageIssue, saveIntakeEntry, deleteIntakeEntry, saveProfile,
+    captureNutritionTarget, confirmNutritionLogging, applyNutritionMealDraft } = useAppStore();
+  const { blockUpdates } = useAppUpdates();
+  const [today, setToday] = useState(() => localWeightDate(new Date()));
+  const [chosenDate, setChosenDate] = useState<string | null>(null);
+  const [showSetup, setShowSetup] = useState(false);
+  const [editor, setEditor] = useState<{ date: string; entry?: IntakeEntry } | null>(null);
+  const [cameraDate, setCameraDate] = useState<string | null>(null);
+  const [showAgent, setShowAgent] = useState(false);
+  const [showKnowledge, setShowKnowledge] = useState(false);
+  const [showTargetHistory, setShowTargetHistory] = useState(false);
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [recordSlot, setRecordSlot] = useState<MealSlot | 'all' | null>(null);
+  const [historyError, setHistoryError] = useState('');
+  const [showWeight, setShowWeight] = useState(false);
+  const [weight, setWeight] = useState('');
+  const [busy, setBusy] = useState('');
+  const [error, setError] = useState('');
+  const pending = useRef(false);
+  const prefs = nutritionJournal.preferences;
+  const date = chosenDate || today;
+  const isToday = date === today;
+  const editing = Boolean(showSetup || editor || cameraDate || showAgent || showTargetHistory || showDatePicker || recordSlot || busy || (showWeight && weight.trim()));
+  useLayoutEffect(() => {
+    if (embedded && editing) return blockUpdates();
+  }, [embedded, editing, blockUpdates]);
+  useEffect(() => {
+    const update = () => setToday(localWeightDate(new Date()));
+    const timer = setInterval(update, 30000);
+    const subscription = AppState.addEventListener('change', state => { if (state === 'active') update(); });
+    return () => { clearInterval(timer); subscription.remove(); };
+  }, []);
+  const training = useMemo(() => profile ? getNutritionTrainingContext(profile, sessions, dailyEdits, today) : null, [profile, sessions, dailyEdits, today]);
+  const menu = useMemo(() => profile && training ? buildNutritionMenu(profile, nutritionJournal, training, today) : null, [profile, training, nutritionJournal, today]);
+  const review = useMemo(() => profile ? summarizeNutritionWeek(nutritionJournal, profile, sessions, today) : null, [profile, nutritionJournal, sessions, today]);
+  useEffect(() => {
+    if (!profile || !training) return;
+    let active = true;
+    void captureNutritionTarget().then(() => { if (active) setHistoryError(''); }).catch(() => { if (active) setHistoryError('当日目标快照未能保存，历史对比暂不采用该目标。请稍后重试。'); });
+    return () => { active = false; };
+  }, [profile, prefs, training, today, nutritionJournal.trainingTime, captureNutritionTarget]);
+  const records = useMemo(() => nutritionJournal.entries.filter(item => item.date === date), [nutritionJournal.entries, date]);
+  const actual = useMemo(() => sumNutrients(records.map(item => item.nutrients)), [records]);
+  const mealSummaries = useMemo(() => summarizeMealSlots(records), [records]);
+  if (!profile || !menu || !training || !review) return null;
+  const ready = menu.targets.status === 'ready';
+  const snapshot = latestNutritionTarget(nutritionJournal, date);
+  const reference = isToday ? menu.targets : snapshot?.targets;
+  const referenceReady = reference?.status === 'ready';
+  const dayState = nutritionJournal.days[date];
+  const availableSlots = MEAL_SLOTS.filter(slot => menu.meals.some(meal => meal.slot === slot)
+    && !nutritionJournal.days[today]?.confirmedSlots.includes(slot) && !nutritionJournal.entries.some(entry => entry.date === today && entry.slot === slot));
+  const trend = summarizeWeightTrend(profile.weightHistory);
+  const planningWeight = suggestedPlanningWeight(profile.weight, trend);
+  const run = async (key: string, operation: () => Promise<void>) => {
+    if (pending.current) return;
+    pending.current = true; setBusy(key); setError('');
+    try { await operation(); } catch (reason) { setError(reason instanceof Error ? reason.message : '保存失败，请重试。'); }
+    finally { pending.current = false; setBusy(''); }
   };
+  const prepareAction = (action: NutritionAgentAction) => prepareMealAdjustment(profile, nutritionJournal, training, today, action);
+  const confirmLogging = (slot: MealSlot | 'day', confirmed: boolean) => {
+    const apply = () => void run('logging-' + slot, () => confirmNutritionLogging(date, slot, confirmed));
+    if (!confirmed) { apply(); return; }
+    const hasRecords = slot === 'day' ? records.length > 0 : records.some(entry => entry.slot === slot);
+    confirmAction(slot === 'day' ? '确认当天全部记完整？' : '确认' + slotLabels[slot] + '已记完整？',
+      hasRecords ? '请确认食物、饮料、零食和用油均已记入，没吃的餐也已核对。之后补录、修改或删除会撤销完整确认。'
+        : '当前没有对应摄入记录。只有确实没有吃、而不是尚未记餐，才确认完成；这会按没有摄入参与完整记录统计。', apply, { confirmLabel: '确认已记完整' });
+  };
+  const removeEntry = (entry: IntakeEntry) => confirmAction('删除这条饮食记录？', '只删除这一次记录，菜谱和其他日期不受影响。',
+    () => void run('delete-' + entry.id, () => deleteIntakeEntry(entry.id)), { confirmLabel: '删除记录', destructive: true });
   const saveWeight = () => {
-    const kg = Number(weightEntry.trim().replace(',', '.'));
-    if (!Number.isFinite(kg) || kg < 30 || kg > 300) {
-      showMessage('请核对体重', '请输入 30–300 kg 之间的有效数值。');
-      return;
-    }
-    const rounded = Math.round(kg * 10) / 10;
-    if (Math.abs(rounded - profile.weight) > profile.weight * 0.1) {
-      confirmAction('体重变化较大', `新记录 ${rounded} kg 与当前 ${profile.weight} kg 相差超过 10%，确认保存吗？`, () => { void persistWeight(rounded); });
-      return;
-    }
-    void persistWeight(rounded);
+    const kg = Number(weight);
+    if (!Number.isFinite(kg) || kg < 30 || kg > 300 || !weight.trim()) { setError('体重请输入 30–300 kg 范围内的有效数值。'); return; }
+    const apply = () => void run('weight', async () => {
+      await saveProfile({ ...profile, weightHistory: recordWeight(profile.weightHistory, Math.round(kg * 10) / 10) });
+      setWeight(''); showMessage('体重已记录', '不会因单日波动自动调整饮食。');
+    });
+    if (Math.abs(kg - profile.weight) / profile.weight > 0.1) confirmAction('确认本次体重？', '与档案体重相差较大，请确认单位为 kg。', apply);
+    else apply();
   };
-  const updatePlanningWeight = () => {
-    if (baselineCandidate === null) return;
-    confirmAction(
-      '更新计划基准体重？',
-      `以近 7 天均重 ${baselineCandidate} kg 重新估算后续能量计划；每日体重记录仍会保留。`,
-      () => {
-        setSavingWeight(true);
-        void saveProfile({ ...profile, weight: baselineCandidate })
-          .catch(() => showMessage('保存失败', '计划基准体重没有更新，请稍后重试。'))
-          .finally(() => setSavingWeight(false));
-      },
-    );
-  };
-  const openEvidence = async (url: string) => {
-    try { await Linking.openURL(url); }
-    catch { showMessage('无法打开链接', '请检查网络后重试。'); }
-  };
-  const saveChoice = async (nextPattern: DietPattern) => {
-    try {
-      await saveProfile({ ...profile, nutritionGoal: activeNutritionGoal, dietPattern: nextPattern });
-      setPattern(nextPattern);
-    } catch {
-      showMessage('保存失败', '营养选择没有保存，请稍后重试。');
-    }
-  };
-  const selectPattern = (nextPattern: DietPattern) => {
-    const candidate = calculateNutritionPlan({ ...profile, frequency: todayPlan.plan.frequency, nutritionGoal: activeNutritionGoal, dietPattern: nextPattern }, isTrainingDay);
-    if (candidate.safetyLevel === 'blocked') {
-      showMessage(candidate.safetyTitle || '当前方案不可用', candidate.safetyMessage || '请先检查个人资料，再选择饮食模式。');
-      return;
-    }
-    if (nextPattern === 'keto') {
-      confirmAction(
-        '启用生酮前请确认',
-        candidate.caution || '生酮属于限制性饮食，请先确认自己没有相关禁忌。',
-        () => { void saveChoice(nextPattern); },
-        { confirmLabel: '我已确认，启用', cancelLabel: '暂不启用', destructive: true },
-      );
-      return;
-    }
-    void saveChoice(nextPattern);
+  const openSource = (url: string) => void Linking.openURL(url).catch(() => showMessage('暂时无法打开', '请联网后重试来源链接。'));
+  const savePhoto = async (estimate: PhotoEstimate, slot: MealSlot, frame?: CapturedNutritionPhoto, retain = false) => {
+    if (!cameraDate) return;
+    await withCapturedPhoto(frame, retain, async photo => saveIntakeEntry({ id: 'photo-' + estimate.id, date: cameraDate, slot,
+      name: estimate.dishName ?? estimate.items.map(item => item.name).join('、').slice(0, 180), portions: [], source: 'photo_estimate', photoEstimate: estimate,
+      ...(photo ? { photos: [photo] } : {}) }));
+    setCameraDate(null);
   };
 
-  return <SafeAreaView style={styles.safe}>
-    <View style={styles.top}><Pressable onPress={onBack} style={styles.back}><Text style={styles.backText}>‹</Text></Pressable><Text style={styles.title}>今日能量</Text><View style={{ width: 42 }} /></View>
-    <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-      {plan.safetyLevel !== 'ok' ? <View accessibilityRole="alert" style={[styles.safetyCard, plan.safetyLevel === 'blocked' ? styles.safetyBlocked : styles.safetyWarning]}>
-        <Text style={styles.safetyEyebrow}>{plan.safetyLevel === 'blocked' ? '已自动启用安全保护' : '重要安全提示'}</Text>
-        <Text style={styles.safetyTitle}>{plan.safetyTitle}</Text>
-        <Text style={styles.safetyText}>{plan.safetyMessage}</Text>
-        <Text style={styles.safetyMeta}>当前生效：{plan.goalLabel} · {dietPatterns.find((item) => item.key === plan.pattern)?.label}</Text>
+  return <Page tone="dark" testID="nutrition-content" style={[styles.page, embedded && styles.embeddedPage]}>
+    {!embedded ? <View style={styles.header}>
+      <Pressable accessibilityRole="button" accessibilityLabel="返回今日页" onPress={onBack} style={styles.back}><AppGlyph name="back" color={appPalette.text} /></Pressable>
+      <View style={styles.flex}><Text style={styles.title}>饮食</Text></View>
+    </View> : null}
+    <View testID="nutrition-energy-card" style={styles.hero}>
+      <View style={styles.heroToolbar}><Text style={styles.heroLabel}>已记录摄入</Text><View style={styles.heroTools}>
+        <Pressable accessibilityRole="button" accessibilityLabel="选择饮食记录日期" onPress={() => setShowDatePicker(true)} style={styles.datePill}><Text style={styles.datePillText}>{isToday ? '今天' : date.slice(5)}</Text><AppGlyph name="chevron" size={12} /></Pressable>
+        <IconAction name="info" label="查看当日目标记录" onPress={() => setShowTargetHistory(true)} />
+        <IconAction name="settings" label="营养设置" onPress={() => setShowSetup(true)} />
+      </View></View>
+      <View style={styles.energyRow}><View style={styles.flex}><View style={styles.energyNumbers}><Text testID="nutrition-recorded-energy" style={styles.energy}>{records.length ? rounded(actual.calories) : '—'}</Text><Text style={styles.energyUnit}>{referenceReady ? '/ ' + reference.calories + ' kcal' : 'kcal'}</Text></View></View><CalorieRing progress={records.length && referenceReady ? actual.calories / reference.calories : undefined} /></View>
+      {!referenceReady || !isToday ? <Text style={styles.target}>{referenceReady ? '当日保存参考 ' + reference.calories + ' kcal' : isToday ? menu.targets.status === 'needs_setup' ? '完成营养设置后显示参考目标' : '自动目标暂停 · 仍可记录饮食' : snapshot ? '当日自动目标暂停 · 不套用今天的目标' : '该日未保存目标 · 不补造历史参考值'}</Text> : null}
+      <View style={styles.macroRow}><Macro label="蛋白质" value={actual.protein} target={referenceReady ? reference.protein : undefined} empty={!records.length} /><Macro label="碳水" value={actual.carbs} target={referenceReady ? reference.carbs : undefined} empty={!records.length} /><Macro label="脂肪" value={actual.fat} target={referenceReady ? reference.fat : undefined} empty={!records.length} /></View>
+    </View>
+    <View testID="nutrition-primary-actions" style={styles.quickActions}><CaptureAction icon="camera" label="拍照记餐" caption="食物 · 标签 · 条码" accessibilityLabel="拍照记餐" onPress={() => setCameraDate(date)} /><CaptureAction icon="chat" label="营养助手" caption="饮食问题，问我吧" accessibilityLabel="问营养助手" onPress={() => setShowAgent(true)} /></View>
+    {error ? <Text accessibilityRole="alert" style={styles.error}>{error}</Text> : null}
+    {nutritionStorageIssue ? <View style={styles.warning}><Text accessibilityRole="alert" style={styles.warningText}>{nutritionStorageIssue}</Text></View> : historyError ? <View style={styles.warning}><Text accessibilityRole="alert" style={styles.warningText}>{historyError}</Text><Action label="重试保存目标" small onPress={() => void run('capture-target', async () => { await captureNutritionTarget(); setHistoryError(''); })} /></View> : null}
+    {isToday && !ready ? <Card style={styles.notice}><Text style={styles.cardTitle}>{menu.targets.status === 'needs_setup' ? '先了解你的饮食需要' : '自动配餐暂不可用'}</Text><Text style={styles.body}>{menu.targets.message}</Text><Action label={menu.targets.status === 'needs_setup' ? '完成营养档案' : '查看营养设置'} onPress={() => setShowSetup(true)} /></Card> : null}
+
+    <View style={styles.section}><Text style={styles.sectionTitle}>{isToday ? '今日饮食' : '当日饮食'}</Text><Pressable accessibilityRole="button" accessibilityLabel="管理当日饮食记录" onPress={() => setRecordSlot('all')} style={styles.textAction}><Text style={styles.subtle}>管理</Text><AppGlyph name="chevron" size={14} /></Pressable></View>
+    {!records.length ? <View testID="nutrition-empty-meals" style={styles.emptyMeal}><View style={styles.emptyMealIcon}><AppGlyph name="utensils" color={appPalette.lime} size={22} /></View><View style={styles.flex}><Text style={styles.emptyTitle}>从这一餐开始</Text><Text style={styles.subtle}>确认后计入，未记录不代表没有吃。</Text></View></View> : <View testID="nutrition-recorded-meals" style={styles.mealRows}>{mealSummaries.map(summary => {
+      const savedPhoto = summary.entries.flatMap(entry => entry.photos ?? [])[0];
+      return <View key={summary.slot} style={styles.mealRow}>
+      {savedPhoto ? <NutritionPhotoView photo={savedPhoto} fallbackFood={mealFoodArtwork(summary.entries)} /> : <Pressable accessibilityRole="button" accessibilityLabel={'查看' + slotLabels[summary.slot] + '食物明细'} onPress={() => setRecordSlot(summary.slot)}><MealArtwork food={mealFoodArtwork(summary.entries)} portions={summary.entries.flatMap(entry => entry.portions)} photoEstimate={summary.entries.some(entry => entry.photoEstimate)} size={60} name={summary.names.join('、')} /></Pressable>}
+      <Pressable accessibilityRole="button" accessibilityLabel={'查看' + slotLabels[summary.slot] + '饮食记录'} onPress={() => setRecordSlot(summary.slot)} style={({ pressed }) => [{ flex: 1, minWidth: 0, minHeight: 60, flexDirection: 'row', gap: 8, alignItems: 'center' }, pressed && { opacity: .75 }]}>
+      <View style={styles.flex}><View style={styles.mealRowHead}><Text style={styles.mealRowTitle}>{slotLabels[summary.slot]} · {rounded(summary.nutrients.calories)} kcal</Text>{summary.entries.some(entry => entry.photoEstimate && !entry.photoEstimate.calculation && !photoUsesOnlyLabels(entry.photoEstimate)) ? <Text style={styles.photoBadge}>照片估算</Text> : summary.entries.some(entry => entry.photoEstimate?.calculation === 'ingredients') ? <Text style={styles.photoBadge}>食材计算</Text> : summary.entries.some(entry => photoUsesOnlyLabels(entry.photoEstimate)) ? <Text style={styles.photoBadge}>标签计算</Text> : null}</View><Text numberOfLines={2} style={styles.subtle}>{summary.entries.map(entry => entry.photoEstimate?.dishName || photoPortionSummary(entry.photoEstimate) || entry.name).join('；')}</Text></View><AppGlyph name="chevron" size={16} />
+    </Pressable></View>; })}</View>}
+
+    <View style={styles.section}><Text style={styles.sectionTitle}>体重趋势</Text><Action label={showWeight ? '收起' : '记录体重'} small onPress={() => setShowWeight(value => !value)} /></View>
+    <Card><WeightTrendChart history={profile.weightHistory} today={today} />
+      {showWeight ? <View style={styles.weightEditor}><Text style={styles.body}>记录的是今天体重，不会自动覆盖饮食估算体重。</Text><View style={styles.actions}><TextInput accessibilityLabel="今日体重kg" placeholder="体重 kg" keyboardType="decimal-pad" value={weight} onChangeText={setWeight} style={styles.input} /><Action label="保存体重" disabled={Boolean(busy)} onPress={saveWeight} /></View>
+        {planningWeight !== null ? <Action label={'使用近期均重 ' + planningWeight + ' kg 重新估算'} onPress={() => confirmAction('更新饮食估算体重？', '只调整之后的建议，不改写已吃的记录。', () => void run('weight-calibration', () => saveProfile({ ...profile, weight: planningWeight })))} disabled={Boolean(busy)} /> : null}
       </View> : null}
+    </Card>
+    <Pressable accessibilityRole="button" accessibilityState={{ expanded: showKnowledge }} onPress={() => setShowKnowledge(value => !value)} style={styles.knowledgeToggle}><Text style={styles.sectionTitle}>计算与知识依据</Text><Text style={styles.link}>{showKnowledge ? '收起 −' : '查看 ＋'}</Text></Pressable>
+    {showKnowledge ? <Card>
+      {prefs ? <Text style={styles.body}>{OBJECTIVE_EXPLANATIONS[prefs.objective]}</Text> : null}
+      {ready ? <Text style={styles.body}>估算基础代谢 {menu.targets.bmr} kcal · 估算日常消耗 {menu.targets.tdee} kcal。建议蛋白 {menu.targets.protein}g、碳水 {menu.targets.carbs}g、脂肪 {menu.targets.fat}g。</Text> : null}
+      {NUTRITION_KNOWLEDGE.map(note => <View key={note.id} style={styles.knowledgeItem}><Text style={styles.cardTitle}>{note.title}</Text><Text style={styles.body}>{note.summary}</Text><Text style={styles.footnote}>{note.scope}</Text>{note.sources.map(source => <Pressable key={source.url} accessibilityRole="link" onPress={() => openSource(source.url)} style={styles.sourceLink}><Text style={styles.link}>{source.title} ↗</Text></Pressable>)}</View>)}
+      <Text style={styles.footnote}>{FOODS.length} 种本地参考食材 · {FOOD_DATA_VERSION}{'\n'}食材计算与照片估算分别标注。照片无法可靠判断油量、隐藏配料或过敏原，结果不是称重实测。资料已核对来源，尚未完成执业营养专业审核。</Text>
+    </Card> : null}
 
-      <View style={styles.horizontalWrap}>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.horizontal}>{dietPatterns.map((item) => <Pressable key={item.key} onPress={() => selectPattern(item.key)} style={[styles.pattern, plan.pattern === item.key && styles.patternActive]}><Text style={[styles.patternTitle, plan.pattern === item.key && styles.patternTitleActive]}>{item.label}</Text><Text style={styles.patternSub}>{item.subtitle}</Text></Pressable>)}</ScrollView>
-        <LinearGradient pointerEvents="none" colors={['rgba(245,243,237,0)', colors.paper]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.horizontalFade} />
-      </View>
-
-      {plan.safetyLevel === 'blocked' ? <View style={styles.blockedAdvice}>
-        <Text style={styles.blockedAdviceTitle}>先保持规律、均衡饮食</Text>
-        <Text style={styles.blockedAdviceText}>按正常饥饿感安排三餐，搭配蔬菜、水果、全谷物和鱼禽蛋奶豆；目前不提供热量、宏量或食物份量目标。请先核对个人资料，并根据上方提示寻求个体评估。</Text>
-      </View> : <>
-      <View style={styles.energyCard}>
-        <View style={styles.energyTop}><View><Text style={styles.kicker}>{isTrainingDay ? '训练日目标' : '恢复日目标'} · {plan.goalLabel}</Text><Text style={styles.calories}>{plan.targetCalories}<Text style={styles.calorieUnit}> kcal</Text></Text></View><View style={styles.deltaBadge}><Text style={styles.delta}>{plan.calorieDelta > 0 ? '+' : ''}{plan.calorieDelta}</Text><Text style={styles.deltaLabel}>对比维持</Text></View></View>
-        <Text style={styles.strategy}>{plan.strategy}</Text>
-        <View style={styles.energyRow}><Mini label="估算基础代谢" value={`${plan.bmr}`} /><Mini label="估算维持消耗" value={`${plan.tdee}`} /><Mini label="饮水" value={`${(plan.waterMl / 1000).toFixed(1)}L`} /></View>
-      </View>
-
-      {weightLossView ? <View style={styles.weightTrendCard}>
-        <Text style={styles.weightTrendTitle}>体重趋势</Text>
-        <Text style={styles.weightTrendHint}>早晨、相近条件下记录；看 7 天均值，不因单日波动改餐。每日记录不自动修改计划基准体重。</Text>
-        <View style={styles.weightEntryRow}><TextInput accessibilityLabel="记录今日体重公斤" value={weightEntry} onChangeText={setWeightEntry} keyboardType="decimal-pad" selectTextOnFocus style={styles.weightInput} /><Text style={styles.weightUnit}>kg</Text><Pressable accessibilityRole="button" disabled={savingWeight} onPress={saveWeight} style={styles.weightSave}><Text style={styles.weightSaveText}>{savingWeight ? '保存中' : '记录今日'}</Text></Pressable></View>
-        <Text style={styles.weightTrendResult}>{trend?.currentAverage !== undefined ? `近 7 天均重 ${trend.currentAverage} kg` : '尚无近 7 天记录'}{trend?.changeKg !== undefined ? ` · 较前 7 天 ${trend.changeKg > 0 ? '+' : ''}${trend.changeKg} kg` : ''}</Text>
-        <Text style={styles.weightTrendNote}>{trend?.changePercent === undefined ? '前后两个 7 天各记录至少 4 天后，才显示趋势对比。' : trend.changePercent < -1 ? '下降较快；留意饥饿、乏力和训练表现，不要继续加大缺口。' : '短期变化受水分影响；连续观察 2–4 周，再结合腰围、饥饿感和力量表现调整。'}</Text>
-        <Text style={styles.weightBaseline}>当前计划基准：{profile.weight} kg</Text>
-        {baselineCandidate !== null ? <Pressable accessibilityRole="button" disabled={savingWeight} onPress={updatePlanningWeight} style={styles.weightBaselineAction}><Text style={styles.weightBaselineActionText}>按近 7 天均重 {baselineCandidate} kg 更新计划 ›</Text></Pressable> : null}
-      </View> : null}
-
-      {plan.meals.map((meal, index) => <View key={meal.name} style={styles.mealCard}><View style={styles.mealTop}><View style={styles.mealIndex}><Text style={styles.mealIndexText}>{index + 1}</Text></View><View style={{ flex: 1 }}><Text style={styles.mealName}>{meal.name} · {meal.timing}</Text><Text style={styles.mealPurpose}>{meal.purpose}</Text></View><Text style={styles.mealCalories}>{meal.calories} kcal</Text></View><View style={styles.foods}>{meal.foods.map((food) => <View key={food} style={styles.foodChip}><Text style={styles.foodText}>{food}</Text></View>)}</View></View>)}
-
-      <Text style={styles.sectionTitle}>深入了解</Text>
-      <Collapse title="饮食节奏" hint="热量循环 · 训练日与恢复日安排">
-        <View style={styles.rhythmCard}>
-          <View style={styles.rhythmHeader}><View style={styles.rhythmHeaderTitle}><Text style={styles.rhythmEyebrow}>热量循环</Text><Text style={styles.rhythmTitle}>跟着训练日安排</Text></View><View style={styles.rhythmDifference}><Text style={styles.rhythmDifferenceText}>{dayDifference > 0 ? `训练日较恢复日 +${dayDifference} kcal` : '两日保持一致'}</Text></View></View>
-          <View style={styles.dayCompare}>
-            <View style={[styles.dayCompareItem, isTrainingDay && styles.dayCompareActive]}><Text style={[styles.dayCompareLabel, isTrainingDay && styles.dayCompareLabelActive]}>训练日</Text><Text style={[styles.dayCompareValue, isTrainingDay && styles.dayCompareValueActive]}>{plan.trainingDayCalories}<Text style={styles.dayCompareUnit}> kcal</Text></Text></View>
-            <View style={[styles.dayCompareItem, !isTrainingDay && styles.dayCompareActive]}><Text style={[styles.dayCompareLabel, !isTrainingDay && styles.dayCompareLabelActive]}>恢复日</Text><Text style={[styles.dayCompareValue, !isTrainingDay && styles.dayCompareValueActive]}>{plan.restDayCalories}<Text style={styles.dayCompareUnit}> kcal</Text></Text></View>
-          </View>
-          <Text style={styles.rhythmCaption}>{dayDifference > 0 ? `已计入上方今日目标，不需要在餐单之外再加 ${dayDifference} kcal。` : '为避免低于保守能量下限，当前不额外进行热量循环。'}</Text>
-          <View style={styles.rhythmDivider} />
-          <View style={styles.rhythmDetail}><View style={[styles.rhythmDetailIcon, styles.carbIcon]}><Text style={styles.rhythmDetailIconText}>C</Text></View><View style={styles.rhythmDetailBody}><Text style={styles.rhythmDetailTitle}>碳水 · 今日 {plan.carbs}g</Text><Text style={styles.rhythmDetailText}>{pattern === 'keto' ? '生酮模式不套用常规训前加餐；若训练表现持续下降，请重新评估饮食模式。' : isTrainingDay ? '按实际训练时间，把一部分主食放在训前与训后的正餐；不必追求固定“窗口”。' : '恢复日适度减少主食，保留蔬菜、水果与足够的总能量。'}</Text></View></View>
-          <View style={styles.rhythmDetail}><View style={[styles.rhythmDetailIcon, styles.proteinIcon]}><Text style={styles.rhythmDetailIconText}>P</Text></View><View style={styles.rhythmDetailBody}><Text style={styles.rhythmDetailTitle}>蛋白质 · 今日 {plan.protein}g</Text><Text style={styles.rhythmDetailText}>分散到三至四餐；训练日与恢复日都要覆盖全天目标。</Text></View></View>
-        </View>
-      </Collapse>
-      <Collapse title="恢复与补给" hint="训练、睡眠和正常饮食优先；补剂不是每日任务">
-        <View style={styles.evidencePanel}>
-          <View style={styles.evidenceLead}><View style={styles.evidenceLeadAccent} /><View style={styles.evidenceLeadBody}><View style={styles.evidenceTitleRow}><Text style={styles.evidenceLeadTitle}>胶原蛋白与肌腱</Text><Text style={styles.evidenceBadge}>研究中</Text></View><Text style={styles.evidenceLeadText}>小样本研究提示，胶原蛋白配合负荷训练可能影响肌腱结构；“训练前 45–60 分钟必须补充”的窗口和治愈伤痛效果都未获证实。</Text><Text style={styles.evidenceLeadNote}>不代替合理负荷、疼痛评估或康复治疗。</Text></View></View>
-          <View style={styles.evidenceSeparator} />
-          <EvidenceRow index="01" title="一水肌酸" badge="证据较充分" body="健康成年人可考虑每日 3–5g，主要支持短时、重复高强度训练；不是必需品。肾病或正在用药者先咨询医生。" />
-          <EvidenceRow index="02" title="维生素 D" badge="先评估需要" body="不把 2000–4000 IU/天当作通用处方；是否补充、剂量多少，应结合饮食、日照和健康情况判断。" />
-          <EvidenceRow index="03" title="Omega-3" badge="饮食优先" body="优先通过鱼类等食物摄入；不常规建议所有人补充 2–3g/天，也不能称为“关节润滑剂”。" last />
-          <Pressable accessibilityRole="button" accessibilityState={{ expanded: showEvidence }} onPress={() => setShowEvidence((value) => !value)} style={styles.evidenceToggle}><Text style={styles.evidenceToggleText}>研究与安全依据</Text><Text style={styles.evidenceToggleArrow}>{showEvidence ? '⌃' : '⌄'}</Text></Pressable>
-          {showEvidence ? <View style={styles.evidenceLinks}>
-            <SourceLink label="肌酸 · NIH 运动补剂资料" onPress={() => { void openEvidence('https://ods.od.nih.gov/factsheets/ExerciseAndAthleticPerformance-HealthProfessional/'); }} />
-            <SourceLink label="胶原蛋白 · 2026 系统综述" onPress={() => { void openEvidence('https://pubmed.ncbi.nlm.nih.gov/41900537/'); }} />
-            <SourceLink label="维生素 D · NIH 资料" onPress={() => { void openEvidence('https://ods.od.nih.gov/factsheets/VitaminD-HealthProfessional/'); }} />
-            <SourceLink label="Omega-3 · NIH 资料" onPress={() => { void openEvidence('https://ods.od.nih.gov/factsheets/Omega3FattyAcids-HealthProfessional/'); }} />
-          </View> : null}
-        </View>
-      </Collapse>
-      <Collapse title="数字依据" hint="这些数字如何得出、何时调整">
-        <View style={styles.basisCard}>
-          <Text style={styles.basisText}>以年龄、身高、体重及性别估算基础代谢，再按每周训练次数估算维持消耗；这不是代谢测试结果。</Text>
-          <Text style={styles.basisText}>今日建议比估算维持消耗{plan.calorieDelta < 0 ? '低' : plan.calorieDelta > 0 ? '高' : '相同'}约 {Math.abs(Math.round(plan.calorieDelta / Math.max(1, plan.tdee) * 100))}%。训练日与恢复日分配不同，一周平均约 {plan.weeklyMeanCalories} kcal。</Text>
-          <Text style={styles.basisText}>蛋白质按参考体重和目标估算；碳水、脂肪随饮食模式调整。食谱份量只作起点，两周后结合体重趋势、饥饿感和训练表现再调整。</Text>
-        </View>
-      </Collapse>
-      </>}
-
-      <Collapse title="执行原则" hint={`共 ${plan.principles.length} 条实操原则`}>
-        <View style={styles.notes}>{plan.principles.map((item, index) => <View key={item} style={styles.noteRow}><Text style={styles.noteNum}>{index + 1}</Text><Text style={styles.noteText}>{item}</Text></View>)}</View>
-      </Collapse>
-      {plan.caution ? <View style={styles.caution}><Text style={styles.cautionTitle}>开始前请确认</Text><Text style={styles.cautionText}>{plan.caution}</Text></View> : null}
-      <Text style={styles.disclaimer}>计划采用估算值，体重、腰围、饥饿感和训练表现连续记录两周后再调整。它不能替代医生或注册营养师的个体化建议。</Text>
-    </ScrollView>
-  </SafeAreaView>;
+    {showSetup ? <NutritionSetupModal profile={profile} preferences={prefs} onClose={() => setShowSetup(false)} /> : null}
+    {editor?.entry?.source === 'photo_estimate' ? <PhotoIntakeEditor entry={editor.entry} onClose={() => setEditor(null)} /> : editor ? <IntakeEditor date={editor.date} entry={editor.entry} onClose={() => setEditor(null)} /> : null}
+    {cameraDate ? <FoodCameraModal visible onClose={() => setCameraDate(null)} onSave={savePhoto} /> : null}
+    {showAgent ? <NutritionAgentModal context={{ safetyStatus: menu.targets.status, preferences: prefs, targets: menu.targets,
+      consumed: sumNutrients(nutritionJournal.entries.filter(item => item.date === today).map(item => item.nutrients)),
+      menu: menu.meals.map(meal => ({ slot: meal.slot, name: meal.name, nutrients: meal.nutrients, editable: availableSlots.includes(meal.slot) })),
+      logging: { date: today, confirmedSlots: nutritionJournal.days[today]?.confirmedSlots || [], complete: Boolean(nutritionJournal.days[today]?.completedAt), recordCount: nutritionJournal.entries.filter(entry => entry.date === today).length, containsPhoto: nutritionJournal.entries.some(entry => entry.date === today && entry.source === 'photo_estimate' && !photoUsesOnlyLabels(entry.photoEstimate)) },
+      training: { ...training, time: nutritionJournal.trainingTime },
+      weekly: { completeDays: review.completeDays, comparableDays: review.comparableDays, trainingDays: review.trainingDays, photoDays: review.photoDays, status: review.status, average: review.average },
+      toolsAllowed: ready && availableSlots.length > 0 && !nutritionJournal.days[today]?.completedAt }}
+      onPrepare={prepareAction} onApply={applyNutritionMealDraft} onClose={() => setShowAgent(false)} /> : null}
+    <Modal transparent visible={showDatePicker} animationType="fade" onRequestClose={() => setShowDatePicker(false)}><View style={styles.backdrop}><View style={styles.sheet} accessibilityViewIsModal>
+      <View style={styles.between}><Text style={styles.sectionTitle}>饮食日期</Text><IconAction name="plus" close label="关闭饮食日期" onPress={() => setShowDatePicker(false)} /></View>
+      <View style={styles.dateRow}><Action label="‹" accessibilityLabel="前一天饮食记录" onPress={() => { setChosenDate(offsetDate(date, -1)); setShowDatePicker(false); }} small /><Pressable accessibilityRole="button" accessibilityLabel="回到今天饮食记录" onPress={() => { setChosenDate(null); setShowDatePicker(false); }} style={styles.dateCenter}><Text style={styles.dateText}>{date}</Text><Text style={styles.subtle}>{isToday ? '今天' : '点此回到今天'}</Text></Pressable><Action label="›" accessibilityLabel="后一天饮食记录" disabled={isToday} onPress={() => { setChosenDate(offsetDate(date, 1)); setShowDatePicker(false); }} small /></View>
+    </View></View></Modal>
+    <Modal transparent visible={recordSlot !== null} animationType="fade" onRequestClose={() => { if (!busy) setRecordSlot(null); }}><View style={styles.backdrop}><View testID="nutrition-record-details" style={styles.sheet} accessibilityViewIsModal>
+      <View style={styles.between}><Text style={styles.sectionTitle}>{recordSlot && recordSlot !== 'all' ? slotLabels[recordSlot] : '当日'}记录</Text><IconAction name="plus" close label="关闭饮食记录" disabled={Boolean(busy)} onPress={() => setRecordSlot(null)} /></View>
+      <Text style={styles.subtle}>{date} · 只统计确认保存的食物</Text>
+      {error ? <Text accessibilityRole="alert" style={styles.error}>{error}</Text> : null}
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.recordList}>
+        {records.filter(entry => recordSlot === 'all' || entry.slot === recordSlot).map(entry => {
+          return <Card key={entry.id}>
+            <View style={styles.between}><Text style={styles.slot}>{slotLabels[entry.slot]}</Text><Text style={styles.mealMacros}>{rounded(entry.nutrients.calories)} kcal</Text></View>
+            <Text style={styles.recordName}>{entry.name}</Text><Text style={styles.subtle}>蛋白 {rounded(entry.nutrients.protein)}g · 碳水 {rounded(entry.nutrients.carbs)}g · 脂肪 {rounded(entry.nutrients.fat)}g</Text>
+            {entry.photoEstimate ? <><Text style={styles.subtle}>{photoPortionSummary(entry.photoEstimate)}</Text><Text style={styles.estimateNote}>{photoUsesOnlyLabels(entry.photoEstimate) ? '按包装标签与所选份量计算' : entry.photoEstimate.calculation === 'ingredients' ? '按确认食材查库计算 · 份量仍为估计' : '含照片估算 · ' + summarizePhotoEstimate(entry.photoEstimate).calorieRange.min + '–' + summarizePhotoEstimate(entry.photoEstimate).calorieRange.max + ' kcal'}</Text></> : null}
+            {entry.photos?.length ? <View style={styles.actions}>{entry.photos.map(photo => <NutritionPhotoView key={photo.id} photo={photo} size={70} />)}</View> : null}
+            {entry.fiberIncomplete ? <Text style={styles.subtle}>部分标签未标注纤维</Text> : null}
+            <View style={styles.recordActions}><Action label="编辑" small onPress={() => { setRecordSlot(null); setEditor({ date: entry.date, entry }); }} disabled={Boolean(busy)} /><Action label="删除" small onPress={() => removeEntry(entry)} disabled={Boolean(busy)} /></View>
+          </Card>;
+        })}
+        {!records.some(entry => recordSlot === 'all' || entry.slot === recordSlot) ? <Text style={styles.body}>暂无记录，未记录不代表没有吃。</Text> : null}
+        <LoggingCompletenessControls state={dayState} disabled={Boolean(busy)} onConfirm={confirmLogging} />
+      </ScrollView>
+      <Action label="添加饮食记录" onPress={() => { setRecordSlot(null); setEditor({ date }); }} disabled={Boolean(busy)} />
+    </View></View></Modal>
+    <Modal transparent visible={showTargetHistory} animationType="fade" onRequestClose={() => setShowTargetHistory(false)}><View style={styles.backdrop}><View style={styles.sheet} accessibilityViewIsModal>
+      <View style={styles.between}><Text style={styles.sectionTitle}>目标记录</Text><Action label="关闭目标记录" small onPress={() => setShowTargetHistory(false)} /></View>
+      <Text style={styles.body}>{date} · 只展示当天实际保存的快照，不套用新目标。</Text>
+      <ScrollView contentContainerStyle={styles.targetHistoryList}>{dayState?.targetHistory.length ? dayState.targetHistory.map((item, index) => <View key={item.signature + index} style={styles.targetSnapshot}>
+        <View style={styles.between}><Text style={styles.slot}>{targetChangeLabel(dayState.targetHistory[index - 1], item)}</Text><Text style={styles.subtle}>{new Date(item.capturedAt).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })}</Text></View>
+        <Text style={styles.recordName}>{item.objective ? objectiveLabels[item.objective] : '待完善设置'}{item.pattern ? ' · ' + patternLabels[item.pattern] : ''}</Text>
+        {item.targets.status === 'ready' ? <><Text style={styles.cardTitle}>{item.targets.calories} kcal</Text><Text style={styles.subtle}>蛋白 {item.targets.protein} g · 碳水 {item.targets.carbs} g · 脂肪 {item.targets.fat} g</Text></> : <Text style={styles.body}>{item.targets.message}</Text>}
+        <Text style={styles.footnote}>{item.training.title} · 时段{trainingTimeLabels[item.training.time]}{index === dayState.targetHistory.length - 1 ? ' · 当日最新快照' : ''}</Text>
+      </View>) : <Text style={styles.body}>这一天没有保存目标。摄入记录仍保留，但不会凭今天的资料补造历史目标。</Text>}</ScrollView>
+    </View></View></Modal>
+  </Page>;
 }
 
-function Mini({ label, value }: { label: string; value: string }) { return <View style={styles.mini}><Text style={styles.miniValue}>{value}</Text><Text style={styles.miniLabel}>{label}</Text></View>; }
-// 折叠收纳：默认收起长内容（节奏/补剂/原则/依据），保持页面首屏聚焦在能量目标与四餐。
-function Collapse({ title, hint, children }: { title: string; hint: string; children: React.ReactNode }) {
-  const [open, setOpen] = useState(false);
-  return <View style={styles.collapseCard}>
-    <Pressable accessibilityRole="button" accessibilityState={{ expanded: open }} onPress={() => setOpen((value) => !value)} style={styles.collapseHead}>
-      <View style={{ flex: 1, paddingRight: 10 }}>
-        <Text style={styles.collapseTitle}>{title}</Text>
-        <Text style={styles.collapseHint}>{hint}</Text>
-      </View>
-      <Text style={styles.collapseArrow}>{open ? '⌃' : '⌄'}</Text>
-    </Pressable>
-    {open ? <View style={styles.collapseBody}>{children}</View> : null}
-  </View>;
+function targetChangeLabel(previous: NutritionTargetSnapshot | undefined, current: NutritionTargetSnapshot) {
+  if (!previous) return '首次保存';
+  if (previous.objective !== current.objective) return '营养目标改变';
+  if (previous.pattern !== current.pattern) return '饮食方式改变';
+  if (JSON.stringify(previous.body) !== JSON.stringify(current.body)) return '身体资料更新';
+  if (previous.activity !== current.activity) return '活动程度更新';
+  return '偏好或训练安排更新';
 }
-function EvidenceRow({ index, title, badge, body, last = false }: { index: string; title: string; badge: string; body: string; last?: boolean }) { return <View style={[styles.evidenceRow, !last && styles.evidenceRowBorder]}><Text style={styles.evidenceIndex}>{index}</Text><View style={styles.evidenceRowBody}><View style={styles.evidenceTitleRow}><Text style={styles.evidenceRowTitle}>{title}</Text><Text style={styles.evidenceRowBadge}>{badge}</Text></View><Text style={styles.evidenceRowText}>{body}</Text></View></View>; }
-function SourceLink({ label, onPress }: { label: string; onPress: () => void }) { return <Pressable accessibilityRole="link" onPress={onPress} style={styles.sourceLink}><Text style={styles.sourceLinkText}>{label}</Text><Text style={styles.sourceLinkArrow}>↗</Text></Pressable>; }
+function Macro({ label, value, target, empty }: { label: string; value: number; target?: number; empty?: boolean }) {
+  return <View style={styles.macro}><Text style={styles.macroLabel}>{label}</Text><Text style={styles.macroValue}>{empty ? '—' : rounded(value)}<Text style={styles.macroUnit}> g</Text>{target ? <Text style={styles.macroReference}> / {target}</Text> : null}</Text>{target ? <View style={styles.macroTrack}><View style={[styles.fill, { width: `${Math.min(100, value / target * 100)}%` }]} /></View> : null}</View>;
+}
+function IconAction({ name, label, onPress, close, disabled }: { name: GlyphName; label: string; onPress: () => void; close?: boolean; disabled?: boolean }) {
+  return <Pressable accessibilityRole="button" accessibilityLabel={label} onPress={onPress} disabled={disabled} style={({ pressed }) => [styles.iconAction, close && styles.closeIcon, (pressed || disabled) && { opacity: .5 }]}><AppGlyph name={name} size={18} /></Pressable>;
+}
+function CaptureAction({ icon, label, caption, accessibilityLabel, onPress }: { icon: 'camera' | 'chat'; label: string; caption: string; accessibilityLabel: string; onPress: () => void }) {
+  return <Pressable accessibilityRole="button" accessibilityLabel={accessibilityLabel} onPress={onPress} style={({ pressed }) => [styles.captureAction, pressed && { opacity: .75 }]}><AppGlyph name={icon} size={23} color={icon === 'chat' ? appPalette.lime : appPalette.text} /><View style={styles.flex}><Text style={styles.captureTitle}>{label}</Text><Text style={styles.captureCaption}>{caption}</Text></View></Pressable>;
+}
+function Action({ label, onPress, disabled, bright, small, accessibilityLabel }: { label: string; onPress: () => void; disabled?: boolean; bright?: boolean; small?: boolean; accessibilityLabel?: string }) {
+  return <Pressable accessibilityRole="button" accessibilityLabel={accessibilityLabel || label} disabled={disabled} onPress={onPress} style={({ pressed }) => [styles.action, bright && styles.actionBright, small && styles.actionSmall, (disabled || pressed) && { opacity: disabled ? 0.45 : 0.7 }]}><Text style={[styles.actionText, bright && { color: appPalette.onLime }]}>{label}</Text></Pressable>;
+}
+
+function CalorieRing({ progress }: { progress?: number }) {
+  const circumference = 2 * Math.PI * 28;
+  const value = typeof progress === 'number' && Number.isFinite(progress) ? Math.max(0, progress) : undefined;
+  return <View testID="nutrition-energy-ring" style={styles.ring}><Svg width={64} height={64} viewBox="0 0 64 64"><Circle cx={32} cy={32} r={28} fill="none" stroke={appPalette.border} strokeWidth={6} /><Circle cx={32} cy={32} r={28} fill="none" stroke={appPalette.lime} strokeWidth={6} strokeLinecap="round" strokeDasharray={circumference} strokeDashoffset={circumference * (1 - Math.min(1, value || 0))} rotation={-90} origin="32,32" /></Svg><View style={styles.ringCopy}><Text style={styles.ringValue}>{value === undefined ? '—' : Math.round(value * 100) + '%'}</Text></View></View>;
+}
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: colors.paper }, top: { height: 64, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 18 }, back: { width: 42, height: 42, borderRadius: 21, backgroundColor: colors.card, borderWidth: 1, borderColor: colors.line, alignItems: 'center', justifyContent: 'center' }, backText: { color: colors.ink, fontSize: 34, lineHeight: 37 }, title: { color: colors.ink, fontWeight: '900', fontSize: 17 },
-  unavailable: { margin: 20, padding: 20, backgroundColor: colors.card, borderWidth: 1, borderColor: colors.line, borderRadius: radius.lg },
-  unavailableTitle: { color: colors.ink, fontSize: 18, fontWeight: '900' },
-  unavailableText: { color: colors.inkMuted, fontSize: 12, lineHeight: 20, marginTop: 9 },
-  content: { padding: 20, paddingBottom: 55 }, sectionTitle: { color: colors.ink, fontSize: 19, fontWeight: '900', marginTop: 24, marginBottom: 12 }, horizontal: { paddingRight: 20 },
-  horizontalWrap: { position: 'relative' },
-  horizontalFade: { position: 'absolute', top: 0, bottom: 0, right: 0, width: 26 },
-  safetyCard: { borderRadius: radius.md, borderWidth: 1, padding: 15, marginTop: 16 }, safetyBlocked: { backgroundColor: '#FFF0EC', borderColor: '#E9A08D' }, safetyWarning: { backgroundColor: '#FFF8DE', borderColor: '#D7B94B' }, safetyEyebrow: { color: '#8D351F', fontSize: 9, fontWeight: '900', letterSpacing: 0.8 }, safetyTitle: { color: colors.ink, fontSize: 15, fontWeight: '900', marginTop: 5 }, safetyText: { color: '#644E47', fontSize: 11, lineHeight: 18, marginTop: 6 }, safetyMeta: { color: colors.ink, fontSize: 10, fontWeight: '800', marginTop: 9 },
-  pattern: { width: 145, minHeight: 76, borderRadius: radius.md, backgroundColor: colors.card, borderWidth: 1, borderColor: colors.line, padding: 13, marginRight: 9 }, patternActive: { borderColor: colors.limeDark, backgroundColor: '#F0F6DC' }, patternTitle: { color: colors.ink, fontSize: 14, fontWeight: '900' }, patternTitleActive: { color: '#4F6114' }, patternSub: { color: colors.inkMuted, fontSize: 9, lineHeight: 14, marginTop: 5 },
-  energyCard: { marginTop: 27, borderRadius: radius.lg, backgroundColor: colors.ink, padding: 20 }, energyTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }, kicker: { color: colors.lime, fontSize: 10, fontWeight: '900', letterSpacing: 1 }, calories: { color: '#FFFFFF', fontSize: 38, fontWeight: '900', marginTop: 5 }, calorieUnit: { color: '#AEB1A8', fontSize: 12 }, deltaBadge: { backgroundColor: '#30332C', borderRadius: 15, paddingVertical: 9, paddingHorizontal: 12, alignItems: 'center' }, delta: { color: '#FFFFFF', fontSize: 15, fontWeight: '900' }, deltaLabel: { color: '#92958C', fontSize: 8, marginTop: 2 }, strategy: { color: '#BFC2B8', fontSize: 12, lineHeight: 18, marginTop: 12 }, energyRow: { flexDirection: 'row', borderTopWidth: 1, borderTopColor: '#393C34', marginTop: 17, paddingTop: 15 }, mini: { flex: 1 }, miniValue: { color: '#FFFFFF', fontWeight: '900', fontSize: 15 }, miniLabel: { color: '#888B82', fontSize: 9, marginTop: 3 },
-  weightTrendCard: { backgroundColor: colors.card, borderRadius: radius.md, borderWidth: 1, borderColor: colors.line, padding: 15, marginTop: 11 },
-  weightTrendTitle: { color: colors.ink, fontSize: 15, fontWeight: '900' },
-  weightTrendHint: { color: colors.inkMuted, fontSize: 11, lineHeight: 17, marginTop: 4 },
-  weightEntryRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 12 },
-  weightInput: { flex: 1, minWidth: 65, height: 42, borderRadius: 10, borderWidth: 1, borderColor: colors.line, backgroundColor: colors.paper, color: colors.ink, fontSize: 16, fontWeight: '900', paddingHorizontal: 10 },
-  weightUnit: { color: colors.inkMuted, fontSize: 11, fontWeight: '800' },
-  weightSave: { height: 42, borderRadius: 10, backgroundColor: colors.ink, paddingHorizontal: 12, alignItems: 'center', justifyContent: 'center' },
-  weightSaveText: { color: colors.lime, fontSize: 11, fontWeight: '900' },
-  weightTrendResult: { color: colors.ink, fontSize: 12, fontWeight: '900', marginTop: 13 },
-  weightTrendNote: { color: colors.inkMuted, fontSize: 10, lineHeight: 16, marginTop: 5 },
-  weightBaseline: { color: colors.inkMuted, fontSize: 10, marginTop: 10 },
-  weightBaselineAction: { alignSelf: 'flex-start', marginTop: 8, paddingVertical: 8, paddingHorizontal: 11, borderRadius: 9, backgroundColor: '#EDF4DF' },
-  weightBaselineActionText: { color: colors.green, fontSize: 10, fontWeight: '900' },
-  rhythmCard: { backgroundColor: colors.card, borderRadius: radius.lg, borderWidth: 1, borderColor: colors.line, padding: 18 },
-  rhythmHeader: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8 },
-  rhythmHeaderTitle: { flex: 1 },
-  rhythmEyebrow: { color: colors.green, fontSize: 10, fontWeight: '900', letterSpacing: 1 },
-  rhythmTitle: { color: colors.ink, fontSize: 17, fontWeight: '900', marginTop: 5 },
-  rhythmDifference: { backgroundColor: '#EDF7E5', borderRadius: radius.pill, paddingHorizontal: 10, paddingVertical: 7 },
-  rhythmDifferenceText: { color: '#49672B', fontSize: 10, fontWeight: '900' },
-  dayCompare: { flexDirection: 'row', gap: 8, marginTop: 17 },
-  dayCompareItem: { flex: 1, minWidth: 0, borderRadius: 15, padding: 13, backgroundColor: colors.paper, borderWidth: 1, borderColor: colors.line },
-  dayCompareActive: { backgroundColor: colors.ink, borderColor: colors.ink },
-  dayCompareLabel: { color: colors.inkMuted, fontSize: 11, fontWeight: '800' },
-  dayCompareLabelActive: { color: colors.lime },
-  dayCompareValue: { color: colors.ink, fontSize: 21, fontWeight: '900', marginTop: 6 },
-  dayCompareValueActive: { color: '#FFFFFF' },
-  dayCompareUnit: { fontSize: 10, color: '#8B8F84' },
-  rhythmCaption: { color: colors.inkMuted, fontSize: 10, lineHeight: 16, marginTop: 10 },
-  rhythmDivider: { height: 1, backgroundColor: colors.line, marginVertical: 16 },
-  rhythmDetail: { flexDirection: 'row', alignItems: 'flex-start', gap: 11, marginBottom: 13 },
-  rhythmDetailIcon: { width: 26, height: 26, borderRadius: 9, alignItems: 'center', justifyContent: 'center' },
-  carbIcon: { backgroundColor: '#E9EFFF' }, proteinIcon: { backgroundColor: '#FFF0E8' },
-  rhythmDetailIconText: { color: colors.ink, fontSize: 11, fontWeight: '900' },
-  rhythmDetailBody: { flex: 1 }, rhythmDetailTitle: { color: colors.ink, fontSize: 12, fontWeight: '900' },
-  rhythmDetailText: { color: colors.inkMuted, fontSize: 11, lineHeight: 18, marginTop: 4 },
-  evidencePanel: { backgroundColor: colors.card, borderRadius: radius.lg, borderWidth: 1, borderColor: colors.line, overflow: 'hidden' },
-  evidenceLead: { flexDirection: 'row', backgroundColor: '#F2F7EC', padding: 16, gap: 12 },
-  evidenceLeadAccent: { width: 4, borderRadius: 3, backgroundColor: colors.green }, evidenceLeadBody: { flex: 1 },
-  evidenceTitleRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 8 },
-  evidenceLeadTitle: { color: colors.ink, fontSize: 15, fontWeight: '900', flexShrink: 1 },
-  evidenceBadge: { color: '#406B40', backgroundColor: '#DFEDDB', borderRadius: radius.pill, overflow: 'hidden', paddingHorizontal: 9, paddingVertical: 5, fontSize: 10, fontWeight: '900' },
-  evidenceLeadText: { color: colors.ink, fontSize: 11, lineHeight: 19, marginTop: 9 },
-  evidenceLeadNote: { color: '#4F7552', fontSize: 10, fontWeight: '700', marginTop: 8 },
-  evidenceSeparator: { height: 1, backgroundColor: colors.line },
-  evidenceRow: { flexDirection: 'row', gap: 12, padding: 16 }, evidenceRowBorder: { borderBottomWidth: 1, borderBottomColor: colors.line },
-  evidenceIndex: { color: colors.limeDark, fontSize: 12, fontWeight: '900', width: 21, marginTop: 2 },
-  evidenceRowBody: { flex: 1 }, evidenceRowTitle: { color: colors.ink, fontSize: 13, fontWeight: '900', flexShrink: 1 },
-  evidenceRowBadge: { color: colors.inkMuted, backgroundColor: colors.paper, borderRadius: radius.pill, overflow: 'hidden', paddingHorizontal: 8, paddingVertical: 5, fontSize: 9, fontWeight: '800' },
-  evidenceRowText: { color: colors.inkMuted, fontSize: 11, lineHeight: 18, marginTop: 6 },
-  evidenceToggle: { borderTopWidth: 1, borderTopColor: colors.line, minHeight: 46, paddingHorizontal: 17, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  evidenceToggleText: { color: colors.ink, fontSize: 11, fontWeight: '900' }, evidenceToggleArrow: { color: colors.inkMuted, fontSize: 18 },
-  evidenceLinks: { backgroundColor: colors.paper, paddingHorizontal: 17, paddingBottom: 8 },
-  sourceLink: { minHeight: 39, borderTopWidth: 1, borderTopColor: colors.line, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  sourceLinkText: { color: colors.inkMuted, fontSize: 10 }, sourceLinkArrow: { color: colors.blue, fontSize: 14 },
-  basisCard: { backgroundColor: colors.card, borderWidth: 1, borderColor: colors.line, borderRadius: radius.md, padding: 14, marginTop: 7 },
-  basisText: { color: colors.inkMuted, fontSize: 11, lineHeight: 18, marginBottom: 8 },
-  blockedAdvice: { backgroundColor: colors.card, borderRadius: radius.md, borderWidth: 1, borderColor: colors.line, padding: 16, marginTop: 23 }, blockedAdviceTitle: { color: colors.ink, fontSize: 16, fontWeight: '900' }, blockedAdviceText: { color: colors.inkMuted, fontSize: 12, lineHeight: 20, marginTop: 8 },
-  mealCard: { backgroundColor: colors.card, borderWidth: 1, borderColor: colors.line, borderRadius: radius.md, padding: 15, marginBottom: 10 }, mealTop: { flexDirection: 'row', alignItems: 'center' }, mealIndex: { width: 35, height: 35, borderRadius: 12, backgroundColor: colors.lime, alignItems: 'center', justifyContent: 'center', marginRight: 11 }, mealIndexText: { color: colors.ink, fontWeight: '900' }, mealName: { color: colors.ink, fontSize: 14, fontWeight: '900' }, mealPurpose: { color: colors.inkMuted, fontSize: 9, marginTop: 3 }, mealCalories: { color: colors.ink, fontSize: 11, fontWeight: '800' }, foods: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 12 }, foodChip: { backgroundColor: colors.paper, borderRadius: radius.pill, paddingHorizontal: 9, paddingVertical: 6 }, foodText: { color: colors.inkMuted, fontSize: 10 },
-  notes: { backgroundColor: colors.card, borderRadius: radius.md, borderWidth: 1, borderColor: colors.line, padding: 15 }, noteRow: { flexDirection: 'row', alignItems: 'flex-start', marginVertical: 7 }, noteNum: { width: 22, height: 22, borderRadius: 8, backgroundColor: colors.ink, color: colors.lime, textAlign: 'center', lineHeight: 22, fontSize: 10, fontWeight: '900', marginRight: 10 }, noteText: { flex: 1, color: colors.ink, fontSize: 12, lineHeight: 19 }, caution: { backgroundColor: '#FFF0EC', borderRadius: radius.md, padding: 15, marginTop: 12, borderLeftWidth: 3, borderLeftColor: colors.orange }, cautionTitle: { color: '#8D351F', fontWeight: '900', fontSize: 12 }, cautionText: { color: '#7E4B40', fontSize: 11, lineHeight: 18, marginTop: 5 }, disclaimer: { color: colors.inkMuted, fontSize: 10, lineHeight: 16, textAlign: 'center', marginTop: 18 },
-  collapseCard: { backgroundColor: colors.card, borderRadius: radius.md, borderWidth: 1, borderColor: colors.line, marginBottom: 10, overflow: 'hidden' },
-  collapseHead: { minHeight: 58, paddingHorizontal: 15, paddingVertical: 10, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  collapseTitle: { color: colors.ink, fontSize: 15, fontWeight: '900' },
-  collapseHint: { color: colors.inkMuted, fontSize: 11, lineHeight: 16, marginTop: 3 },
-  collapseArrow: { color: colors.inkMuted, fontSize: 20 },
-  collapseBody: { borderTopWidth: 1, borderTopColor: colors.line, paddingTop: 13, paddingHorizontal: 13, paddingBottom: 13 },
+
+  page: { ...progressPageLayout.content }, embeddedPage: { paddingBottom: 110 },
+  header: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 10 }, back: { width: 44, height: 44, justifyContent: 'center' }, title: { ...progressPageLayout.title, color: colors.ink }, flex: { flex: 1, minWidth: 0 },
+  dateRow: { flexDirection: 'row', alignItems: 'center', gap: 5, marginBottom: 10 }, dateCenter: { flex: 1, minWidth: 0, minHeight: 44, alignItems: 'center', justifyContent: 'center' }, dateText: { color: colors.ink, fontSize: 12, fontWeight: '800' }, subtle: { color: colors.inkMuted, fontSize: 11, lineHeight: 18 },
+  hero: { backgroundColor: colors.card, borderWidth: 1, borderColor: colors.line, paddingHorizontal: 14, paddingTop: 4, paddingBottom: 14, borderRadius: 20 }, between: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10 }, heroLabel: { fontSize: 11, fontWeight: '700', color: colors.inkMuted, flex: 1 }, heroToolbar: { flexDirection: 'row', alignItems: 'center', gap: 4 }, heroTools: { flexDirection: 'row', alignItems: 'center' }, datePill: { minHeight: 44, paddingHorizontal: 6, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4 }, datePillText: { color: colors.inkMuted, fontSize: 11, fontWeight: '700' }, iconAction: { width: 44, height: 44, justifyContent: 'center', alignItems: 'center' }, closeIcon: { transform: [{ rotate: '45deg' }] },
+  energyRow: { flexDirection: 'row', alignItems: 'center', gap: 12 }, energyNumbers: { flexDirection: 'row', alignItems: 'baseline', flexWrap: 'wrap', columnGap: 6 }, energy: { color: colors.ink, fontSize: 40, lineHeight: 48, fontWeight: '900', letterSpacing: -1.2, fontVariant: ['tabular-nums'] }, energyUnit: { color: colors.inkMuted, fontSize: 11 }, target: { color: colors.inkMuted, fontSize: 11, lineHeight: 18, marginTop: 8 },
+  ring: { width: 64, height: 64, flexShrink: 0 }, ringCopy: { ...StyleSheet.absoluteFill, alignItems: 'center', justifyContent: 'center' }, ringValue: { color: colors.ink, fontSize: 14, fontWeight: '800', fontVariant: ['tabular-nums'] },
+  macroRow: { flexDirection: 'row', gap: 12, marginTop: 12, paddingTop: 12, borderTopWidth: 1, borderTopColor: colors.line }, macro: { flex: 1, minWidth: 0 }, macroValue: { color: colors.ink, fontSize: 16, fontWeight: '800', lineHeight: 22, marginTop: 3, fontVariant: ['tabular-nums'] }, macroUnit: { fontSize: 10, color: colors.inkMuted }, macroLabel: { color: colors.inkMuted, fontSize: 11 }, macroReference: { color: colors.inkMuted, fontSize: 10, fontWeight: '500' }, macroTrack: { height: 4, backgroundColor: colors.line, borderRadius: 3, overflow: 'hidden', marginTop: 6 }, fill: { height: '100%', backgroundColor: colors.lime },
+  quickActions: { flexDirection: 'row', gap: 10, marginTop: 10 }, action: { borderRadius: 14, minHeight: 44, backgroundColor: appPalette.raised, borderWidth: 1, borderColor: colors.line, paddingHorizontal: 12, paddingVertical: 10, flexDirection: 'row', gap: 8, alignItems: 'center', justifyContent: 'center', flexShrink: 1 }, actionBright: { backgroundColor: colors.lime, borderColor: colors.lime }, actionSmall: { paddingHorizontal: 10, minHeight: 44, borderRadius: 12 }, actionText: { fontSize: 12, color: colors.ink, fontWeight: '800', textAlign: 'center', flexShrink: 1 },
+  captureAction: { flex: 1, minWidth: 0, minHeight: 60, flexDirection: 'row', alignItems: 'center', gap: 10, borderRadius: 14, paddingHorizontal: 12, paddingVertical: 10, backgroundColor: colors.card, borderWidth: 1, borderColor: colors.line }, captureTitle: { color: colors.ink, fontSize: 13, fontWeight: '800', lineHeight: 19 }, captureCaption: { color: colors.inkMuted, fontSize: 10, lineHeight: 16, marginTop: 2 },
+  section: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 12, marginBottom: 6, gap: 12 }, sectionTitle: { ...progressPageLayout.sectionTitle, color: colors.ink },
+
+  recordList: { gap: 10, paddingVertical: 12 }, recordName: { color: colors.ink, fontSize: 16, fontWeight: '800', marginVertical: 8, lineHeight: 22 }, recordActions: { flexDirection: 'row', justifyContent: 'flex-end', gap: 8, marginTop: 12 }, estimateNote: { color: appPalette.warning, fontSize: 11, lineHeight: 18, marginTop: 8 }, emptyTitle: { color: colors.ink, fontSize: 13, fontWeight: '800', marginBottom: 3 }, textAction: { minHeight: 44, flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 4 },
+  emptyMeal: { flexDirection: 'row', alignItems: 'center', gap: 10, padding: 12, borderWidth: 1, borderColor: colors.line, backgroundColor: colors.card, borderRadius: 14 }, emptyMealIcon: { width: 36, height: 36, backgroundColor: appPalette.olive, borderRadius: 12, justifyContent: 'center', alignItems: 'center' }, mealRows: { gap: 7 }, mealRow: { minHeight: 76, flexDirection: 'row', alignItems: 'center', gap: 10, padding: 8, backgroundColor: colors.card, borderWidth: 1, borderColor: colors.line, borderRadius: 14 }, mealRowHead: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 5, marginBottom: 4 }, mealRowTitle: { fontSize: 13, lineHeight: 20, fontWeight: '800', color: colors.ink }, photoBadge: { fontSize: 9, lineHeight: 15, color: appPalette.warning, backgroundColor: appPalette.warningBackground, paddingHorizontal: 5, borderRadius: 5 },
+  cardTitle: { color: colors.ink, fontSize: 15, fontWeight: '800' },
+  slot: { color: colors.green, fontSize: 11, fontWeight: '700', flexShrink: 1 }, mealMacros: { color: colors.inkMuted, fontSize: 11, lineHeight: 18, marginTop: 4 },
+
+  link: { color: colors.green, fontSize: 12, fontWeight: '700', lineHeight: 18 }, actions: { flexDirection: 'row', gap: 8, alignItems: 'center', marginTop: 8 }, body: { color: colors.inkMuted, fontSize: 12, lineHeight: 20, marginVertical: 6 }, footnote: { color: colors.inkMuted, fontSize: 11, lineHeight: 18, marginVertical: 10 },
+  warning: { padding: 12, borderRadius: 12, backgroundColor: appPalette.warningBackground, marginTop: 7 }, warningText: { color: appPalette.warning, fontSize: 12, lineHeight: 19 }, notice: { marginTop: 16, gap: 9 },
+  weightEditor: { borderTopWidth: 1, borderTopColor: colors.line, marginTop: 15, paddingTop: 9, gap: 10 }, input: { flex: 1, minWidth: 0, minHeight: 44, borderWidth: 1, borderColor: colors.line, padding: 12, borderRadius: 12, color: colors.ink, backgroundColor: colors.paper, fontSize: 13 },
+  knowledgeToggle: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 20, alignItems: 'center', gap: 12 }, knowledgeItem: { borderTopWidth: 1, borderTopColor: colors.line, marginTop: 16, paddingTop: 16 }, sourceLink: { minHeight: 44, justifyContent: 'center' }, error: { color: colors.danger, fontSize: 12, lineHeight: 21, marginVertical: 12 },
+  targetHistoryList: { paddingVertical: 10, gap: 12 }, targetSnapshot: { backgroundColor: colors.paper, borderRadius: 16, padding: 14, gap: 5 },
+  backdrop: { flex: 1, padding: 16, backgroundColor: 'rgba(0,0,0,.72)', justifyContent: 'center', alignItems: 'center' }, sheet: { backgroundColor: colors.card, borderWidth: 1, borderColor: colors.line, borderRadius: 20, padding: 16, width: '100%', maxWidth: 440, maxHeight: '90%' },
 });

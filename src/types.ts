@@ -5,7 +5,7 @@ export type ExperienceLevel = 'beginner' | 'intermediate' | 'advanced' | 'elite'
 
 export type Profile = {
   name: string;
-  sex: 'male' | 'female';
+  sex: 'male' | 'female' | 'unspecified';
   age: number;
   height: number;
   weight: number;
@@ -93,6 +93,7 @@ export type TrainingSession = {
   kind?: 'strength' | 'running';
   distanceKm?: number;
   calories?: number;
+  route?: Array<{ latitude: number; longitude: number }>;
   quality?: 'solid' | 'hard' | 'pain';
   completion?: 'complete' | 'partial';
   trainingDate?: string;
@@ -103,6 +104,7 @@ export type DailyWorkoutEdits = Record<string, { date: string; workoutId: string
 export type Settings = {
   vibration: boolean;
   restSeconds: number;
+  runningGoal?: import('./data/runGoals').RunningGoal;
 };
 
 export type Route =

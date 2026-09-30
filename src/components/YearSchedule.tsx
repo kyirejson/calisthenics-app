@@ -1,7 +1,7 @@
 import React, { useMemo, useRef, useState } from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { getCalendarMonths, getDisplayedSchedule, localDateKey, type ScheduledDay } from '../data/planProgress';
-import { colors, radius } from '../theme';
+import { fitnessColors as colors, appPalette, radius, progressPageLayout } from '../theme';
 import type { Profile, TrainingSession } from '../types';
 import { ScheduleDayDetail } from './ScheduleDayDetail';
 
@@ -46,7 +46,7 @@ export function YearSchedule({ profile, sessions, anchor, onSelect, onOpenExerci
   return <Modal visible animationType="slide" transparent onRequestClose={onClose}>
     <View style={styles.backdrop}>
       <Pressable style={StyleSheet.absoluteFill} onPress={onClose} />
-      <View style={styles.sheet}>
+      <View testID="year-schedule-sheet" style={styles.sheet}>
         <View style={styles.handle} />
         <View style={styles.header}>
           <View style={styles.headerCopy}><Text style={styles.eyebrow}>日程详情</Text><Text style={styles.title}>训练日历</Text><Text style={styles.subtitle}>未来 {horizon} 天 · 每月翻页，点日期查看课程</Text></View>
@@ -54,7 +54,7 @@ export function YearSchedule({ profile, sessions, anchor, onSelect, onOpenExerci
         </View>
         <View style={styles.pager}>
           <Pressable accessibilityRole="button" accessibilityLabel="上一个月" disabled={monthIndex === 0} onPress={() => changeMonth(-1)} style={[styles.pageButton, monthIndex === 0 && styles.pageButtonDisabled]}><Text style={styles.pageArrow}>‹</Text></Pressable>
-          <View style={styles.pagerCenter}><Text style={styles.monthTitle}>{month.title}</Text><Text style={styles.pageCount}>{monthIndex + 1} / {months.length} · {month.plannedCount} 天训练</Text></View>
+          <View style={styles.pagerCenter}><Text style={styles.monthTitle}>{month.title}</Text><Text style={styles.pageCount}>{monthIndex + 1} / {months.length} · {month.plannedCount} 天有安排</Text></View>
           <Pressable accessibilityRole="button" accessibilityLabel="下一个月" disabled={monthIndex === months.length - 1} onPress={() => changeMonth(1)} style={[styles.pageButton, monthIndex === months.length - 1 && styles.pageButtonDisabled]}><Text style={styles.pageArrow}>›</Text></Pressable>
         </View>
         <View style={styles.legend}><Legend color={colors.limeDark} label="力量 / 技术" />{profile.goal !== 'street_mastery' ? <Legend color={colors.blue} label="有氧" /> : null}<Legend color="#BDC2B7" label="恢复" /></View>
@@ -91,40 +91,40 @@ function Legend({ color, label }: { color: string; label: string }) {
 }
 
 const styles = StyleSheet.create({
-  backdrop: { flex: 1, backgroundColor: 'rgba(12,15,10,0.62)', justifyContent: 'flex-end' },
-  sheet: { height: '94%', backgroundColor: colors.paper, borderTopLeftRadius: radius.lg, borderTopRightRadius: radius.lg, overflow: 'hidden' },
-  handle: { width: 38, height: 4, borderRadius: 2, backgroundColor: '#C7C7BE', alignSelf: 'center', marginTop: 9 },
-  header: { flexDirection: 'row', alignItems: 'flex-start', paddingHorizontal: 20, paddingTop: 17, paddingBottom: 12 },
+  backdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.72)', justifyContent: 'flex-end', alignItems: 'center' },
+  sheet: { width: '100%', maxWidth: progressPageLayout.content.maxWidth, height: '94%', backgroundColor: colors.paper, borderTopLeftRadius: radius.lg, borderTopRightRadius: radius.lg, overflow: 'hidden' },
+  handle: { width: 38, height: 4, borderRadius: 2, backgroundColor: colors.line, alignSelf: 'center', marginTop: 9 },
+  header: { flexDirection: 'row', alignItems: 'flex-start', paddingHorizontal: 16, paddingTop: 17, paddingBottom: 12 },
   headerCopy: { flex: 1 }, eyebrow: { color: colors.green, fontSize: 10, fontWeight: '900', letterSpacing: 1 },
-  title: { color: colors.ink, fontSize: 24, fontWeight: '900', marginTop: 3 },
+  title: { color: colors.ink, fontSize: progressPageLayout.title.fontSize, fontWeight: '900', marginTop: 3 },
   subtitle: { color: colors.inkMuted, fontSize: 11, lineHeight: 17, marginTop: 4 },
-  close: { width: 35, height: 35, borderRadius: 18, backgroundColor: colors.card, alignItems: 'center', justifyContent: 'center' },
+  close: { width: 44, height: 44, borderRadius: 22, backgroundColor: colors.card, alignItems: 'center', justifyContent: 'center' },
   closeText: { fontSize: 24, color: colors.inkMuted },
-  pager: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginHorizontal: 20, marginBottom: 12, paddingHorizontal: 10, paddingVertical: 9, borderRadius: radius.md, backgroundColor: colors.card, borderWidth: 1, borderColor: colors.line },
-  pageButton: { width: 39, height: 39, borderRadius: 12, backgroundColor: colors.ink, alignItems: 'center', justifyContent: 'center' },
+  pager: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginHorizontal: 16, marginBottom: 12, paddingHorizontal: 10, paddingVertical: 9, borderRadius: radius.md, backgroundColor: colors.card, borderWidth: 1, borderColor: colors.line },
+  pageButton: { width: 44, height: 44, borderRadius: 12, backgroundColor: appPalette.raised, alignItems: 'center', justifyContent: 'center' },
   pageButtonDisabled: { opacity: 0.28 },
   pageArrow: { color: colors.lime, fontSize: 26, lineHeight: 30, fontWeight: '800' },
   pagerCenter: { alignItems: 'center' },
   monthTitle: { color: colors.ink, fontSize: 17, fontWeight: '900' },
   pageCount: { color: colors.inkMuted, fontSize: 10, marginTop: 3 },
-  legend: { flexDirection: 'row', gap: 17, paddingHorizontal: 20, paddingBottom: 12, borderBottomWidth: 1, borderBottomColor: colors.line },
+  legend: { flexDirection: 'row', gap: 17, paddingHorizontal: 16, paddingBottom: 12, borderBottomWidth: 1, borderBottomColor: colors.line },
   legendItem: { flexDirection: 'row', alignItems: 'center', gap: 5 },
   legendDot: { width: 7, height: 7, borderRadius: 4 }, legendText: { color: colors.inkMuted, fontSize: 10 },
-  content: { paddingHorizontal: 20, paddingTop: 12, paddingBottom: 38 },
+  content: { paddingHorizontal: 16, paddingTop: 12, paddingBottom: 38 },
   monthCard: { backgroundColor: colors.card, borderRadius: radius.md, borderWidth: 1, borderColor: colors.line, padding: 12 },
   monthGrid: { flexDirection: 'row', flexWrap: 'wrap' },
   weekday: { width: '14.2857%', textAlign: 'center', color: colors.inkMuted, fontSize: 10, fontWeight: '800', marginBottom: 7 },
-  cellSlot: { width: '14.2857%', height: 41, alignItems: 'center', justifyContent: 'center' },
-  dateCell: { width: 33, height: 37, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
-  todayCell: { backgroundColor: '#EFF5DC' },
-  selectedCell: { backgroundColor: colors.ink },
+  cellSlot: { width: '14.2857%', minHeight: 48, alignItems: 'center', justifyContent: 'center' },
+  dateCell: { width: '100%', height: 44, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
+  todayCell: { backgroundColor: appPalette.olive },
+  selectedCell: { backgroundColor: colors.lime },
   dateText: { color: colors.ink, fontSize: 12, fontWeight: '800' },
-  selectedDateText: { color: '#FFFFFF' },
+  selectedDateText: { color: appPalette.onLime },
   kindDot: { width: 5, height: 5, borderRadius: 3, marginTop: 3 },
   strengthDot: { backgroundColor: colors.limeDark }, cardioDot: { backgroundColor: colors.blue }, recoveryDot: { backgroundColor: '#BDC2B7' },
-  outsideDate: { color: '#C5C7BF', fontSize: 11 },
+  outsideDate: { color: appPalette.faint, fontSize: 11 },
   dayDetail: { marginTop: 12 },
-  backToMonth: { alignSelf: 'flex-start', minHeight: 30, justifyContent: 'center', marginBottom: 7 },
+  backToMonth: { alignSelf: 'flex-start', minHeight: 44, justifyContent: 'center', marginBottom: 7 },
   backToMonthText: { color: colors.green, fontSize: 11, fontWeight: '900' },
   pickHint: { color: colors.inkMuted, fontSize: 11, lineHeight: 17, textAlign: 'center', paddingVertical: 18 },
   note: { color: colors.inkMuted, fontSize: 10, lineHeight: 16, marginTop: 14 },

@@ -1,6 +1,7 @@
 import type { Profile } from '../types';
 
-type WeightRecord = NonNullable<Profile['weightHistory']>[number];
+export type WeightRecord = NonNullable<Profile['weightHistory']>[number];
+export type WeightPeriod = 7 | 30 | 90;
 
 export function localWeightDate(date: Date) {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
@@ -15,15 +16,37 @@ function dayNumber(key: string) {
 
 export function recordWeight(history: Profile['weightHistory'], kg: number, date = new Date()): WeightRecord[] {
   const key = localWeightDate(date);
-  return [...(history || []).filter((entry) => entry.date !== key), { date: key, kg }]
-    .filter((entry) => Number.isFinite(dayNumber(entry.date)) && Number.isFinite(entry.kg) && entry.kg >= 30 && entry.kg <= 300)
-    .sort((a, b) => a.date.localeCompare(b.date))
-    .slice(-180);
+  const records = cleanWeightRecords(history);
+  if (!Number.isFinite(dayNumber(key)) || !Number.isFinite(kg) || kg < 30 || kg > 300) return records.slice(-180);
+  return [...records.filter(entry => entry.date !== key), { date: key, kg }].sort((a, b) => a.date.localeCompare(b.date)).slice(-180);
+}
+
+/** Keep the last valid measurement for a calendar day; never coerce imported values. */
+function cleanWeightRecords(history: Profile['weightHistory']): WeightRecord[] {
+  const byDate = new Map<string, WeightRecord>();
+  if (!Array.isArray(history)) return [];
+  for (const entry of history) {
+    if (!entry || typeof entry.date !== 'string' || !Number.isFinite(dayNumber(entry.date))
+      || !Number.isFinite(entry.kg) || entry.kg < 30 || entry.kg > 300) continue;
+    byDate.set(entry.date, { date: entry.date, kg: entry.kg });
+  }
+  return [...byDate.values()].sort((a, b) => a.date.localeCompare(b.date));
+}
+
+export function weightTrendWindow(history: Profile['weightHistory'], days: WeightPeriod, today = new Date()) {
+  const endDay = dayNumber(localWeightDate(today));
+  const end = localWeightDate(today);
+  if (!Number.isFinite(endDay)) return { days, start: '', end, records: [] as WeightRecord[], average: undefined as number | undefined };
+  const startDay = endDay - days + 1;
+  const start = new Date(startDay * 86400000).toISOString().slice(0, 10);
+  const records = cleanWeightRecords(history).filter(entry => { const day = dayNumber(entry.date); return day >= startDay && day <= endDay; });
+  const average = records.length ? Number((records.reduce((sum, entry) => sum + entry.kg, 0) / records.length).toFixed(1)) : undefined;
+  return { days, start, end, records, average };
 }
 
 export function summarizeWeightTrend(history: Profile['weightHistory'], today = new Date()) {
   const currentDay = dayNumber(localWeightDate(today));
-  const records = history || [];
+  const records = cleanWeightRecords(history);
   const inWindow = (start: number, end: number) => records.filter((entry) => {
     const day = dayNumber(entry.date);
     return Number.isFinite(day) && day >= start && day <= end && Number.isFinite(entry.kg);
