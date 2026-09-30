@@ -6,9 +6,9 @@
 
 永不言弃，积极向上，奋斗终生。
 
-**v1.3.0 · Android**
+**v1.4.0 · Android**
 
-[下载安卓安装包](https://github.com/kyirejson/calisthenics-app/releases/download/v1.3.0/uncover-v1.3.0.apk) · [正式版发布页](https://github.com/kyirejson/calisthenics-app/releases/tag/v1.3.0) · [反馈问题](https://github.com/kyirejson/calisthenics-app/issues)
+[下载安卓安装包](https://github.com/kyirejson/calisthenics-app/releases/download/v1.4.0/uncover-v1.4.0.apk) · [正式版发布页](https://github.com/kyirejson/calisthenics-app/releases/tag/v1.4.0) · [反馈问题](https://github.com/kyirejson/calisthenics-app/issues)
 
 </div>
 
@@ -21,15 +21,19 @@
 - 今日课程、周日历与全年日程查看；支持减肥控重及囚徒健身专题。
 - 动作分类、阶数选择、步骤指导和基于训练记录的进阶辅助。
 - 逐组打钩记录、加组、追加动作、重置当天训练和删除历史；没有勾选的力量训练不记入历史。
-- 今日能量、餐食示例、健康与恢复提示。
-- 前台 GPS 跑步记录、本机数据统计与 JSON 导出。
+- 今日饮食、摄入与体重趋势图；食品库、自定义食品与包装营养标签录入。
+- 公网营养助手：文字／系统语音记餐草案、需求和忌口记忆、50 字以内回复；修改记录前由用户确认。
+- 同一相机入口识别食材、包装标签和商品条码；查库核算营养，份量与用油需核对，照片可保存在本机。
+- 前台 GPS 跑步路线、距离与配速，本机数据统计与 JSON 导出。
 - GitHub 新版 APK 检查及 Expo 内容更新：发现更新、下载、由用户重启生效；训练中不强制重启。
 
 ## 发布说明
 
 本包未包含授权尚未确认的原书全文、原图及照片，部分动作会显示缺图提示；生成的单人动作示范图随包提供。本版不是完整原书资源版。
 
-发布前已进行自动化检查及云端 Android 构建；实体安卓手机的安装、训练记录与热更新端到端验收尚未完成。详细边界见 [本版说明](RELEASE-NOTES.md)。
+已验证公网问答、图片识别、营养标签与商品条码接口，并完成自动化检查和 Android 云端构建。实体安卓手机的安装、相机、语音、GPS 与更新全过程仍需验收。详细边界见 [本版说明](RELEASE-NOTES.md)。
+
+营养服务使用免费 Render 实例，闲置后首次请求可能较慢；当前没有多用户账户鉴权、持久化额度和云备份，不代表企业级服务已经完成。
 
 训练进阶是基于用户记录的自评辅助，不是自动动作识别；高风险动作需要专业指导。营养和训练建议不替代个体化医疗建议。
 
@@ -41,7 +45,7 @@
 
 ## 本地开发
 
-`main` 分支还包含待发布的新版界面、营养助手与拍照记餐代码；上方 APK 链接仍指向已发布的 v1.3.0。新版需先完成公网营养服务验收，部署步骤见 [Render 部署说明](docs/RENDER-DEPLOY.md)。
+营养服务配置与上线边界见 [Render 部署说明](docs/RENDER-DEPLOY.md)。本机开发使用 `npm run dev:nutrition`，密钥仅放在被忽略的 `server/.env`；前端不得保存 API 密钥。
 
 在现有项目 `calisthenics-app` 中运行：
 
@@ -62,6 +66,6 @@ npm run test:updates
 
 ## 数据与版本
 
-个人档案、训练记录默认保存在设备上，不自动同步到云端。当前支持 JSON 导出，尚无导入恢复。位置权限用于前台跑步，尚不支持可靠的后台持续跑步追踪。
+个人档案、训练／饮食记录、助手记忆及照片保存在本机，不自动云同步，卸载可能丢失。当前支持 JSON 导出，尚无导入恢复。联网识图和问答须取得用户同意，可撤销授权。位置权限用于前台跑步，尚不支持可靠的后台持续跑步追踪。
 
 [更新记录](CHANGELOG.md) · [历史版本归档](https://github.com/kyirejson/calisthenics-app/releases)

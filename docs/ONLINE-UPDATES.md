@@ -2,7 +2,7 @@
 
 ## Current status
 
-Code integration is complete. On 2026-09-26, the existing app was linked to [@kyirechou/uncover](https://expo.dev/accounts/kyirechou/projects/uncover) under the user's confirmed personal account. The public project ID is `f6e5af9d-46ec-4f38-be5e-ec267e071eb7`, stored in `app.json`; the effective update URL is `https://u.expo.dev/f6e5af9d-46ec-4f38-be5e-ec267e071eb7`. The user requested a dedicated signing key and official APK release for new users, without legacy compatibility. EAS generated that key and successfully completed [production build e0e73cef-3529-4a9b-9e9b-4335d84e1a77](https://expo.dev/accounts/kyirechou/projects/uncover/builds/e0e73cef-3529-4a9b-9e9b-4335d84e1a77), version 1.3.0/build 4, after fixing the local/cloud channel fingerprint mismatch. Expo Doctor passed 21/21 checks. Device acceptance remains required. No OTA update is published by pushing code. When unconfigured, OTA is explicitly disabled; Android can still check GitHub APK releases. Web is a development preview, not an OTA device.
+The existing project is [@kyirechou/uncover](https://expo.dev/accounts/kyirechou/projects/uncover), ID `f6e5af9d-46ec-4f38-be5e-ec267e071eb7`. On 2026-09-30, [production build daacb5e0-fd52-4eb5-9d06-a7e6eacb3c05](https://expo.dev/accounts/kyirechou/projects/uncover/builds/daacb5e0-fd52-4eb5-9d06-a7e6eacb3c05) completed for v1.4.0/build 5 with runtime `8927a55b51aaa5ede65a3fbbde03dd50e2ba57e6`, the existing dedicated signing credentials and the production nutrition URL. Expo Doctor passed 21/21 checks. Physical-device acceptance remains required. New camera and speech native dependencies require this new APK; a content update cannot add them to v1.3.0. Pushing GitHub code does not publish OTA content. Web is a development preview, not an OTA device.
 
 ## User flow
 
@@ -49,7 +49,8 @@ Book excerpts, book images, derived skill/demon photos and raw downloaded source
 ## Android acceptance checklist
 
 - The user confirmed there are no existing users. Test a clean install; no legacy migration workflow is provided.
-- Install the dedicated-key APK, confirm version 1.3.0/build 4 and test profile/history persistence. Future dedicated-key releases should support in-place upgrades without changing the key.
+- Install the dedicated-key APK, confirm version 1.4.0/build 5 and test profile/history persistence. Dedicated-key releases support in-place upgrades without changing the key; a data export is still recommended.
+- Check camera, barcode scanning, microphone and system speech recognition on a physical Android device. Confirm revoked permissions and network timeouts remain actionable, and that consent survives an app restart.
 - Confirm the app starts with the computer disconnected; opening a workout and leaving without checked sets must not create history.
 - Check one set, leave training, restart and verify only the checked set is saved.
 - Open the update screen. No update is expected until a compatible preview update is explicitly published. Check that offline failures do not erase data.
@@ -57,6 +58,8 @@ Book excerpts, book images, derived skill/demon photos and raw downloaded source
 - This resource-filtered release intentionally lacks local-only book illustrations/full text; describe that limitation publicly.
 
 ## Verification
+
+The v1.4.0 production APK (119,387,676 bytes) passed Google Android `apksig` 8.13.0 cryptographic verification (`verified=true`, APK v2) with the same dedicated certificate. APK SHA-256: `86514109cd9a12b482a36edb58c006219f52d1ac8607c51369b9c3cc27667af2`. Compiled manifest checks confirm `com.zizhong.jinjie`, version 1.4.0/build 5, `debuggable=false`, camera/audio/location/network permissions, updates enabled, the intended Expo project URL and the production channel header. The actual Hermes bundle contains `https://uncover-nutrition-api.onrender.com`. These checks are not physical-device acceptance.
 
 The v1.3.0 production APK (84,141,479 bytes) passed Google Android `apksig` 8.13.0 cryptographic verification (`verified=true`, APK v2). Its dedicated certificate SHA-256 is `EF8CE110F9EAB334A0120D2D50374FA6EF31709A5503C9BB7FAF5E6611C0EC81`, different from the former default debug certificate. APK SHA-256: `15149890a1d1055fb9b159dc12e84bf86019ff1116ba8dea95c3021adabb8b5c`. The compiled Android manifest confirms package `com.zizhong.jinjie`, version 1.3.0/build 4, updates enabled, `NEVER` automatic startup checks, the intended project URL, and the `production` request header. These are package checks, not physical-device acceptance.
 
