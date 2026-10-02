@@ -6,9 +6,9 @@
 
 永不言弃，积极向上，奋斗终生。
 
-**v1.5.0 · Android**
+**v1.5.1 · Android**
 
-[下载安卓安装包](https://github.com/kyirejson/calisthenics-app/releases/download/v1.5.0/uncover-v1.5.0.apk) · [正式版发布页](https://github.com/kyirejson/calisthenics-app/releases/tag/v1.5.0) · [反馈问题](https://github.com/kyirejson/calisthenics-app/issues)
+[下载安卓安装包](https://github.com/kyirejson/calisthenics-app/releases/download/v1.5.1/uncover-v1.5.1.apk) · [正式版发布页](https://github.com/kyirejson/calisthenics-app/releases/tag/v1.5.1) · [反馈问题](https://github.com/kyirejson/calisthenics-app/issues)
 
 </div>
 
@@ -42,7 +42,7 @@
 
 已关联 [Expo 项目 kyirechou/uncover](https://expo.dev/accounts/kyirechou/projects/uncover)。正式包使用 `production` 渠道；测试包使用 `preview` 渠道。上传 GitHub 代码不会自动向手机推送更新，内容更新需要单独发布；新增原生功能仍需安装新版 APK。
 
-v1.5.0/build 6 新增 SQLite 原生依赖，需要安装新版 APK，不能只向旧安装包推送内容更新。沿用专属签名，更新前建议导出本机数据，并覆盖安装而不卸载旧版。
+v1.5.1/build 7 修复营养助手 SQLite 保存和语音输入，需要覆盖安装新版 APK，不能只向旧安装包推送内容更新。沿用专属签名，更新前建议导出本机数据，并覆盖安装而不卸载旧版。
 
 详细配置、签名说明和验收清单见 [联网更新说明](docs/ONLINE-UPDATES.md)。
 
