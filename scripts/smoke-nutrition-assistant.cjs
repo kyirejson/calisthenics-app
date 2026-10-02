@@ -28,7 +28,7 @@ const b = (page, name) => page.getByRole('button', { name, exact: true });
           start() { this.dispatchEvent(new Event('start')); }
           stop() { this.dispatchEvent(new Event('end')); }
           abort() { this.dispatchEvent(new Event('end')); }
-          result(text) { const result = [{ transcript: text, confidence: 0.98 }]; result.isFinal = true; const event = new Event('result'); Object.assign(event, { resultIndex: 0, results: [result] }); this.dispatchEvent(event); }
+          result(text, isFinal = true) { const result = [{ transcript: text, confidence: 0.98 }]; result.isFinal = isFinal; const event = new Event('result'); Object.assign(event, { resultIndex: 0, results: [result] }); this.dispatchEvent(event); }
         };
         window.webkitSpeechRecognition = window.SpeechRecognition;
       }, { profile, journal });
@@ -63,6 +63,11 @@ const b = (page, name) => page.getByRole('button', { name, exact: true });
         assert.equal(await b(page, '同意并开始').count(), 0);
         await b(page, '助手语音输入').click(); await b(page, '同意并开始').click();
         await b(page, '结束助手语音输入').waitFor();
+        assert.equal(await b(page, '发送营养问题').isDisabled(), true);
+        assert.equal(await page.getByLabel('营养问题', { exact: true }).isEditable(), false);
+        await page.getByText('正在听 · 说完点麦克风结束，核对后发送', { exact: true }).waitFor();
+        await page.evaluate(() => window.assistantQASpeech.result('早餐吃了两个水煮', false));
+        assert.equal(await page.getByLabel('营养问题', { exact: true }).inputValue(), '早餐吃了两个水煮');
         await page.evaluate(() => window.assistantQASpeech.result('早餐吃了两个水煮鸡蛋，帮我记录'));
         await b(page, '结束助手语音输入').click();
         assert.equal(await page.getByLabel('营养问题', { exact: true }).inputValue(), '早餐吃了两个水煮鸡蛋，帮我记录');
@@ -104,7 +109,7 @@ const b = (page, name) => page.getByRole('button', { name, exact: true });
           assert.equal(await page.getByLabel('营养问题', { exact: true }).inputValue(), '');
           await b(page, '助手语音输入').click(); await b(page, '结束助手语音输入').waitFor();
           await page.evaluate(() => { const error = new Event('error'); Object.assign(error, { error: 'not-allowed', message: 'QA blocked permission' }); window.assistantQASpeech.dispatchEvent(error); });
-          await page.getByText('未允许麦克风或语音权限，请使用文字输入。', { exact: true }).waitFor();
+          await page.getByText('未允许麦克风或语音权限，请在系统设置开启，或使用键盘输入。', { exact: true }).waitFor();
           assert.equal(await page.getByLabel('营养问题', { exact: true }).isEditable(), true);
         }
         if (process.env.NUTRITION_SCREENSHOT_DIR) await page.screenshot({ path: path.join(process.env.NUTRITION_SCREENSHOT_DIR, 'assistant-' + width + '.png') });

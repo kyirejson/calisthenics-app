@@ -17,21 +17,64 @@ const file = path.resolve(__dirname, '../src/nutrition/assistantArchive.ts');
 const exportsObject = {};
 vm.runInNewContext(ts.transpileModule(fs.readFileSync(file, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText,
   { exports: exportsObject, require: id => id === 'expo-sqlite' ? { openDatabaseAsync: () => { throw Error('real native runtime not allowed in tests'); } } : createRequire(file)(id) });
-function sqlite(t) {
+function sqlite(t, intercept = () => {}) {
   const db = new DatabaseSync(':memory:'); t.after(() => db.close());
   const args = values => values.length === 1 && Array.isArray(values[0]) ? values[0] : values;
   const adapter = {
-    async execAsync(sql) { db.exec(sql); },
-    async runAsync(sql, ...values) { return db.prepare(sql).run(...args(values)); },
+    async execAsync(sql) { await intercept(sql); db.exec(sql); },
+    async runAsync(sql, ...values) { await intercept(sql); return db.prepare(sql).run(...args(values)); },
     async getFirstAsync(sql, ...values) { return db.prepare(sql).get(...args(values)); },
     async getAllAsync(sql, ...values) { return db.prepare(sql).all(...args(values)); },
-    async withExclusiveTransactionAsync(fn) { db.exec('BEGIN'); try { await fn(adapter); db.exec('COMMIT'); } catch (e) { db.exec('ROLLBACK'); throw e; } },
+    // Android can reject temporary connection teardown after FTS writes. The
+    // archive must not open/close a second native connection for each message.
+    async withExclusiveTransactionAsync() { throw Error('NativeDatabase.closeAsync: unable to close due to unfinalized statements'); },
   };
-  return { db, archive: exportsObject.createSQLiteArchive(async () => adapter) };
+  let opens = 0;
+  return { db, archive: exportsObject.createSQLiteArchive(async () => { opens++; return adapter; }), opens: () => opens };
 }
 const turn = (i, patch = {}) => ({ id: 'turn-' + i, createdAt: new Date(Date.UTC(2026, 8, 1, 0, i)).toISOString(), question: '普通训练问答', answer: '已整理训练需求。', topic: 'equipment', ...patch });
 const profile = { name: 'DO_NOT_UPLOAD_NAME', goal: 'equipment', frequency: 6, equipmentSplit: 'ppl', planId: 'equipment_training_v2', age: 30, height: 175, weight: 75, sex: 'male', levels: {}, experience: 'advanced', planStartedAt: '2026-09-01T00:00:00.000Z' };
 const draft = topic => ({ version: 1, topic, updatedAt: '2026-10-02T00:00:00.000Z', objective: '增肌', schedule: '每周六次', environment: '健身房', baseline: '持续训练中', priorities: '上胸', restrictions: '', diet: '不吃香菜' });
+
+test('native archive uses one persistent connection and reads wait for atomic writes', async t => {
+  let release, entered;
+  const blocked = new Promise(resolve => { entered = resolve; });
+  const gate = new Promise(resolve => { release = resolve; });
+  let hold = true;
+  const { archive, opens } = sqlite(t, async sql => {
+    if (hold && sql.startsWith('INSERT INTO turn_search')) { hold = false; entered(); await gate; }
+  });
+  const write = archive.put(turn(0)); await blocked;
+  let readFinished = false;
+  const read = archive.list().then(rows => { readFinished = true; return rows; });
+  await new Promise(resolve => setImmediate(resolve)); assert.equal(readFinished, false);
+  release(); await write; assert.equal((await read)[0].id, 'turn-0');
+  await Promise.all(Array.from({ length: 50 }, (_, i) => archive.put(turn(i + 1))));
+  assert.equal((await archive.exportAll()).length, 51); assert.equal(opens(), 1);
+});
+
+test('failed index write rolls back the turn, then the queue accepts another write', async t => {
+  let fail = true;
+  const { archive, db } = sqlite(t, sql => {
+    if (fail && sql.startsWith('INSERT INTO turn_search')) { fail = false; throw Error('index write failed'); }
+  });
+  await assert.rejects(archive.put(turn(0)), /index write failed/);
+  assert.equal(db.prepare('SELECT count(*) AS n FROM turns').get().n, 0);
+  assert.equal(db.prepare('SELECT count(*) AS n FROM turn_search').get().n, 0);
+  await archive.put(turn(1)); assert.equal((await archive.exportAll()).length, 1);
+});
+
+test('rollback failure quarantines the connection rather than continuing or deleting data', async t => {
+  let fail = false;
+  const { archive, db } = sqlite(t, sql => {
+    if (fail && (sql.startsWith('INSERT INTO turn_search') || sql === 'ROLLBACK')) throw Error('database failed');
+  });
+  await archive.put(turn(0)); fail = true;
+  await assert.rejects(archive.put(turn(1)), /事务未能恢复/);
+  await assert.rejects(archive.clear(), /事务未能恢复/);
+  await assert.rejects(archive.put(turn(2)), /事务未能恢复/);
+  assert.equal(db.prepare('SELECT count(*) AS n FROM turns WHERE id=?').get('turn-0').n, 1);
+});
 test('six focused questions normalize per-topic profiles without altering actual training settings', () => {
   assert.equal(personal.personalQuestions.length, 6);
   assert.equal(personal.normalizePersonalProfile(draft('equipment')).priorities, '上胸');

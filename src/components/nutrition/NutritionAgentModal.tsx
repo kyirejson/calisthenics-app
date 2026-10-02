@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, AppState, KeyboardAvoidingView, Linking, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, AppState, KeyboardAvoidingView, Linking, Modal, Platform, Pressable, ScrollView, StatusBar, StyleSheet, Text, TextInput, View } from 'react-native';
 import { askNutritionAgent, getNutritionServiceStatus, type AdviceContext, type AdviceTurn, type NutritionAdvice } from '../../nutrition/agentClient';
 import type { MealDraftResult } from '../../nutrition/adjustments';
 import type { NutritionAgentAction } from '../../nutrition/types';
@@ -67,7 +67,7 @@ export function NutritionAgentModal({ context, onPrepare, onClose }: {
     finally { mutating.current = false; if (mounted.current) setBusy(false); }
   };
   const send = async (consented = false) => {
-    const text = question.trim(); if (!text || pending.current || mutating.current || voice.listening) return;
+    const text = question.trim(); if (!text || pending.current || mutating.current || voice.active) return;
     const localIntent = normalizeAssistantIntent(explicitPreferenceIntent(text));
     if (!localIntent && !consented && (!latest.current.assistant.consentAt || latest.current.assistant.consentScope !== 2)) { setGate('send'); return; }
     const controller = new AbortController(), requestContext = latest.current.context, signature = JSON.stringify(requestContext), captured = latest.current;
@@ -113,7 +113,7 @@ export function NutritionAgentModal({ context, onPrepare, onClose }: {
   };
   const startVoice = () => {
     if (busy) return;
-    if (!assistant.consentAt) { setGate('voice'); return; }
+    if (!assistant.consentAt || assistant.consentScope !== 2) { setGate('voice'); return; }
     setError(''); void voice.start(question);
   };
   const accept = async () => {
@@ -146,7 +146,7 @@ export function NutritionAgentModal({ context, onPrepare, onClose }: {
     setMessages(current => current.filter(m => !m.question.includes(fact.text) && !m.reply.answer.includes(fact.text))); setForgetId(null);
   });
   return <Modal visible animationType="slide" onRequestClose={close}>
-    <KeyboardAvoidingView style={s.root} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+    <KeyboardAvoidingView style={[s.root, Platform.OS === 'android' && { paddingTop: (StatusBar.currentHeight || 24) + 12 }]} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <View style={s.header}><View style={s.flex}><Text style={s.eyebrow}>UNCOVER · ASSISTANT</Text><Text style={s.title}>营养助手</Text></View><Pressable accessibilityRole="button" accessibilityLabel={view === 'chat' ? '查看助手记忆' : '返回助手对话'} disabled={busy} onPress={() => { voice.abort(); setView(v => v === 'chat' ? 'memory' : 'chat'); }} style={s.headerButton}><Text style={s.lime}>{view === 'chat' ? '记忆 ' + assistant.facts.length : '对话'}</Text></Pressable><Pressable accessibilityRole="button" accessibilityLabel="关闭营养助手" disabled={mutating.current} onPress={close} style={s.close}><Text style={s.closeText}>×</Text></Pressable></View>
       <ScrollView ref={scroll} style={s.flex} contentContainerStyle={s.content} keyboardShouldPersistTaps="handled" onContentSizeChange={() => { if (loadingOlder.current) { loadingOlder.current = false; return; } if (view === 'chat') scroll.current?.scrollToEnd({ animated: true }); }}>
         {serviceNotice && serviceNotice !== error ? <Text accessibilityRole="alert" style={s.small}>{serviceNotice}</Text> : null}
@@ -185,11 +185,16 @@ export function NutritionAgentModal({ context, onPrepare, onClose }: {
         </>}
         {error ? <Text accessibilityRole="alert" style={s.error}>{error}</Text> : null}
       </ScrollView>
-      {view === 'chat' ? <View style={s.composer}><Pressable accessibilityRole="button" accessibilityLabel={voice.listening ? '结束助手语音输入' : '助手语音输入'} disabled={busy} onPress={startVoice} style={[s.voice, voice.listening && s.recording]}><AppGlyph name="microphone" color={voice.listening ? c.onLime : c.lime} size={22} /></Pressable><TextInput accessibilityLabel="营养问题" placeholder={voice.listening ? '正在听，请描述这一餐…' : '描述饮食，或告诉我你的需求'} placeholderTextColor={c.muted} value={question} onChangeText={setQuestion} multiline maxLength={1000} editable={!busy && !voice.listening} style={s.input} /><Pressable accessibilityRole="button" accessibilityLabel="发送营养问题" disabled={busy || voice.listening || !question.trim()} onPress={() => void send()} style={[s.send, (busy || voice.listening || !question.trim()) && s.disabled]}><AppGlyph name="send" color={c.onLime} /></Pressable></View> : null}
+      {view === 'chat' ? <View style={s.composerArea}>
+        {voice.active ? <Text accessibilityLiveRegion="polite" style={s.voiceStatus}>{voice.phase === 'starting' ? '正在准备麦克风 · 再点可取消' : voice.phase === 'stopping' ? '正在整理识别结果…' : '正在听 · 说完点麦克风结束，核对后发送'}</Text> : null}
+        <View style={s.composer}><Pressable accessibilityRole="button" accessibilityLabel={voice.phase === 'starting' ? '取消助手语音输入' : voice.active ? '结束助手语音输入' : '助手语音输入'} disabled={busy || voice.phase === 'stopping'} onPress={startVoice} style={[s.voice, voice.active && s.recording]}>{voice.phase === 'starting' || voice.phase === 'stopping' ? <ActivityIndicator color={c.onLime} /> : <AppGlyph name="microphone" color={voice.active ? c.onLime : c.lime} size={22} />}</Pressable><TextInput accessibilityLabel="营养问题" placeholder={voice.active ? '请描述这一餐…' : '描述饮食，或告诉我你的需求'} placeholderTextColor={c.muted} value={question} onChangeText={setQuestion} multiline maxLength={1000} editable={!busy && !voice.active} style={s.input} /><Pressable accessibilityRole="button" accessibilityLabel="发送营养问题" disabled={busy || voice.active || !question.trim()} onPress={() => void send()} style={[s.send, (busy || voice.active || !question.trim()) && s.disabled]}><AppGlyph name="send" color={c.onLime} /></Pressable></View>
+      </View> : null}
     </KeyboardAvoidingView>
   </Modal>;
 }
 const s = StyleSheet.create({
+  composerArea: { width: '100%', maxWidth: progressPageLayout.content.maxWidth, alignSelf: 'center' },
+  voiceStatus: { color: c.muted, fontSize: 12, lineHeight: 18, paddingHorizontal: 16, paddingTop: 8 },
   root: { flex: 1, backgroundColor: c.background, paddingTop: 20 }, flex: { flex: 1, minWidth: 0 }, header: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 16, paddingBottom: 18, width: '100%', maxWidth: progressPageLayout.content.maxWidth, alignSelf: 'center' }, eyebrow: { color: c.muted, fontSize: 9, letterSpacing: 1.1 }, title: { color: c.text, fontSize: 25, fontWeight: '900', marginTop: 5 }, headerButton: { minWidth: 44, minHeight: 44, justifyContent: 'center', alignItems: 'center' }, close: { width: 40, height: 40, borderRadius: 20, backgroundColor: c.raised, alignItems: 'center', justifyContent: 'center' }, closeText: { fontSize: 25, color: c.text }, content: { width: '100%', maxWidth: progressPageLayout.content.maxWidth, alignSelf: 'center', padding: 16, gap: 16 },
   section: { color: c.text, fontSize: 18, fontWeight: '800' }, text: { color: c.text, fontSize: 13, lineHeight: 21 }, answerText: { color: c.text, fontSize: 15, lineHeight: 25 }, small: { color: c.muted, fontSize: 10, lineHeight: 17 }, muted: { color: c.muted, fontSize: 12, lineHeight: 20 }, lime: { color: c.lime, fontSize: 12, fontWeight: '700' }, dark: { color: c.onLime, fontWeight: '800', fontSize: 12 }, card: { padding: 12, gap: 10, borderWidth: 1, borderColor: c.border, borderRadius: 14 }, row: { flexDirection: 'row', gap: 10, alignItems: 'center' }, memoryRow: { flexDirection: 'row', gap: 10, padding: 14, alignItems: 'center', borderRadius: 16, backgroundColor: c.card }, secondary: { minHeight: 44, borderRadius: 12, borderWidth: 1, borderColor: c.border, padding: 12, alignItems: 'center', justifyContent: 'center' }, bright: { minHeight: 44, padding: 12, borderRadius: 12, backgroundColor: c.lime, alignItems: 'center', justifyContent: 'center' },
   prompts: { gap: 10, paddingVertical: 28 }, emptyTitle: { color: c.text, fontSize: 20, fontWeight: '800', marginBottom: 10 }, prompt: { backgroundColor: c.card, padding: 14, borderRadius: 14, flexDirection: 'row', gap: 10, alignItems: 'center', justifyContent: 'space-between' }, message: { gap: 10 }, question: { alignSelf: 'flex-end', backgroundColor: c.raised, padding: 12, borderRadius: 16, maxWidth: '90%' }, answer: { backgroundColor: c.card, borderRadius: 18, padding: 14, gap: 12 }, sourceButton: { minHeight: 36, flexDirection: 'row', gap: 6, alignItems: 'center' }, error: { color: c.warning, fontSize: 12, lineHeight: 20 }, composer: { flexDirection: 'row', gap: 8, padding: 12, paddingBottom: 20, width: '100%', maxWidth: progressPageLayout.content.maxWidth, alignSelf: 'center', alignItems: 'flex-end' }, voice: { width: 44, height: 48, borderRadius: 14, backgroundColor: c.card, alignItems: 'center', justifyContent: 'center' }, recording: { backgroundColor: c.lime }, input: { flex: 1, minWidth: 0, minHeight: 48, maxHeight: 110, borderRadius: 14, padding: 12, backgroundColor: c.card, color: c.text, borderWidth: 1, borderColor: c.border, fontSize: 13 }, send: { width: 44, height: 48, borderRadius: 14, backgroundColor: c.lime, alignItems: 'center', justifyContent: 'center' }, disabled: { opacity: .4 },
