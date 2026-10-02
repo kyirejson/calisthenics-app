@@ -1,4 +1,3 @@
-import React from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { fitnessColors as colors, appPalette, radius } from '../theme';
 import type { Profile } from '../types';

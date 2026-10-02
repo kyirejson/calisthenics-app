@@ -3,6 +3,7 @@ import { getWorkoutExercises, workoutDisplayTitle } from '../data/catalog';
 import { getDayTrainingState } from '../data/planProgress';
 import { dailyWorkoutKey, sessionDateKey, trainingDateKey } from '../data/sessionRecords';
 import { getPlanDay } from '../data/trainingPlans';
+import { equipmentSessionPlan } from '../data/equipmentTraining';
 import { estimateStrengthSession, preferredSessionMinutes } from '../data/trainingPrescription';
 import { localWeightDate } from '../data/weightTrend';
 import { dateAtNoon, isValidDateKey } from './validation';
@@ -33,7 +34,8 @@ export function getNutritionTrainingContext(profile: Profile, sessions: Training
   const actual = meaningfulTrainingSessions(sessions, key);
   const normalizedSessions = actual.map(session => ({ ...session, trainingDate: dateKey }));
   const type = !resolved.day.workoutId && addedIds.length ? 'strength' : resolved.day.type;
-  const state = getDayTrainingState({ ...resolved.day, date, type, ...(addedIds.length ? { workoutId } : {}) }, normalizedSessions, addedIds);
+  const state = getDayTrainingState({ ...resolved.day, date, type, ...(addedIds.length ? { workoutId } : {}) }, normalizedSessions, addedIds,
+    profile.goal === 'equipment' && resolved.day.workoutId ? equipmentSessionPlan(resolved.day.workoutId, profile, date) : undefined);
   const completedMinutes = Math.round(actual.reduce((sum, session) => sum + (Number.isFinite(session.durationSeconds) && session.durationSeconds > 0 ? session.durationSeconds : 0), 0) / 60);
   const completedSets = actual.reduce((sum, session) => sum + session.exercises.reduce((total, exercise) => total + exercise.sets.filter(set => set.completed && set.reps > 0).length, 0), 0);
   const rest = type === 'recovery' && !resolved.day.workoutId && !addedIds.length;
@@ -51,13 +53,3 @@ export function getNutritionTrainingContext(profile: Profile, sessions: Training
 }
 
 export const trainingTimeLabels: Record<TrainingTime, string> = { unspecified: '未定', morning: '早上', midday: '中午', evening: '晚上' };
-
-export function trainingNutritionGuidance(training: NutritionTrainingContext, time: TrainingTime): string {
-  if (training.type === 'recovery') return '恢复日照常规律进餐，保留蛋白质和主食，不因休息自动扣减能量。';
-  const timing = time === 'morning' ? '把早餐与训练前后的进餐衔接；胃肠不适时按耐受调整时间。'
-    : time === 'midday' ? '把午餐与训练前后的进餐衔接；临近训练避免突然吃得很油腻。'
-    : time === 'evening' ? '把加餐、晚餐与训练前后衔接，不必为错过短暂“窗口”焦虑。'
-    : '选一个常用训练时段，让菜单分配更贴近日程；也可以保持当前餐次。';
-  return training.type === 'strength' ? `${timing}全天蛋白质优先分散到各餐。`
-    : `${timing}以平时耐受的主食搭配蛋白质，不自动开具运动饮料或补剂方案。`;
-}

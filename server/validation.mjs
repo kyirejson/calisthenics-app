@@ -1,3 +1,5 @@
+import { validateHarness } from './harness-v2.mjs';
+
 export class ServiceError extends Error {
   constructor(status, code, message) {
     super(message);
@@ -144,7 +146,7 @@ function dateKey(value) {
 function boolean(value) { if (typeof value !== 'boolean') throw BAD(); return value; }
 function integer(value, max) { const n = number(value, max); if (!Number.isInteger(n)) throw BAD(); return n; }
 export function validateAdviceRequest(value) {
-  record(value, ['question', 'context', 'history', 'assistantMode', 'memory']);
+  record(value, ['question', 'context', 'history', 'assistantMode', 'memory', 'harness']);
   const question = text(value.question, 1000);
   const input = record(value.context, ['safetyStatus', 'objective', 'pattern', 'riskFlags', 'age', 'targets', 'preferences', 'consumed', 'menu', 'logging', 'training', 'weekly', 'toolsAllowed']);
   const context = {};
@@ -210,7 +212,7 @@ export function validateAdviceRequest(value) {
   if (input.toolsAllowed !== undefined) context.toolsAllowed = boolean(input.toolsAllowed);
   const history = [];
   if (value.history !== undefined) {
-    if (!Array.isArray(value.history) || value.history.length > 6 || value.history.length % 2) throw BAD();
+    if (!Array.isArray(value.history) || value.history.length > 12 || value.history.length % 2) throw BAD();
     for (const [index, turn] of value.history.entries()) {
       record(turn, ['role', 'content']);
       if (turn.role !== (index % 2 ? 'assistant' : 'user')) throw BAD();
@@ -227,5 +229,7 @@ export function validateAdviceRequest(value) {
       memory.push({ kind: choice(fact.kind, ['like', 'avoid', 'need', 'allergy']), text: text(fact.text, 80) });
     }
   }
-  return { question, context, history, ...(assistantMode ? { assistantMode } : {}), ...(memory.length ? { memory } : {}) };
+  let harness;
+  if (value.harness !== undefined) { try { if (!assistantMode) throw BAD(); harness = validateHarness(value.harness, { record, text, number }); } catch { throw BAD(); } }
+  return { question, context, history, ...(assistantMode ? { assistantMode } : {}), ...(memory.length ? { memory } : {}), ...(harness ? { harness } : {}) };
 }

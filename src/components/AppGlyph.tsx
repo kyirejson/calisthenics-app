@@ -1,9 +1,9 @@
-import React from 'react';
 import Svg, { Circle, Path } from 'react-native-svg';
 import { appPalette } from '../theme';
 
-export type GlyphName = 'camera' | 'search' | 'chevron' | 'back' | 'flame' | 'chat' | 'run' | 'clock' | 'pace' | 'pause' | 'stop' | 'plus' | 'check' | 'expand' | 'calendar' | 'settings' | 'edit' | 'shield' | 'download' | 'trash' | 'refresh' | 'vibrate' | 'utensils' | 'dumbbell' | 'info' | 'image' | 'flash' | 'microphone' | 'send';
+export type GlyphName = 'camera' | 'search' | 'chevron' | 'back' | 'flame' | 'chat' | 'run' | 'clock' | 'pace' | 'pause' | 'stop' | 'plus' | 'check' | 'expand' | 'calendar' | 'settings' | 'edit' | 'shield' | 'download' | 'trash' | 'refresh' | 'vibrate' | 'utensils' | 'dumbbell' | 'info' | 'image' | 'flash' | 'microphone' | 'send' | 'chart';
 const paths: Record<GlyphName, string> = {
+  chart: 'M3 20h18M4 15l5-5 4 3 7-9m-5 0h5v5',
   microphone: 'M9 5a3 3 0 0 1 6 0v7a3 3 0 0 1-6 0V5zm-3 6v1a6 6 0 0 0 12 0v-1M12 18v4m-4 0h8',
   send: 'M3 3l18 9-18 9 4-9-4-9zm4 9h14',
   camera: 'M3 7h4l2-3h6l2 3h4v13H3V7zm9 3a4 4 0 1 0 0 8 4 4 0 0 0 0-8',

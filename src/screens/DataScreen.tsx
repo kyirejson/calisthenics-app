@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { AppState, FlatList, Modal, Pressable, SafeAreaView, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { RouteSketch } from '../components/GpsTrailMap';
 import { UnifiedProgressCard } from '../components/UnifiedProgressCard';
@@ -13,7 +13,7 @@ import {
 import { getSeriesExercises, parseMasteryCriteria } from '../data/progression';
 import { progressNumber, type ProgressMetric, type ProgressRange } from '../data/progressChart';
 import { useAppStore } from '../store/AppStore';
-import type { Profile, TrainingSession } from '../types';
+import type { Profile, TrainingSession, SessionExercise } from '../types';
 import { confirmAction } from '../utils/confirm';
 import { formatPace, formatRunClock } from '../utils/geo';
 import { progressPageLayout } from '../theme';
@@ -208,8 +208,8 @@ function sessionSummary(session: TrainingSession): string {
   for (const exercise of session.exercises || []) {
     const sets = validCompletedSets(exercise);
     for (const unit of [...new Set(sets.map(set => setHistoryUnit(exercise, set)))]) {
-      const values = sets.filter(set => setHistoryUnit(exercise, set) === unit).map(set => progressNumber(set.reps));
-      parts.push(exercise.name + ' ' + values.join('·') + ' ' + historyUnitLabels[unit]);
+      const values = sets.filter(set => setHistoryUnit(exercise, set) === unit).map(set => exercise.exerciseId.startsWith('equipment_') ? equipmentSetText(exercise, set) : progressNumber(set.reps));
+      parts.push(exercise.name + ' ' + values.join('·') + (exercise.exerciseId.startsWith('equipment_') ? '' : ' ' + historyUnitLabels[unit]));
     }
   }
   return parts.join('　') || '无有效完成组';
@@ -233,12 +233,17 @@ function RunDetail({ session }: { session: TrainingSession }) {
     {(session.route || []).length >= 2 ? <View style={styles.route}><RouteSketch route={session.route!} height={140} /></View> : null}
   </View>;
 }
+function equipmentSetText(exercise: SessionExercise, set: SessionExercise['sets'][number]) {
+  const load = Number.isFinite(set.loadKg) ? `${progressNumber(set.loadKg!)} kg × ` : '';
+  return load + progressNumber(set.reps) + (exercise.targetSnapshot?.perSide ? ' 次/侧' : ' 次') + (Number.isFinite(set.rir) ? ` · RIR ${set.rir}` : '');
+}
 function ComparisonRow({ row, onOpenExercise }: { row: SessionComparisonRow; onOpenExercise: Props['onOpenExercise'] }) {
+  const equipment = row.exercise.exerciseId.startsWith('equipment_');
   return <View style={styles.comparison}>
     <Pressable accessibilityRole="button" accessibilityLabel={'查看' + row.exercise.name + '指导'} onPress={() => onOpenExercise(row.exercise.exerciseId)} style={styles.flex}>
-      <Text style={styles.sessionName}>{row.exercise.name}</Text><Text style={styles.historyMeta}>{row.exercise.sets.map(set => progressNumber(set.reps) + historyUnitLabels[row.unit]).join(' · ')}</Text>
+      <Text style={styles.sessionName}>{row.exercise.name}</Text><Text style={styles.historyMeta}>{row.exercise.sets.map(set => equipment ? equipmentSetText(row.exercise, set) : progressNumber(set.reps) + historyUnitLabels[row.unit]).join(' · ')}</Text>
     </Pressable>
-    <View style={styles.comparisonResult}><Text style={[styles.delta, row.delta !== null && row.delta > 0 && styles.green]}>{row.delta === null ? '首次记录' : row.delta === 0 ? '持平' : (row.delta > 0 ? '+' : '') + progressNumber(row.delta) + historyUnitLabels[row.unit]}</Text>
+    <View style={styles.comparisonResult}><Text style={[styles.delta, row.delta !== null && row.delta > 0 && styles.green]}>{equipment ? '实际记录' : row.delta === null ? '首次记录' : row.delta === 0 ? '持平' : (row.delta > 0 ? '+' : '') + progressNumber(row.delta) + historyUnitLabels[row.unit]}</Text>
       {row.prevBest !== null ? <Text style={styles.caption}>上次最佳 {progressNumber(row.prevBest)} {historyUnitLabels[row.unit]}</Text> : null}
     </View>
   </View>;

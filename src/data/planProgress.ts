@@ -1,6 +1,7 @@
 import type { Profile, TrainingSession } from '../types';
 import { getPlanDay, type PlanDay } from './trainingPlans';
 import { sessionDateKey } from './sessionRecords';
+import type { EquipmentSessionPlan } from './equipmentTraining';
 
 export type ScheduledDay = PlanDay & { date: Date };
 export type CalendarMonth = {
@@ -53,7 +54,7 @@ export function getCalendarMonths(schedule: ScheduledDay[]): CalendarMonth[] {
   });
 }
 
-export function getDayTrainingState(day: ScheduledDay, sessions: TrainingSession[], requiredExerciseIds: string[] = []) {
+export function getDayTrainingState(day: ScheduledDay, sessions: TrainingSession[], requiredExerciseIds: string[] = [], equipmentPlan?: EquipmentSessionPlan) {
   if (day.type === 'recovery' && !day.workoutId) return { complete: false, partial: false, session: undefined };
   const matching = sessions.filter((session) => {
     if (sessionDateKey(session) !== localDateKey(day.date)) return false;
@@ -61,6 +62,15 @@ export function getDayTrainingState(day: ScheduledDay, sessions: TrainingSession
     return session.kind !== 'running' && session.workoutId === day.workoutId;
   });
   const completed = matching.find((session) => session.completion !== 'partial'
+    && (!day.workoutId?.startsWith('equipment_v2_') || (session.completion === 'complete' && session.planSnapshot?.schemaVersion === 4
+      && session.planSnapshot.workoutId === day.workoutId
+      && (!equipmentPlan || (equipmentPlan.status === 'feasible' && session.planSnapshot.revision === equipmentPlan.revision))
+      && (equipmentPlan?.items.map(item => ({ id: item.id, sets: item.targetSets, loadBasis: item.loadBasis, perSide: item.perSide })) || session.planSnapshot.targets).every(target =>
+        session.exercises.some(exercise => exercise.exerciseId === target.id && exercise.targetSnapshot?.loadBasis === target.loadBasis
+          && Boolean(exercise.targetSnapshot?.perSide) === Boolean(target.perSide)
+          && exercise.sets.filter(set => set.completed && Number.isInteger(set.reps) && set.reps > 0
+            && (target.loadBasis === 'bodyweight' || (set.loadKg !== undefined && Number.isFinite(set.loadKg) && set.loadKg >= 0))).length >= target.sets))
+      && session.planSnapshot.targets.length > 0))
     && requiredExerciseIds.every((id) => session.exercises.some((exercise) => exercise.exerciseId === id && exercise.sets.some((set) => set.completed && set.reps > 0)))
     && (day.type !== 'cardio' || session.durationSeconds >= (day.targetMinutes || 0) * 60));
   return {

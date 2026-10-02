@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Image, StyleSheet, Text, View, type ImageSourcePropType } from 'react-native';
 import { resolveFoodArtwork, type FoodArtworkInput } from '../../nutrition/foodArtwork';
 import { nutritionPhotoURI, releasePhotoURI } from '../../nutrition/photoStorage';

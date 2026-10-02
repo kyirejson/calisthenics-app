@@ -1,4 +1,5 @@
 import { emptyAssistantState, normalizeAssistantState } from './assistantState';
+import { synchronizeMemoryAllergens } from './assistantMemory';
 import type { Profile } from '../types';
 import { localWeightDate } from '../data/weightTrend';
 import { FOOD_DATA_VERSION, RECIPES, getFood } from './catalog';
@@ -369,7 +370,7 @@ export function createIntakeEntry(args: {
 }
 
 export function emptyNutritionJournal(): NutritionJournal {
-  return { version: 1, photoConsentAt: null, assistant: emptyAssistantState(), preferences: null, entries: [], mealRevisions: {}, customFoods: [], savedMeals: [], trainingTime: 'unspecified', days: {}, mealOverrides: {} };
+  return { version: 1, manualAllergens: [], photoConsentAt: null, assistant: emptyAssistantState(), preferences: null, entries: [], mealRevisions: {}, customFoods: [], savedMeals: [], trainingTime: 'unspecified', days: {}, mealOverrides: {} };
 }
 
 /** User labels never impersonate the curated catalogue or a measured USDA source. */
@@ -481,6 +482,10 @@ export function normalizeNutritionJournal(input: unknown): NutritionJournal {
   result.photoConsentAt = validTimestamp(input.photoConsentAt) ? input.photoConsentAt : null;
   result.assistant = normalizeAssistantState(input.assistant);
   result.preferences = normalizeNutritionPreferences(input.preferences);
+  // Legacy data has no provenance; preserve those exclusions as manual rather than guessing.
+  const manual = input.manualAllergens;
+  result.manualAllergens = Array.isArray(manual) && manual.every(a => ALLERGENS.includes(a))
+    ? ALLERGENS.filter(a => manual.includes(a)) : result.preferences?.allergens ?? [];
   result.trainingTime = TRAINING_TIMES.includes(input.trainingTime as TrainingTime) ? input.trainingTime as TrainingTime : 'unspecified';
   result.days = normalizeNutritionDays(input.days);
   result.mealOverrides = normalizeMealOverrides(input.mealOverrides);
@@ -506,5 +511,5 @@ export function normalizeNutritionJournal(input: unknown): NutritionJournal {
     const date = key.slice(0, 10), slot = key.slice(11);
     if (key[10] === ':' && isValidDateKey(date) && isSlot(slot) && Number.isSafeInteger(value) && (value as number) >= 0) result.mealRevisions[key] = value as number;
   }
-  return result;
+  return synchronizeMemoryAllergens(result);
 }

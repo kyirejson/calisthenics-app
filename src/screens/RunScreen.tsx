@@ -1,5 +1,5 @@
 import * as Location from 'expo-location';
-import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { KeyboardAvoidingView, Linking, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Page, ProgressBar } from '../components/ui';
 import { AppGlyph, type GlyphName } from '../components/AppGlyph';

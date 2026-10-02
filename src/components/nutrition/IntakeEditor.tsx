@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Image, KeyboardAvoidingView, Linking, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { launchImageLibraryAsync } from 'expo-image-picker';
 import { FOOD_DATA_VERSION, FOODS, getFood } from '../../nutrition/catalog';

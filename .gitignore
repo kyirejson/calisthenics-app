@@ -45,7 +45,9 @@ yarn-error.*
 # Do not upload without confirming publication rights.
 /src/data/private/
 /assets/original-images/
-/assets/skills-images/
+/assets/supplemental-images/
+/assets/equipment-images/
+/assets/equipment-demos/sources.local/
 /assets/demon-images/
 /assets/raw-sources/
 __pycache__/

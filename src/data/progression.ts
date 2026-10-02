@@ -2,14 +2,13 @@ import { categoryMatches, exercises } from './catalog';
 import { coreFinalSteps } from './progressionRoutes';
 import type { Exercise, Profile, TrainingSession } from '../types';
 
-export type SeriesGroup = '六艺基础' | '关节与支援' | '爆发六功' | '街头技巧';
+export type SeriesGroup = '六艺基础' | '关节与支援' | '爆发六功';
 export type SeriesDefinition = { key: string; label: string; icon: string; group: SeriesGroup };
 
 export const progressionGroups: Array<{ key: SeriesGroup; icon: string; description: string }> = [
   { key: '六艺基础', icon: '↗', description: '推、拉、蹲与核心的基础路线' },
   { key: '关节与支援', icon: '◇', description: '握力、颈部与辅助练习' },
   { key: '爆发六功', icon: 'ϟ', description: '跳跃、上杠与动态技巧' },
-  { key: '街头技巧', icon: '⊶', description: '水平、俯撑与旗帜' },
 ];
 
 export const progressionSeries: SeriesDefinition[] = [
@@ -30,12 +29,6 @@ export const progressionSeries: SeriesDefinition[] = [
   { key: 'front_flip', label: '前空翻', icon: 'ϟ', group: '爆发六功' },
   { key: 'back_flip', label: '后空翻', icon: 'ϟ', group: '爆发六功' },
   { key: 'power_pull', label: '暴力上杠', icon: 'ϟ', group: '爆发六功' },
-  { key: 'front_lever', label: '前水平', icon: '⊶', group: '街头技巧' },
-  { key: 'planche', label: '俯撑', icon: '⊷', group: '街头技巧' },
-  { key: 'back_lever', label: '后水平', icon: '⊸', group: '街头技巧' },
-  { key: 'muscle_up', label: '双力臂', icon: '⇧', group: '街头技巧' },
-  { key: 'l_sit', label: 'L支撑', icon: '∟', group: '街头技巧' },
-  { key: 'human_flag', label: '人体旗帜', icon: '⚑', group: '街头技巧' },
 ];
 
 export type MasteryCriteria = {

@@ -1,22 +1,27 @@
-import { normalizeAssistantState, withAssistantFact, type AssistantConversation, type AssistantFact } from '../nutrition/assistantState';
+import { assistantAuthorization, normalizeAssistantState, type AssistantAuthorization, type AssistantConversation, type AssistantFact } from '../nutrition/assistantState';
+import { assistantArchive } from '../nutrition/assistantArchive';
+import { ASSISTANT_PAGE_SIZE, type ArchiveQuery } from '../nutrition/assistantArchiveCore';
+import { normalizePersonalProfile, type PersonalTrainingProfile } from '../nutrition/personalKnowledge';
+import { assistantDataBasis, assistantOperationPayload, authorizeAssistantOperation, type AssistantOperation } from '../nutrition/assistantAuthorization';
+import { withAssistantPreferences } from '../nutrition/assistantPreferences';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
-import type { DailyWorkoutEdits, Profile, Settings, TrainingSession } from '../types';
+import type { DailyWorkoutEdits, Goal, Profile, Settings, TrainingSession } from '../types';
 import { cleanSession, dailyWorkoutKey, normalizeTrainingSessions, withoutTrainingDay } from '../data/sessionRecords';
-import { normalizeDietPattern, normalizeNutritionGoal } from '../nutrition/legacyProfile';
-import { progressionSeries } from '../data/progression';
-import { PERSONAL_PLAN_ID, RETIRED_PLAN_ID, recommendPlanId } from '../data/trainingPlans';
-import { preferredSessionMinutes } from '../data/trainingPrescription';
+import { exercises } from '../data/catalog';
+import { defaultSettings, normalizeSettings, normalizeProfile, normalizeDailyEdits } from './profile';
+import { loadStoredDomain } from './storage';
 import { emptyNutritionJournal, normalizeNutritionJournal } from '../nutrition/engine';
-import { withCustomFood, withFavoriteMeal, withIntakeEntry, withMealRevision, withNutritionPreferences, withoutCustomFood, withoutFavoriteMeal, withoutIntakeEntry, withoutMealOverride, type IntakeInput } from '../nutrition/journal';
-import { createNutritionTargetSnapshot, withDailyTargetSnapshot, withMealLoggingConfirmation, withNutritionTrainingTime } from '../nutrition/timeline';
+import { withCustomFood, withIntakeEntry, withMealRevision, withNutritionPreferences, withoutCustomFood, withoutIntakeEntry, withoutMealOverride, type IntakeInput } from '../nutrition/journal';
+import { createNutritionTargetSnapshot, withDailyTargetSnapshot, withMealLoggingConfirmation } from '../nutrition/timeline';
 import { getNutritionTrainingContext } from '../nutrition/training';
 import { withAppliedMealDraft, type MealAdjustmentDraft } from '../nutrition/adjustments';
 import { localWeightDate } from '../data/weightTrend';
-import type { Food, IntakeEntry, MealSlot, NutritionJournal, NutritionPreferences, TrainingTime } from '../nutrition/types';
-import { normalizeBodyMetrics } from '../nutrition/profileBody';
-import { normalizeRunningGoal } from '../data/runGoals';
+import type { Food, MealSlot, NutritionJournal, NutritionPreferences } from '../nutrition/types';
 import { referencedPhotoIds } from '../nutrition/photoMetadata';
+import { withRememberedFact, withoutRememberedFact } from '../nutrition/assistantMemory';
+
+import { captureTrainingTopic, switchTrainingTopic } from '../data/trainingTopicProfiles';
 
 const KEYS = {
   profile: 'user_profile',
@@ -27,64 +32,8 @@ const KEYS = {
   nutrition: 'nutrition_journal_v1',
 };
 
-const defaultSettings: Settings = { vibration: true, restSeconds: 120 };
 
-function normalizeSettings(raw: Partial<Settings> & Record<string, unknown>): Settings {
-  const restSeconds = Number(raw.restSeconds);
-  const runningGoal = normalizeRunningGoal(raw.runningGoal);
-  return {
-    vibration: raw.vibration !== false,
-    restSeconds: Number.isFinite(restSeconds) ? Math.max(15, Math.min(300, Math.round(restSeconds))) : defaultSettings.restSeconds,
-    ...(runningGoal ? { runningGoal } : {}),
-  };
-}
-
-function normalizeProfile(raw: Partial<Profile> & Record<string, unknown>): Profile {
-  const legacyGoal: unknown = raw.goal;
-  const goal: Profile['goal'] = legacyGoal === 'health' ? 'street_mastery'
-    : legacyGoal === 'gain' || legacyGoal === 'strength' || legacyGoal === 'street_mastery' || legacyGoal === 'weight_loss'
-      ? legacyGoal : 'fat_loss';
-  const storedFrequency = Math.max(2, Math.min(6, Number(raw.frequency) || 3));
-  const frequency = goal === 'street_mastery' && ![2, 3, 6].includes(storedFrequency) ? 3 : storedFrequency;
-  const experience: Profile['experience'] = raw.experience === 'intermediate' || raw.experience === 'advanced' || raw.experience === 'elite' || raw.experience === 'supermax'
-    ? raw.experience
-    : raw.experience === 'beginner'
-      ? 'beginner'
-      : frequency <= 2 ? 'beginner' : frequency <= 3 ? 'intermediate' : 'advanced';
-  const levels = { ...(raw.levels || {}) } as Record<string, number>;
-  progressionSeries.forEach((series) => { if (!levels[series.key]) levels[series.key] = 1; });
-  const planLevels = { ...(raw.planLevels || {}) } as Record<string, number>;
-  // Existing installs had no separate training variant; offer the common squat
-  // starting point without changing verified progression levels.
-  if (!raw.planLevels && (levels.squat || 1) === 1) planLevels.squat = 5;
-  if (!raw.planLevels && (levels.pull || 1) > 2) planLevels.pull = 2;
-  const restOptions = goal === 'street_mastery' ? [120, 180, 240, 300] : [90, 120, 150, 180, 240];
-  const trainingRestSeconds = restOptions.includes(Number(raw.trainingRestSeconds)) ? Number(raw.trainingRestSeconds) : goal === 'street_mastery' ? 180 : 120;
-  const storedPlanStart = typeof raw.planStartedAt === 'string' ? raw.planStartedAt : '';
-  const planId = goal === 'street_mastery' && raw.planId === RETIRED_PLAN_ID ? RETIRED_PLAN_ID : recommendPlanId({ goal });
-  const migratingLegacyPlan = goal === 'weight_loss' && raw.planId !== PERSONAL_PLAN_ID;
-  const planStartedAt = !migratingLegacyPlan && storedPlanStart && !Number.isNaN(Date.parse(storedPlanStart)) ? storedPlanStart : new Date().toISOString();
-  const weightHistory = Array.isArray(raw.weightHistory)
-    ? raw.weightHistory.filter((entry) => /^\d{4}-\d{2}-\d{2}$/.test(entry?.date) && Number.isFinite(entry?.kg) && entry.kg >= 30 && entry.kg <= 300).slice(-180)
-    : [];
-  const base: Omit<Profile, 'planId'> = {
-    name: typeof raw.name === 'string' && raw.name.trim() ? raw.name : '训练者',
-    ...normalizeBodyMetrics(raw),
-    weightHistory,
-    goal,
-    nutritionGoal: goal === 'weight_loss' ? 'rapid_loss' : goal === 'street_mastery' ? 'performance' : normalizeNutritionGoal(raw.nutritionGoal || legacyGoal),
-    dietPattern: normalizeDietPattern(raw.dietPattern),
-    frequency,
-    sessionMinutes: preferredSessionMinutes(raw),
-    levels,
-    planLevels,
-    trainingRestSeconds,
-    neckBridgeConsent: raw.neckBridgeConsent === true && (levels.bridge || 1) >= 6,
-    experience,
-    planStartedAt,
-  };
-  return { ...base, planId };
-}
+const exerciseIds = new Set(exercises.map(exercise => exercise.id));
 
 type StoreValue = {
   ready: boolean;
@@ -94,33 +43,38 @@ type StoreValue = {
   dailyEdits: DailyWorkoutEdits;
   nutritionJournal: NutritionJournal;
   nutritionStorageIssue: string;
+  storageIssues: Record<string, string>;
+  retryStorageLoading: () => Promise<void>;
   setPhotoConsent: (consent: boolean) => Promise<void>;
   setAssistantConsent: (consent: boolean) => Promise<void>;
   appendAssistantConversation: (turn: AssistantConversation) => Promise<void>;
   saveAssistantFact: (fact: AssistantFact) => Promise<void>;
   deleteAssistantFact: (id: string) => Promise<void>;
   clearAssistantHistory: () => Promise<void>;
+  readAssistantHistory: (query?: ArchiveQuery) => Promise<AssistantConversation[]>;
+  setAssistantAuthorization: (mode: AssistantAuthorization['mode']) => Promise<void>;
+  savePersonalTrainingProfile: (profile: PersonalTrainingProfile) => Promise<void>;
+  executeAssistantOperation: (operation: AssistantOperation) => Promise<void>;
   saveNutritionPreferences: (preferences: NutritionPreferences) => Promise<void>;
   saveIntakeEntry: (input: IntakeInput) => Promise<void>;
   deleteIntakeEntry: (id: string) => Promise<void>;
   setPlannedMealRevision: (date: string, slot: MealSlot, revision: number) => Promise<void>;
   saveCustomFood: (food: Food) => Promise<void>;
   deleteCustomFood: (id: string) => Promise<void>;
-  saveFavoriteMeal: (entry: IntakeEntry) => Promise<void>;
-  deleteFavoriteMeal: (id: string) => Promise<void>;
   captureNutritionTarget: () => Promise<void>;
-  setNutritionTrainingTime: (time: TrainingTime) => Promise<void>;
   confirmNutritionLogging: (date: string, slot: MealSlot | 'day', confirmed: boolean) => Promise<void>;
   applyNutritionMealDraft: (draft: MealAdjustmentDraft) => Promise<void>;
   resetNutritionMeal: (date: string, slot: MealSlot) => Promise<void>;
   saveProfile: (profile: Profile) => Promise<void>;
+  patchProfile: (patch: Partial<Profile> | ((current: Profile) => Partial<Profile>)) => Promise<void>;
+  switchTrainingGoal: (goal: Goal) => Promise<void>;
   saveSession: (session: TrainingSession) => Promise<void>;
   deleteSession: (id: string) => Promise<void>;
   addDailyExercise: (date: string, workoutId: string, exerciseId: string) => Promise<void>;
   removeDailyExercise: (date: string, workoutId: string, exerciseId: string) => Promise<void>;
   resetTrainingDay: (date: string) => Promise<void>;
   updateSettings: (patch: Partial<Settings>) => Promise<void>;
-  exportData: () => string;
+  exportData: () => Promise<string>;
   clearData: () => Promise<void>;
 };
 
@@ -138,68 +92,118 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
   const [nutritionJournal, setNutritionJournal] = useState<NutritionJournal>(emptyNutritionJournal);
   const nutritionRef = useRef<NutritionJournal>(nutritionJournal);
   const [nutritionStorageIssue, setNutritionStorageIssue] = useState('');
-  const nutritionRecoveryRaw = useRef<string | null>(null);
+  const recoveryRaw = useRef<Record<string, string>>({});
+  const [storageIssues, setStorageIssues] = useState<Record<string, string>>({});
+  const issuesRef = useRef<Record<string, string>>({});
   const pendingNutrition = useRef(Promise.resolve());
   const pendingAccount = useRef(Promise.resolve());
   const settingsRef = useRef(defaultSettings);
   const clearing = useRef(false);
+  const loading = useRef(false);
+  const reloading = useRef(false);
+  const archiveReady = useRef(false);
+  const archiveLoading = useRef<Promise<void> | null>(null);
+  const initializeArchive = async () => {
+    if (issuesRef.current.assistant_archive) throw new Error(issuesRef.current.assistant_archive);
+    if (archiveReady.current) return;
+    if (!archiveLoading.current) archiveLoading.current = assistantArchive.migrate(nutritionRef.current.assistant.conversations)
+      .then(() => { archiveReady.current = true; }).finally(() => { archiveLoading.current = null; });
+    await archiveLoading.current;
+  };
+  const persistedNutrition = (value: NutritionJournal) => JSON.stringify(archiveReady.current ? { ...value, assistant: { ...value.assistant, conversations: [] } } : value);
 
-  useEffect(() => {
-    AsyncStorage.multiGet(Object.values(KEYS))
-      .then(async (pairs) => {
-        const map = Object.fromEntries(pairs);
-        // A bad nutrition payload must not prevent training/profile data loading.
-        if (map[KEYS.nutrition]) {
-          try {
-            const raw = JSON.parse(map[KEYS.nutrition]!);
-            if (!raw || typeof raw !== 'object' || Array.isArray(raw) || raw.version !== 1 || !Array.isArray(raw.entries)) throw new Error('饮食文件结构无法识别。');
-            const normalized = normalizeNutritionJournal(raw);
-            if (normalized.entries.length !== raw.entries.length) throw new Error('饮食记录存在无法安全加载的条目。');
-            nutritionRef.current = normalized;
-            setNutritionJournal(nutritionRef.current);
-          } catch {
-            nutritionRecoveryRaw.current = map[KEYS.nutrition]!;
-            setNutritionStorageIssue('本地饮食文件无法完整读取，原始数据已保留。已暂停饮食写入，请先导出备份并核对数据，不会用空记录覆盖。');
-            console.warn('读取本地饮食记录失败，原始数据未覆盖；已暂停保存。');
+  const loadData = useCallback(async () => {
+    loading.current = true;
+    issuesRef.current = {};
+    recoveryRaw.current = {};
+    const object = (value: unknown) => {
+      if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error('数据文件结构无法识别。');
+      return value as Record<string, unknown>;
+    };
+    const loaders = [
+      { key: KEYS.profile, read: () => loadStoredDomain(AsyncStorage, KEYS.profile, raw => normalizeProfile(object(raw))),
+        commit: (value: unknown) => { profileRef.current = value as Profile; setProfile(value as Profile); } },
+      { key: KEYS.sessions, read: () => loadStoredDomain(AsyncStorage, KEYS.sessions, raw => {
+          if (!Array.isArray(raw)) throw new Error('训练文件结构无法识别。');
+          return normalizeTrainingSessions(raw);
+        }, { backupKey: KEYS.sessionsBackup }),
+        commit: (value: unknown) => { journal.current.sessions = value as TrainingSession[]; setSessions(journal.current.sessions); } },
+      { key: KEYS.dailyEdits, read: () => loadStoredDomain(AsyncStorage, KEYS.dailyEdits, normalizeDailyEdits),
+        commit: (value: unknown) => { journal.current.edits = value as DailyWorkoutEdits; setDailyEdits(journal.current.edits); } },
+      { key: KEYS.settings, read: () => loadStoredDomain(AsyncStorage, KEYS.settings, raw => normalizeSettings(object(raw))),
+        commit: (value: unknown) => { settingsRef.current = value as Settings; setSettings(settingsRef.current); } },
+      { key: KEYS.nutrition, read: () => loadStoredDomain(AsyncStorage, KEYS.nutrition, raw => {
+          const input = object(raw) as Record<string, unknown>;
+          if (input.version !== 1 || !Array.isArray(input.entries)) throw new Error('饮食文件结构无法识别。');
+          const normalized = normalizeNutritionJournal(input);
+          if (normalized.entries.length !== input.entries.length) throw new Error('饮食记录存在无法安全加载的条目。');
+          return normalized;
+        }, { migrate: false }),
+        commit: (value: unknown) => { nutritionRef.current = value as NutritionJournal; setNutritionJournal(nutritionRef.current); } },
+    ];
+    await Promise.all(loaders.map(async loader => {
+      const result = await loader.read();
+      if (result.value !== undefined) loader.commit(result.value);
+      if (result.issue) {
+        issuesRef.current[loader.key] = result.issue;
+        if (result.raw !== undefined) recoveryRaw.current[loader.key] = result.raw;
+        console.warn('本地数据已进入恢复保护：' + loader.key);
+      }
+    })).then(async () => {
+      if (!issuesRef.current[KEYS.nutrition]) {
+        try {
+          await initializeArchive();
+          if (nutritionRef.current.assistant.conversations.length) {
+            // The independent archive is committed before retiring the old JSON path.
+            await AsyncStorage.setItem(KEYS.nutrition, persistedNutrition(nutritionRef.current));
           }
-        }
-        if (map[KEYS.profile]) {
-          const migrated = normalizeProfile(JSON.parse(map[KEYS.profile]!));
-          profileRef.current = migrated;
-          setProfile(migrated);
-          await AsyncStorage.setItem(KEYS.profile, JSON.stringify(migrated));
-        }
-        if (map[KEYS.sessions]) {
-          const raw = map[KEYS.sessions]!;
-          journal.current.sessions = normalizeTrainingSessions(JSON.parse(raw));
-          setSessions(journal.current.sessions);
-          const normalized = JSON.stringify(journal.current.sessions);
-          if (normalized !== raw) {
-            // Preserve a recovery copy before removing obsolete empty/unchecked records.
-            const backupKey = KEYS.sessionsBackup;
-            if (!(await AsyncStorage.getItem(backupKey))) await AsyncStorage.setItem(backupKey, raw);
-            await AsyncStorage.setItem(KEYS.sessions, normalized);
-          }
-        }
-        if (map[KEYS.dailyEdits]) {
-          journal.current.edits = JSON.parse(map[KEYS.dailyEdits]!);
-          setDailyEdits(journal.current.edits);
-        }
-        if (map[KEYS.settings]) {
-          const migrated = normalizeSettings(JSON.parse(map[KEYS.settings]!));
-          settingsRef.current = migrated;
-          setSettings(migrated);
-          await AsyncStorage.setItem(KEYS.settings, JSON.stringify(migrated));
-        }
-      })
-      .catch((error) => console.warn('读取本地数据失败', error))
-      .finally(() => setReady(true));
+          const conversations = (await assistantArchive.list()).reverse();
+          nutritionRef.current = { ...nutritionRef.current, assistant: { ...nutritionRef.current.assistant, conversations } };
+          setNutritionJournal(nutritionRef.current);
+        } catch (error) { issuesRef.current.assistant_archive = error instanceof Error ? error.message : '长期记忆读取失败，旧对话仍保留。'; }
+      }
+      try {
+        const backup = await AsyncStorage.getItem(KEYS.sessionsBackup);
+        if (backup) recoveryRaw.current[KEYS.sessionsBackup] = backup;
+      } catch { console.warn('历史训练迁移备份暂不可读取。'); }
+      setStorageIssues({ ...issuesRef.current });
+      setNutritionStorageIssue(issuesRef.current[KEYS.nutrition] || '');
+      loading.current = false;
+      setReady(true);
+    });
   }, []);
+  useEffect(() => { void loadData(); }, [loadData]);
+  const retryStorageLoading = useCallback(async () => {
+    if (clearing.current || loading.current || reloading.current) return;
+    reloading.current = true;
+    try {
+      await Promise.all([pendingJournal.current, pendingNutrition.current, pendingAccount.current]);
+      setReady(false);
+      profileRef.current = null; setProfile(null);
+      journal.current = { sessions: [], edits: {} }; setSessions([]); setDailyEdits({});
+      settingsRef.current = defaultSettings; setSettings(defaultSettings);
+      nutritionRef.current = emptyNutritionJournal(); setNutritionJournal(nutritionRef.current);
+      archiveReady.current = false;
+      await loadData();
+    } finally { reloading.current = false; }
+  }, [loadData]);
 
-  const saveProfile = useCallback((next: Profile) => {
+  const assertWritable = (key: string) => {
+    if (loading.current) throw new Error('正在加载本地数据，请稍后重试。');
+    if (issuesRef.current[key]) throw new Error(issuesRef.current[key]);
+  };
+
+  const updateProfile = useCallback((change: (current: Profile | null) => Profile) => {
     if (clearing.current) return Promise.reject(new Error('正在清除数据，请稍后重试。'));
+    if (reloading.current) return Promise.reject(new Error('正在重新加载数据，请稍后重试。'));
     const operation = pendingAccount.current.then(async () => {
-      const normalized = normalizeProfile(next);
+      assertWritable(KEYS.profile);
+      const next = change(profileRef.current);
+      const current = profileRef.current;
+      const normalized = normalizeProfile({ ...next, topicPlans: {
+        ...current?.topicPlans, ...next.topicPlans,
+        ...(current && current.goal !== next.goal ? { [current.goal]: captureTrainingTopic(current) } : {}),
+      } });
       await AsyncStorage.setItem(KEYS.profile, JSON.stringify(normalized));
       profileRef.current = normalized;
       setProfile(normalized);
@@ -208,12 +212,32 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
     return operation;
   }, []);
 
+  // Full snapshots are only accepted when creating an absent profile.
+  const saveProfile = useCallback((next: Profile) => updateProfile(current => {
+    if (current) throw new Error('档案已存在，请只提交需要修改的字段。');
+    return next;
+  }), [updateProfile]);
+  const patchProfile = useCallback((patch: Partial<Profile> | ((current: Profile) => Partial<Profile>)) => updateProfile(current => {
+    if (!current) throw new Error('请先建立个人资料');
+    const changes = typeof patch === 'function' ? patch(current) : patch;
+    if (changes.goal !== undefined && changes.goal !== current.goal) throw new Error('请通过专题切换入口更改训练目标。');
+    return { ...current, ...changes };
+  }), [updateProfile]);
+  const switchTrainingGoal = useCallback((goal: Goal) => updateProfile(current => {
+    if (!current) throw new Error('请先建立个人资料');
+    return switchTrainingTopic(current, goal);
+  }), [updateProfile]);
+
   // Serialize journal mutations so rapid saves/deletes cannot restore stale records.
   const updateJournal = useCallback((change: (current: typeof journal.current) => typeof journal.current) => {
     if (clearing.current) return Promise.reject(new Error('正在清除数据，请稍后重试。'));
+    if (reloading.current) return Promise.reject(new Error('正在重新加载数据，请稍后重试。'));
     const operation = pendingJournal.current.then(async () => {
       const next = change(journal.current);
-      await AsyncStorage.multiSet([[KEYS.sessions, JSON.stringify(next.sessions)], [KEYS.dailyEdits, JSON.stringify(next.edits)]]);
+      const pairs: Array<[string, string]> = [];
+      if (next.sessions !== journal.current.sessions) { assertWritable(KEYS.sessions); pairs.push([KEYS.sessions, JSON.stringify(next.sessions)]); }
+      if (next.edits !== journal.current.edits) { assertWritable(KEYS.dailyEdits); pairs.push([KEYS.dailyEdits, JSON.stringify(next.edits)]); }
+      if (pairs.length) await AsyncStorage.multiSet(pairs);
       journal.current = next;
       setSessions(next.sessions);
       setDailyEdits(next.edits);
@@ -230,6 +254,7 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
 
   const deleteSession = useCallback((id: string) => updateJournal((current) => ({ ...current, sessions: current.sessions.filter((session) => session.id !== id) })), [updateJournal]);
   const addDailyExercise = useCallback((date: string, workoutId: string, exerciseId: string) => updateJournal((current) => {
+    if (!exerciseIds.has(exerciseId)) throw new Error('此动作已不在动作库中。');
     const key = dailyWorkoutKey(date, workoutId);
     return { ...current, edits: { ...current.edits, [key]: { date, workoutId, exerciseIds: [...new Set([...(current.edits[key]?.exerciseIds || []), exerciseId])] } } };
   }), [updateJournal]);
@@ -247,7 +272,9 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
 
   const updateSettings = useCallback((patch: Partial<Settings>) => {
     if (clearing.current) return Promise.reject(new Error('正在清除数据，请稍后重试。'));
+    if (reloading.current) return Promise.reject(new Error('正在重新加载数据，请稍后重试。'));
     const operation = pendingAccount.current.then(async () => {
+      assertWritable(KEYS.settings);
       const next = normalizeSettings({ ...settingsRef.current, ...patch });
       await AsyncStorage.setItem(KEYS.settings, JSON.stringify(next));
       settingsRef.current = next;
@@ -258,17 +285,36 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   // One persisted document + a serialized queue prevents fast taps from losing meals.
-  const updateNutrition = useCallback((change: (current: NutritionJournal) => NutritionJournal | Promise<NutritionJournal>) => {
+  const updateNutrition = useCallback((change: (current: NutritionJournal) => NutritionJournal | Promise<NutritionJournal>, rollbackArchive?: () => Promise<void>) => {
     if (clearing.current) return Promise.reject(new Error('正在清除数据，请稍后重试。'));
-    if (nutritionRecoveryRaw.current !== null) return Promise.reject(new Error('饮食文件无法完整读取，已暂停保存以保留原始数据；请先导出备份并核对。'));
+    if (reloading.current) return Promise.reject(new Error('正在重新加载数据，请稍后重试。'));
+    if (issuesRef.current[KEYS.nutrition]) return Promise.reject(new Error('饮食文件无法完整读取，已暂停保存以保留原始数据；请先导出备份并核对。'));
     const operation = pendingNutrition.current.then(async () => {
-      const next = await change(nutritionRef.current);
+      assertWritable(KEYS.nutrition);
+      let next: NutritionJournal;
+      try {
+        next = await change(nutritionRef.current);
+        if (next !== nutritionRef.current) {
+          const persisted = persistedNutrition(next);
+          if (persisted !== persistedNutrition(nutritionRef.current)) await AsyncStorage.setItem(KEYS.nutrition, persisted);
+        }
+      } catch (error) {
+        if (rollbackArchive) {
+          try { await rollbackArchive(); }
+          catch { throw new Error('档案未保存，相关对话恢复也失败；请先导出备份并重试。'); }
+        }
+        throw error;
+      }
       if (next === nutritionRef.current) return;
       const retainedPhotos = new Set(referencedPhotoIds(next));
       const removedPhotos = referencedPhotoIds(nutritionRef.current).filter(id => !retainedPhotos.has(id));
-      await AsyncStorage.setItem(KEYS.nutrition, JSON.stringify(next));
+      const changedTurns = next.assistant.conversations.filter(turn => nutritionRef.current.assistant.conversations.some(old => old.id === turn.id && old.answer !== turn.answer));
       nutritionRef.current = next;
       setNutritionJournal(next);
+      if (archiveReady.current && changedTurns.length) {
+        try { for (const turn of changedTurns) await assistantArchive.put(turn); }
+        catch { console.warn('业务已保存，但对话回执归档未更新；实际业务记录仍为准。'); }
+      }
       if (removedPhotos.length) {
         try { const { deleteStoredPhotos } = await import('../nutrition/photoStorage'); await deleteStoredPhotos(removedPhotos); }
         catch { console.warn('饮食记录已保存，但本机照片清理未完成。'); }
@@ -278,20 +324,70 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
     return operation;
   }, []);
   const setPhotoConsent = useCallback((consent: boolean) => updateNutrition(current => ({ ...current, photoConsentAt: consent ? new Date().toISOString() : null })), [updateNutrition]);
-  const setAssistantConsent = useCallback((consent: boolean) => updateNutrition(current => ({ ...current, assistant: { ...current.assistant, consentAt: consent ? new Date().toISOString() : null } })), [updateNutrition]);
+  const setAssistantConsent = useCallback((consent: boolean) => updateNutrition(current => ({ ...current, assistant: { ...current.assistant, consentScope: 2, consentAt: consent ? new Date().toISOString() : null } })), [updateNutrition]);
   const appendAssistantConversation = useCallback((turn: AssistantConversation) => updateNutrition(current => {
-    const conversations = [...current.assistant.conversations.filter(t => t.id !== turn.id), turn].slice(-30);
-    return { ...current, assistant: normalizeAssistantState({ ...current.assistant, conversations }) };
+    return initializeArchive().then(async () => {
+      await assistantArchive.put(turn);
+      // This is a display page only; all original turns live in the archive.
+      const conversations = [...current.assistant.conversations.filter(t => t.id !== turn.id), turn].slice(-ASSISTANT_PAGE_SIZE);
+      return { ...current, assistant: normalizeAssistantState({ ...current.assistant, conversations }) };
+    });
   }), [updateNutrition]);
-  const saveAssistantFact = useCallback((fact: AssistantFact) => updateNutrition(current => {
-    const remembered = withAssistantFact(current.assistant, fact);
-    const assistant = { ...remembered, conversations: remembered.conversations.map(turn => fact.id === 'fact-' + turn.id ? { ...turn, answer: '已记住，可在“记忆”中查看或删除。' } : turn) };
-    const allergenMap = { '牛奶': 'milk', '乳制品': 'milk', '鸡蛋': 'egg', '大豆': 'soy', '小麦': 'wheat', '花生': 'peanut', '坚果': 'tree_nut', '鱼': 'fish', '虾': 'shellfish', '贝类': 'shellfish' } as const;
-    const allergens = fact.kind === 'allergy' ? Object.entries(allergenMap).filter(([name]) => fact.text.includes(name)).map(([, value]) => value) : [];
-    return { ...current, assistant, ...(current.preferences && allergens.length ? { preferences: { ...current.preferences, allergens: [...new Set([...current.preferences.allergens, ...allergens])] } } : {}) };
+  const saveAssistantFact = useCallback((fact: AssistantFact) => updateNutrition(current => withRememberedFact(current, fact)), [updateNutrition]);
+  const deleteAssistantFact = useCallback((id: string) => {
+    let removed: AssistantConversation[] = [];
+    return updateNutrition(async current => {
+      const fact = current.assistant.facts.find(f => f.id === id); if (!fact) return current;
+      await initializeArchive();
+      removed = (await assistantArchive.exportAll()).filter(t => t.question.includes(fact.text) || t.answer.includes(fact.text));
+      await assistantArchive.forget(fact.text);
+      const next = withoutRememberedFact(current, id);
+      const personalProfiles = Object.fromEntries(Object.entries(next.assistant.personalProfiles || {}).map(([topic, p]) => [topic, p && Object.fromEntries(Object.entries(p).map(([key, value]) => [key, typeof value === 'string' && !['topic', 'updatedAt'].includes(key) && value.includes(fact.text) ? '' : value]))]));
+      const receipts = Object.fromEntries(Object.entries(next.assistant.receipts || {}).map(([key, r]) => [key, r.kind === 'remember' && r.payload.includes(fact.text) ? { ...r, payload: '<forgotten>' } : r]));
+      return { ...next, assistant: normalizeAssistantState({ ...next.assistant, personalProfiles, receipts, conversations: next.assistant.conversations.filter(t => !t.question.includes(fact.text) && !t.answer.includes(fact.text)) }) };
+    }, async () => { for (const turn of removed) await assistantArchive.put(turn); });
+  }, [updateNutrition]);
+  const clearAssistantHistory = useCallback(() => updateNutrition(async current => {
+    await initializeArchive(); await assistantArchive.clear();
+    return { ...current, assistant: { ...current.assistant, conversations: [] } };
   }), [updateNutrition]);
-  const deleteAssistantFact = useCallback((id: string) => updateNutrition(current => ({ ...current, assistant: { ...current.assistant, facts: current.assistant.facts.filter(f => f.id !== id) } })), [updateNutrition]);
-  const clearAssistantHistory = useCallback(() => updateNutrition(current => ({ ...current, assistant: { ...current.assistant, conversations: [] } })), [updateNutrition]);
+  const readAssistantHistory = useCallback(async (query?: ArchiveQuery) => {
+    await pendingNutrition.current;
+    if (clearing.current || reloading.current || loading.current) throw new Error('本地数据正在处理，请稍后重试。');
+    assertWritable(KEYS.nutrition); await initializeArchive(); return assistantArchive.list(query);
+  }, []);
+  const setAssistantAuthorization = useCallback((mode: AssistantAuthorization['mode']) => updateNutrition(current => {
+    if (!['request_confirmation', 'full_access'].includes(mode)) throw new Error('权限设置无效。');
+    const old = assistantAuthorization(current.assistant);
+    if (old.mode === mode) return current;
+    if (old.policyVersion >= Number.MAX_SAFE_INTEGER) throw new Error('权限版本已达到上限。');
+    return { ...current, assistant: { ...current.assistant, authorization: { mode, policyVersion: old.policyVersion + 1 } } };
+  }), [updateNutrition]);
+  const savePersonalTrainingProfile = useCallback((input: PersonalTrainingProfile) => updateNutrition(current => {
+    const personal = normalizePersonalProfile(input);
+    if (!personal || personal.topic !== profileRef.current?.goal) throw new Error('专题或档案已变化，请重新打开问卷。');
+    return { ...current, assistant: { ...current.assistant, personalProfiles: { ...current.assistant.personalProfiles, [personal.topic]: personal } } };
+  }), [updateNutrition]);
+  const executeAssistantOperation = useCallback((operation: AssistantOperation) => updateNutrition(async current => {
+    await Promise.all([pendingAccount.current, pendingJournal.current]);
+    if (authorizeAssistantOperation(current.assistant, operation, assistantDataBasis(current, profileRef.current, journal.current.sessions, journal.current.edits)) === 'replay') return current;
+    let next: NutritionJournal;
+    if (operation.kind === 'remember') next = withRememberedFact(current, operation.fact);
+    else if (operation.kind === 'set_preferences') next = withAssistantPreferences(current, profileRef.current, operation.patch);
+    else if (operation.kind === 'log_intake') {
+      next = withIntakeEntry(current, operation.input);
+      next = { ...next, assistant: { ...next.assistant, conversations: next.assistant.conversations.map(turn => operation.input.id === 'intake-' + turn.id ? { ...turn, answer: '已记录这一餐，可在今日饮食中查看。' } : turn) } };
+    }
+    else {
+      if (!profileRef.current || operation.draft.date !== localWeightDate(new Date())) throw new Error('日期或资料已变化，请重新生成草案。');
+      const training = getNutritionTrainingContext(profileRef.current, journal.current.sessions, journal.current.edits, operation.draft.date);
+      next = withAppliedMealDraft(current, profileRef.current, training, operation.draft);
+    }
+    const answer = operation.kind === 'remember' ? '已记住，可在“记忆”中查看或删除。' : operation.kind === 'set_preferences' ? '已保存营养偏好，参考目标由本机重新计算。' : operation.kind === 'meal' ? '已更新推荐菜单；实际摄入记录未改变。' : '已记录这一餐，可在今日饮食中查看。';
+    return { ...next, assistant: { ...next.assistant,
+      conversations: next.assistant.conversations.map(turn => operation.id === (operation.kind === 'log_intake' ? 'intake-' : operation.kind + '-') + turn.id ? { ...turn, answer } : turn),
+      receipts: { ...next.assistant.receipts, [operation.id]: { kind: operation.kind, payload: assistantOperationPayload(operation), createdAt: new Date().toISOString() } } } };
+  }), [updateNutrition]);
   const saveNutritionPreferences = useCallback((preferences: NutritionPreferences) => updateNutrition((current) => withNutritionPreferences(current, preferences)), [updateNutrition]);
   const saveIntakeEntry = useCallback((input: IntakeInput) => updateNutrition((current) => {
     const journal = withIntakeEntry(current, input);
@@ -301,8 +397,6 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
   const setPlannedMealRevision = useCallback((date: string, slot: MealSlot, revision: number) => updateNutrition(current => withMealRevision(current, date, slot, revision)), [updateNutrition]);
   const saveCustomFood = useCallback((food: Food) => updateNutrition(current => withCustomFood(current, food)), [updateNutrition]);
   const deleteCustomFood = useCallback((id: string) => updateNutrition(current => withoutCustomFood(current, id)), [updateNutrition]);
-  const saveFavoriteMeal = useCallback((entry: IntakeEntry) => updateNutrition(current => withFavoriteMeal(current, entry)), [updateNutrition]);
-  const deleteFavoriteMeal = useCallback((id: string) => updateNutrition(current => withoutFavoriteMeal(current, id)), [updateNutrition]);
   const captureNutritionTarget = useCallback(() => updateNutrition(async current => {
     await Promise.all([pendingAccount.current, pendingJournal.current]);
     if (!profileRef.current) return current;
@@ -311,7 +405,6 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
     const training = getNutritionTrainingContext(profileRef.current, journal.current.sessions, journal.current.edits, date);
     return withDailyTargetSnapshot(current, date, createNutritionTargetSnapshot(profileRef.current, current, training, now.toISOString()));
   }), [updateNutrition]);
-  const setNutritionTrainingTime = useCallback((time: TrainingTime) => updateNutrition(current => withNutritionTrainingTime(current, time)), [updateNutrition]);
   const confirmNutritionLogging = useCallback((date: string, slot: MealSlot | 'day', confirmed: boolean) => updateNutrition(current => withMealLoggingConfirmation(current, date, slot, confirmed)), [updateNutrition]);
   const applyNutritionMealDraft = useCallback((draft: MealAdjustmentDraft) => updateNutrition(async current => {
     // A pending profile/course save must finish before accepting an old preview.
@@ -325,17 +418,32 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
   const resetNutritionMeal = useCallback((date: string, slot: MealSlot) => updateNutrition(current => withoutMealOverride(current, date, slot)), [updateNutrition]);
 
   const exportData = useCallback(
-    () => JSON.stringify({ formatVersion: '2.3-mobile', exportDate: new Date().toISOString(), data: { user_profile: profile, sessions, settings, daily_workout_edits: dailyEdits, nutrition_journal_v1: nutritionJournal },
-      ...(nutritionRecoveryRaw.current !== null ? { recovery: { nutritionRaw: nutritionRecoveryRaw.current, reason: '饮食文件无法完整读取，原始文本保留以便人工恢复。' } } : {}) }, null, 2),
+    async () => {
+      await Promise.all([pendingJournal.current, pendingNutrition.current, pendingAccount.current]);
+      let archive: AssistantConversation[] = [];
+      let archiveError: string | undefined;
+      try { await initializeArchive(); archive = await assistantArchive.exportAll(); }
+      catch (error) { archiveError = error instanceof Error ? error.message : '助手归档暂不可导出。'; }
+      return JSON.stringify({ formatVersion: '2.3-mobile', exportDate: new Date().toISOString(), data: { user_profile: profileRef.current, sessions: journal.current.sessions, settings: settingsRef.current, daily_workout_edits: journal.current.edits, nutrition_journal_v1: JSON.parse(persistedNutrition(nutritionRef.current)), assistant_archive_v2: archive }, ...(archiveError ? { assistantArchiveError: archiveError } : {}),
+      ...(Object.keys(recoveryRaw.current).length || Object.keys(issuesRef.current).length ? { recovery: { raw: { ...recoveryRaw.current }, issues: { ...issuesRef.current }, ...(recoveryRaw.current[KEYS.nutrition] ? { nutritionRaw: recoveryRaw.current[KEYS.nutrition] } : {}) } } : {}) }, null, 2);
+    },
     [profile, sessions, settings, dailyEdits, nutritionJournal],
   );
 
   const clearData = useCallback(async () => {
+    if (loading.current || reloading.current || clearing.current) throw new Error('正在处理本地数据，请稍后重试。');
     clearing.current = true;
     try {
       await Promise.all([pendingJournal.current, pendingNutrition.current, pendingAccount.current]);
       const photos = referencedPhotoIds(nutritionRef.current);
-      await AsyncStorage.multiRemove(Object.values(KEYS));
+      const archived = await assistantArchive.exportAll();
+      await assistantArchive.clear();
+      try { await AsyncStorage.multiRemove(Object.values(KEYS)); }
+      catch (error) {
+        try { for (const turn of archived) await assistantArchive.put(turn); }
+        catch { throw new Error('清除未完成，助手历史恢复也失败；请导出备份核对。'); }
+        throw error;
+      }
       setProfile(null);
       profileRef.current = null;
       setSessions([]);
@@ -344,7 +452,9 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
       journal.current = { sessions: [], edits: {} };
       setDailyEdits({});
       nutritionRef.current = emptyNutritionJournal();
-      nutritionRecoveryRaw.current = null;
+      recoveryRaw.current = {};
+      issuesRef.current = {};
+      setStorageIssues({});
       setNutritionStorageIssue('');
       setNutritionJournal(nutritionRef.current);
       if (photos.length) { try { const { deleteStoredPhotos } = await import('../nutrition/photoStorage'); await deleteStoredPhotos(photos); } catch { console.warn('记录已清除，但本机照片清理未完成。'); } }
@@ -353,7 +463,8 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
-  const value = useMemo(() => ({ ready, profile, sessions, settings, dailyEdits, nutritionJournal, nutritionStorageIssue, setPhotoConsent, setAssistantConsent, appendAssistantConversation, saveAssistantFact, deleteAssistantFact, clearAssistantHistory, saveNutritionPreferences, saveIntakeEntry, deleteIntakeEntry, setPlannedMealRevision, saveCustomFood, deleteCustomFood, saveFavoriteMeal, deleteFavoriteMeal, captureNutritionTarget, setNutritionTrainingTime, confirmNutritionLogging, applyNutritionMealDraft, resetNutritionMeal, saveProfile, saveSession, deleteSession, addDailyExercise, removeDailyExercise, resetTrainingDay, updateSettings, exportData, clearData }), [ready, profile, sessions, settings, dailyEdits, nutritionJournal, nutritionStorageIssue, setPhotoConsent, setAssistantConsent, appendAssistantConversation, saveAssistantFact, deleteAssistantFact, clearAssistantHistory, saveNutritionPreferences, saveIntakeEntry, deleteIntakeEntry, setPlannedMealRevision, saveCustomFood, deleteCustomFood, saveFavoriteMeal, deleteFavoriteMeal, captureNutritionTarget, setNutritionTrainingTime, confirmNutritionLogging, applyNutritionMealDraft, resetNutritionMeal, saveProfile, saveSession, deleteSession, addDailyExercise, removeDailyExercise, resetTrainingDay, updateSettings, exportData, clearData]);
+  const assistantMethods = { readAssistantHistory, setAssistantAuthorization, savePersonalTrainingProfile, executeAssistantOperation };
+  const value = useMemo(() => ({ ...assistantMethods, ready, profile, sessions, settings, dailyEdits, nutritionJournal, nutritionStorageIssue, storageIssues, retryStorageLoading, setPhotoConsent, setAssistantConsent, appendAssistantConversation, saveAssistantFact, deleteAssistantFact, clearAssistantHistory, saveNutritionPreferences, saveIntakeEntry, deleteIntakeEntry, setPlannedMealRevision, saveCustomFood, deleteCustomFood, captureNutritionTarget, confirmNutritionLogging, applyNutritionMealDraft, resetNutritionMeal, saveProfile, patchProfile, switchTrainingGoal, saveSession, deleteSession, addDailyExercise, removeDailyExercise, resetTrainingDay, updateSettings, exportData, clearData }), [ready, profile, sessions, settings, dailyEdits, nutritionJournal, nutritionStorageIssue, storageIssues, retryStorageLoading, setPhotoConsent, setAssistantConsent, appendAssistantConversation, saveAssistantFact, deleteAssistantFact, clearAssistantHistory, saveNutritionPreferences, saveIntakeEntry, deleteIntakeEntry, setPlannedMealRevision, saveCustomFood, deleteCustomFood, captureNutritionTarget, confirmNutritionLogging, applyNutritionMealDraft, resetNutritionMeal, saveProfile, patchProfile, switchTrainingGoal, saveSession, deleteSession, addDailyExercise, removeDailyExercise, resetTrainingDay, updateSettings, exportData, clearData, readAssistantHistory, setAssistantAuthorization, savePersonalTrainingProfile, executeAssistantOperation]);
   return <Store.Provider value={value}>{children}</Store.Provider>;
 }
 

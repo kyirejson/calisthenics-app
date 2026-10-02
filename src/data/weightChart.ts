@@ -35,9 +35,3 @@ export function buildWeightChart(window: WeightWindow, width: number, height = 1
   return { width: canvasWidth, height: canvasHeight, left, right, top, bottom, points, line, area, ticks,
     dates: [window.start, middle, window.end].map(date => ({ date, x: x(date) })) };
 }
-
-export function nearestWeightPoint(points: WeightPoint[], x: number): WeightPoint | undefined {
-  if (!points.length) return undefined;
-  if (!Number.isFinite(x)) return points.at(-1);
-  return points.reduce((best, point) => Math.abs(point.x - x) < Math.abs(best.x - x) ? point : best);
-}

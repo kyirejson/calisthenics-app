@@ -1,4 +1,4 @@
-import React, { useMemo, useRef, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Animated, Pressable, SafeAreaView, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import Svg, { Circle, Path } from 'react-native-svg';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -13,7 +13,9 @@ import {
 import { useAppStore } from '../store/AppStore';
 import type { Exercise } from '../types';
 import { confirmAction, showMessage } from '../utils/confirm';
+import { useUpdateBlock } from '../components/AppUpdates';
 import { progressPageLayout } from '../theme';
+import { EquipmentProgressScreen } from './EquipmentProgressScreen';
 
 const palette = { bg: progressPageLayout.background, card: '#1B2028', soft: '#222833', line: '#343C48', text: '#F4F6FA', muted: '#A8B1BF', faint: '#818D9F', lime: '#C7F548' };
 const ringSize = progressPageLayout.summaryRingSize;
@@ -27,7 +29,12 @@ function matches(exercise: Exercise, needle: string) {
 }
 
 export function ProgressScreen({ onOpen }: { onOpen?: (exerciseId: string) => void }) {
-  const { profile, sessions, saveProfile } = useAppStore();
+  const { profile } = useAppStore();
+  return profile?.goal === 'equipment' ? <EquipmentProgressScreen onOpen={onOpen} /> : <CalisthenicsProgressScreen onOpen={onOpen} />;
+}
+
+function CalisthenicsProgressScreen({ onOpen }: { onOpen?: (exerciseId: string) => void }) {
+  const { profile, sessions, patchProfile } = useAppStore();
   const [query, setQuery] = useState('');
   const [searchOpen, setSearchOpen] = useState(false);
   const [rulesOpen, setRulesOpen] = useState(false);
@@ -35,6 +42,7 @@ export function ProgressScreen({ onOpen }: { onOpen?: (exerciseId: string) => vo
   const [activeSeries, setActiveSeries] = useState('push');
   const [artwork, setArtwork] = useState<Exercise | null>(null);
   const [saving, setSaving] = useState(false);
+  useUpdateBlock(saving);
   const savingRef = useRef(false);
   const scroll = useRef<ScrollView>(null);
   const reduced = useReducedMotion();
@@ -88,7 +96,10 @@ export function ProgressScreen({ onOpen }: { onOpen?: (exerciseId: string) => vo
         const latestProfile = live.current.profile;
         if (savingRef.current || !latestProfile || !current?.eligible || current.current.id !== status.current.id) return;
         savingRef.current = true; setSaving(true);
-        void saveProfile(applyProgressionUnlock(latestProfile, current))
+        void patchProfile(profile => {
+          const next = applyProgressionUnlock(profile, current);
+          return { levels: next.levels, planLevels: next.planLevels };
+        })
           .then(() => showMessage('已更新进阶', finishing ? '终式已解锁' : '下一式已解锁'))
           .catch(() => showMessage('保存失败', '进阶未保存，请重试。'))
           .finally(() => { savingRef.current = false; setSaving(false); });
@@ -99,9 +110,12 @@ export function ProgressScreen({ onOpen }: { onOpen?: (exerciseId: string) => vo
     <ScrollView ref={scroll} testID="progression-list" showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled" contentContainerStyle={styles.content}>
       <View style={styles.header}>
         <View style={styles.headingCopy}><Text style={styles.title}>进阶路线</Text><Text style={styles.subtitle}><Text style={styles.subtitleCount}>{finalProgress.unlocked}</Text> / {finalProgress.total} 个终式已解锁</Text></View>
-        <View accessibilityRole="progressbar" accessibilityLabel={'终式解锁进度，' + finalProgress.unlocked + '个，共' + finalProgress.total + '个'} accessibilityValue={{ min: 0, max: 100, now: finalProgress.percent }} testID="progression-final-ring" style={styles.ring}>
-          <Svg width={ringSize} height={ringSize} viewBox={'0 0 ' + ringSize + ' ' + ringSize} pointerEvents="none"><Circle cx={ringCenter} cy={ringCenter} r={ringRadius} fill="none" stroke="#33411F" strokeWidth={5} />{finalProgress.unlocked > 0 ? <Circle cx={ringCenter} cy={ringCenter} r={ringRadius} fill="none" stroke={palette.lime} strokeWidth={5} strokeLinecap="round" strokeDasharray={ringCircumference} strokeDashoffset={ringCircumference * (1 - finalProgress.unlocked / finalProgress.total)} rotation={-90} origin={ringCenter + ',' + ringCenter} /> : null}</Svg>
-          <View pointerEvents="none" style={styles.ringCopy}><Text style={styles.percent}>{finalProgress.percent}%</Text><Text style={styles.ringLabel}>终式解锁</Text></View>
+        <View style={styles.progressSummary}>
+          <View accessibilityRole="progressbar" accessibilityLabel={'终式解锁进度，' + finalProgress.unlocked + '个，共' + finalProgress.total + '个'} accessibilityValue={{ min: 0, max: 100, now: finalProgress.percent }} aria-valuemin={0} aria-valuemax={100} aria-valuenow={finalProgress.percent} testID="progression-final-ring" style={styles.ring}>
+            <Svg width={ringSize} height={ringSize} viewBox={'0 0 ' + ringSize + ' ' + ringSize} pointerEvents="none"><Circle cx={ringCenter} cy={ringCenter} r={ringRadius - 7} fill={palette.card} /><Circle cx={ringCenter} cy={ringCenter} r={ringRadius} fill="none" stroke={palette.line} strokeWidth={4} />{finalProgress.unlocked > 0 ? <Circle cx={ringCenter} cy={ringCenter} r={ringRadius} fill="none" stroke={palette.lime} strokeWidth={4} strokeLinecap="round" strokeDasharray={ringCircumference} strokeDashoffset={ringCircumference * (1 - finalProgress.unlocked / finalProgress.total)} rotation={-90} origin={ringCenter + ',' + ringCenter} /> : null}</Svg>
+            <View pointerEvents="none" style={styles.ringCopy}><Text style={styles.percent}>{finalProgress.percent}<Text style={styles.percentUnit}>%</Text></Text></View>
+          </View>
+          <Text style={styles.ringLabel}>终式解锁</Text>
         </View>
       </View>
 
@@ -138,7 +152,6 @@ function RouteDetail({ status, onOpen, onArtwork, onUnlock, saving }: {
   const [examHelp, setExamHelp] = useState(false);
   const sequence = getSeriesExercises(status.series.key);
   const stages = sequence.slice(0, status.totalLevels);
-  const finalAction = stages[stages.length - 1];
   const extensions = sequence.slice(status.totalLevels);
   const passedCount = status.complete ? stages.length : status.level - 1;
   const visibleFrom = passedExpanded ? 0 : status.complete ? Math.max(0, passedCount - 2) : passedCount;
@@ -157,7 +170,6 @@ function RouteDetail({ status, onOpen, onArtwork, onUnlock, saving }: {
 
   return <View style={styles.route}>
     <View style={styles.routeHead}><Text style={styles.routeTitle}>{status.series.label}</Text><Text style={styles.routeState}>{status.complete ? '终式已解锁' : '第 ' + status.level + ' / ' + status.totalLevels + ' 式'}</Text></View>
-    <View style={styles.goalRow}><View style={styles.goalRail}><Glyph name="crown" size={26} color={palette.lime} /></View><View style={[styles.goalCard, status.complete && styles.goalComplete]}><PhotoButton exercise={finalAction} size="goal" onArtwork={onArtwork} /><Pressable accessibilityRole="button" accessibilityLabel={'查看终式' + finalAction.name + '动作指导'} onPress={() => onOpen?.(finalAction.id)} style={styles.goalCopy}><Text style={styles.goalLabel}>{status.complete ? '终式 · 已解锁' : '终式目标 · 第 ' + status.totalLevels + ' 式'}</Text><Text style={styles.goalName}>{finalAction.name}</Text></Pressable><Glyph name={status.complete ? 'shield' : 'chevron'} color={status.complete ? palette.lime : palette.faint} size={21} /></View></View>
     <View style={styles.listHeading}><Text style={styles.listTitle}>阶数动作</Text>{passedCount ? <Pressable accessibilityRole="button" accessibilityLabel={passedExpanded ? '收起已通过阶数' : '展开全部已通过阶数'} accessibilityState={{ expanded: passedExpanded }} onPress={() => setPassedExpanded(!passedExpanded)} style={styles.fold}><Text style={styles.foldText}>{passedCount} 式已通过</Text><Text style={styles.foldArrow}>{passedExpanded ? '⌃' : '⌄'}</Text></Pressable> : <Text style={styles.listCount}>从当前阶开始</Text>}</View>
     {stages.slice(visibleFrom).map((exercise, offset) => {
       const index = offset + visibleFrom;
@@ -179,9 +191,9 @@ function ActionRow({ exercise, index, badge, state, rail = true, onOpen, onArtwo
   </View>;
 }
 
-function PhotoButton({ exercise, size, onArtwork }: { exercise: Exercise; size: 'small' | 'large' | 'goal'; onArtwork: (exercise: Exercise) => void }) {
-  const width = size === 'large' ? 104 : size === 'goal' ? 68 : 82;
-  return <Pressable accessibilityRole="button" accessibilityLabel={'放大查看' + exercise.name + '动作配图'} onPress={() => onArtwork(exercise)} style={styles.photo}><ExerciseMedia exercise={exercise} width={width} minHeight={size === 'goal' ? 44 : 56} maxHeight={size === 'large' ? 126 : 98} /><View pointerEvents="none" style={styles.photoZoom}><Glyph name="expand" size={11} color="#F2F5F9" /></View></Pressable>;
+function PhotoButton({ exercise, size, onArtwork }: { exercise: Exercise; size: 'small' | 'large'; onArtwork: (exercise: Exercise) => void }) {
+  const width = size === 'large' ? 104 : 82;
+  return <Pressable accessibilityRole="button" accessibilityLabel={'放大查看' + exercise.name + '动作配图'} onPress={() => onArtwork(exercise)} style={styles.photo}><ExerciseMedia exercise={exercise} width={width} minHeight={56} maxHeight={size === 'large' ? 126 : 98} /><View pointerEvents="none" style={styles.photoZoom}><Glyph name="expand" size={11} color="#F2F5F9" /></View></Pressable>;
 }
 
 function Glyph({ name, color, size = 20 }: { name: 'crown' | 'shield' | 'lock' | 'check' | 'chevron' | 'expand' | 'search'; color: string; size?: number }) {
@@ -201,7 +213,7 @@ const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: palette.bg }, content: progressPageLayout.content,
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingBottom: 12, borderBottomWidth: 1, borderBottomColor: '#292F38', gap: 12 },
   headingCopy: { flex: 1 }, title: { ...progressPageLayout.title, color: palette.text }, subtitle: { color: palette.muted, fontSize: 11, marginTop: 4 }, subtitleCount: { color: palette.lime, fontWeight: '900' },
-  ring: { width: ringSize, height: ringSize }, ringCopy: { ...StyleSheet.absoluteFill, alignItems: 'center', justifyContent: 'center' }, percent: { color: palette.text, fontSize: 18, fontWeight: '800' }, ringLabel: { color: palette.muted, fontSize: 9, marginTop: 2 },
+  progressSummary: { alignItems: 'center', gap: 3 }, ring: { width: ringSize, height: ringSize }, ringCopy: { ...StyleSheet.absoluteFill, alignItems: 'center', justifyContent: 'center' }, percent: { color: palette.text, fontSize: 20, fontWeight: '800', fontVariant: ['tabular-nums'] }, percentUnit: { color: palette.muted, fontSize: 11, fontWeight: '600' }, ringLabel: { color: palette.muted, fontSize: 9, letterSpacing: 0.5 },
   sectionHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 12, marginBottom: 7 }, sectionTitle: { ...progressPageLayout.sectionTitle, color: palette.text },
   tools: { flexDirection: 'row', gap: 2 }, tool: { minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center' }, toolText: { color: palette.muted, borderColor: palette.faint, borderWidth: 1, borderRadius: 10, width: 18, height: 18, textAlign: 'center', fontSize: 12, lineHeight: 16, fontWeight: '800' },
   rules: { backgroundColor: palette.card, borderRadius: 16, padding: 15, marginBottom: 13 }, rulesTitle: { color: palette.lime, fontSize: 13, fontWeight: '800' }, rulesText: { color: palette.muted, fontSize: 12, lineHeight: 20, marginTop: 7 },
@@ -212,10 +224,8 @@ const styles = StyleSheet.create({
   seriesWrap: { position: 'relative', marginTop: 12 }, seriesRow: { gap: 7, paddingRight: 23, paddingVertical: 3 }, seriesChip: { minHeight: 44, paddingHorizontal: 15, borderRadius: 24, backgroundColor: '#171C23', borderWidth: 1, borderColor: '#292F38', flexDirection: 'row', gap: 6, alignItems: 'center', justifyContent: 'center' },
   seriesActive: { backgroundColor: '#29351C', borderColor: '#697F36' }, seriesText: { ...progressPageLayout.controlText, color: palette.muted }, seriesTextActive: { color: palette.lime }, seriesFade: { position: 'absolute', right: 0, top: 0, bottom: 0, width: 21 },
   empty: { paddingVertical: 45, alignItems: 'center' }, emptyTitle: { color: palette.text, fontSize: 16, fontWeight: '700' }, emptyNote: { color: palette.muted, fontSize: 12, marginTop: 8 },
-  route: { marginTop: 20 }, routeHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginBottom: 13 }, routeTitle: { ...progressPageLayout.sectionTitle, color: palette.text }, routeState: { color: palette.muted, fontSize: 11 },
-  goalRow: { flexDirection: 'row', gap: 10, alignItems: 'center' }, goalRail: { width: 26, alignItems: 'center' }, goalCard: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 11, minHeight: 92, backgroundColor: '#1C222A', borderRadius: progressPageLayout.cardRadius, borderWidth: 1, borderColor: '#3E4B36', padding: 12 },
-  goalComplete: { borderColor: '#738A3E', backgroundColor: '#202A19' }, goalCopy: { flex: 1, minHeight: 48, justifyContent: 'center' }, goalLabel: { color: '#A9C47B', fontSize: 10, fontWeight: '600' }, goalName: { ...progressPageLayout.actionTitle, color: palette.text, marginTop: 6 },
-  listHeading: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 12, marginBottom: 5, minHeight: 44 }, listTitle: { ...progressPageLayout.sectionTitle, color: palette.text }, listCount: { color: palette.faint, fontSize: 11 },
+  route: { marginTop: 20 }, routeHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginBottom: 4 }, routeTitle: { ...progressPageLayout.sectionTitle, color: palette.text }, routeState: { color: palette.muted, fontSize: 11 },
+  listHeading: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 5, minHeight: 44 }, listTitle: { ...progressPageLayout.sectionTitle, color: palette.text }, listCount: { color: palette.faint, fontSize: 11 },
   fold: { flexDirection: 'row', alignItems: 'center', minHeight: 44, gap: 7, paddingHorizontal: 10 }, foldText: { color: '#B9D888', fontSize: 11 }, foldArrow: { color: palette.lime, fontSize: 16 },
   routeRow: { flexDirection: 'row', gap: 10, marginBottom: 12 }, rail: { width: 26, alignItems: 'center' }, railLine: { position: 'absolute', width: 2, top: 0, bottom: -12, backgroundColor: '#343B45' },
   node: { width: 26, height: 34, borderRadius: 12, marginTop: 25, backgroundColor: palette.bg, alignItems: 'center', justifyContent: 'center' }, nodePassed: { backgroundColor: '#172017' }, nodeCurrent: { backgroundColor: '#263A17', borderWidth: 1, borderColor: '#667F32', height: 26 }, nodeDot: { width: 10, height: 10, borderRadius: 5, backgroundColor: palette.lime },

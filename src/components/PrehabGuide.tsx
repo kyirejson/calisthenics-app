@@ -1,4 +1,3 @@
-import React from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { fitnessColors as colors, appPalette, radius, progressPageLayout } from '../theme';
 import type { Profile } from '../types';

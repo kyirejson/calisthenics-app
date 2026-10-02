@@ -16,7 +16,7 @@ for (const [name, body] of Object.entries(resources)) {
   if (!fs.existsSync(target)) fs.writeFileSync(target, body);
 }
 const maps = ['import type { ImageSourcePropType } from \'react-native\';'];
-for (const [directory, symbol] of [['skills-images', 'skillsImageMap'], ['demon-images', 'demonImageMap']]) {
+for (const [directory, symbol] of [['supplemental-images', 'supplementalImageMap'], ['demon-images', 'demonImageMap']]) {
   const folder = path.join(root, 'assets', directory);
   const names = fs.existsSync(folder) ? fs.readdirSync(folder).filter(name => /^[\w-]+\.(png|jpe?g|webp)$/.test(name)) : [];
   maps.push(`export const ${symbol}: Record<string, ImageSourcePropType> = {`);

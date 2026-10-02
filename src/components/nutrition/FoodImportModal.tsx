@@ -1,4 +1,3 @@
-import React from 'react';
 import { KeyboardAvoidingView, Modal, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import type { FoodLabelDraft } from '../../nutrition/types';
 import { FoodCaptureCamera } from './FoodCaptureCamera';

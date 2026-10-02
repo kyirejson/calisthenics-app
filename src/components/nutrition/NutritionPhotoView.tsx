@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Image, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 import type { NutritionPhoto } from '../../nutrition/types';
 import { nutritionPhotoURI, releasePhotoURI } from '../../nutrition/photoStorage';

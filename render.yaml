@@ -3,7 +3,7 @@ services:
     name: uncover-nutrition-api
     runtime: node
     plan: free
-    buildCommand: node --version
+    buildCommand: node --check server/index.mjs && node --check server/book-knowledge.mjs && node --check server/prisoner-knowledge.mjs
     startCommand: node server/index.mjs
     healthCheckPath: /health
     autoDeployTrigger: off

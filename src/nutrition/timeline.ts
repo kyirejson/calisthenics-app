@@ -3,9 +3,9 @@ import { localWeightDate, summarizeWeightTrend } from '../data/weightTrend';
 import { calculateTargets, normalizeNutritionPreferences, sumNutrients } from './engine';
 import { meaningfulTrainingSessions } from './training';
 import { photoUsesOnlyLabels } from './vision';
-import { emptyNutritionDay, MEAL_SLOTS, normalizeTargetSnapshot, TRAINING_TIMES } from './state';
+import { emptyNutritionDay, MEAL_SLOTS, normalizeTargetSnapshot } from './state';
 import { isValidDateKey, offsetDate, validTimestamp, dateAtNoon } from './validation';
-import type { MealSlot, Nutrients, NutritionDayState, NutritionJournal, NutritionTargetSnapshot, NutritionTrainingContext, TrainingTime } from './types';
+import type { MealSlot, Nutrients, NutritionDayState, NutritionJournal, NutritionTargetSnapshot, NutritionTrainingContext } from './types';
 
 export function createNutritionTargetSnapshot(profile: Profile, journal: NutritionJournal, training: NutritionTrainingContext, now = new Date().toISOString()): NutritionTargetSnapshot {
   const prefs = normalizeNutritionPreferences(journal.preferences);
@@ -35,11 +35,6 @@ export function withDailyTargetSnapshot(current: NutritionJournal, date: string,
   const days = { ...current.days, [date]: { ...day, targetHistory } };
   const retained = Object.fromEntries(Object.entries(days).sort(([a], [b]) => a.localeCompare(b)).slice(-1095));
   return { ...current, days: retained };
-}
-
-export function withNutritionTrainingTime(current: NutritionJournal, time: TrainingTime): NutritionJournal {
-  if (!TRAINING_TIMES.includes(time)) throw new Error('训练时段无效。');
-  return current.trainingTime === time ? current : { ...current, trainingTime: time };
 }
 
 export function withMealLoggingConfirmation(current: NutritionJournal, date: string, slot: MealSlot | 'day', confirmed: boolean, now = new Date().toISOString()): NutritionJournal {
@@ -101,7 +96,7 @@ export function summarizeNutritionWeek(journal: NutritionJournal, profile: Profi
   const referenceCalories = status === 'ready' ? Math.round(comparable.reduce((sum, day) => sum + day.target!.targets.calories, 0) / comparable.length) : null;
   const referenceProtein = status === 'ready' ? Math.round(comparable.reduce((sum, day) => sum + day.target!.targets.protein, 0) / comparable.length) : null;
   const insights: string[] = [];
-  if (status === 'paused') insights.push('自动目标暂停，复盘只展示记录，不据此调整热量。请先核对健康与营养设置。');
+  if (status === 'paused') insights.push('自动目标暂停，复盘只展示记录，不据此调整热量。请在营养助手中核对健康情况与饮食偏好。');
   else if (status === 'goal_changed') insights.push('本周存在不同目标或饮食方式，不混算达标率，也不据此改低或改高能量目标。');
   else if (status === 'insufficient') insights.push(`有 ${complete.length} 天明确记完，${comparable.length} 天同时保存了目标。至少积累 4 天可比较记录，再讨论摄入趋势；漏记不算少吃。`);
   else {

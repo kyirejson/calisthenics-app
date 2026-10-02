@@ -1,9 +1,9 @@
-import React from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { appPalette, radius, progressPageLayout } from '../theme';
 import type { Exercise } from '../types';
 import { getWarmupActions } from '../data/trainingWarmup';
 import { ExerciseMedia } from './ExerciseResource';
+import { EquipmentPhoto } from './EquipmentPhoto';
 
 type Phase = { title: string; minutes: number; details: string };
 
@@ -40,7 +40,7 @@ export function WarmupGuide({ minutes, items = [], onSkip, onComplete }: { minut
   return <View style={styles.container}><ScrollView contentContainerStyle={styles.content}>
     <Text style={styles.title}>训练前热身</Text><Text style={styles.subtitle}>约 {Math.ceil(minutes)} 分钟 · 已计入课程估时；热身不计入正式训练量</Text>
     {actions.map((action, index) => <View key={action.id} style={styles.warmupCard}>
-      {action.exercise ? <ExerciseMedia exercise={action.exercise} framing="full" minHeight={100} maxHeight={220} /> : null}
+      {action.exercise ? action.exercise.id.startsWith('equipment_') ? <EquipmentPhoto exerciseId={action.exercise.id} name={action.exercise.name} /> : <ExerciseMedia exercise={action.exercise} framing="full" minHeight={100} maxHeight={220} /> : null}
       <View style={styles.cardBody}><Text style={styles.duration}>{String(index + 1).padStart(2, '0')} · {action.dose}</Text><Text style={[styles.phaseTitle, { marginTop: 8 }]}>{action.title}</Text><Text style={[styles.details, { marginTop: 8 }]}>{action.detail}</Text></View>
     </View>)}
     <Text style={styles.details}>热身次数为轻量起点，可按当天状态减少；不要把热身做成力竭测试。</Text>

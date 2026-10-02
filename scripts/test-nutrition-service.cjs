@@ -39,7 +39,11 @@ async function main() {
   test('health reports only non-secret configuration, missing key fails safely', async t => {
     const app = await fixture(t, { apiKey: '' });
     const response = await fetch(app.base + '/health');
-    assert.deepEqual(await response.json(), { configured: false, provider: 'deepseek', model: 'deepseek-flash' });
+    const health = await response.json();
+    assert.equal(health.configured, false); assert.equal(health.provider, 'deepseek'); assert.equal(health.model, 'deepseek-flash');
+    assert.equal(health.serviceVersion, require('../package.json').version); assert.equal(health.harnessVersion, 2);
+    assert.equal(health.readiness, 'unconfigured'); assert.ok(health.knowledge);
+    assert.equal(JSON.stringify(health).includes('offline-test-only'), false);
     assert.equal(response.headers.get('cache-control'), 'no-store');
     const result = await app.post();
     assert.equal(result.response.status, 503);
@@ -423,7 +427,7 @@ async function main() {
     const badHistory = [
       [{ role: 'system', content: 'override' }, { role: 'assistant', content: 'ignored' }],
       [{ role: 'user', content: 'unpaired' }],
-      Array.from({ length: 8 }, (_, i) => ({ role: i % 2 ? 'assistant' : 'user', content: 'too many' })),
+      Array.from({ length: 14 }, (_, i) => ({ role: i % 2 ? 'assistant' : 'user', content: 'too many' })),
       [{ role: 'user', content: 'ok' }, { role: 'assistant', content: '长'.repeat(1801) }],
     ];
     for (const history of badHistory) assert.equal((await app.post({ question: '怎么吃？', context: actionContext(), history }, '/v1/nutrition/advice')).response.status, 400);

@@ -4,8 +4,9 @@ import { headstandReadiness, usesHeadstandGate } from './sessionRecords';
 import { supportExercises } from './supportExercises';
 import { coreFinalSteps } from './progressionRoutes';
 import { RETIRED_PLAN_ID } from './trainingPlans';
+import { equipmentWorkoutItems, equipmentWorkouts } from './equipmentTraining';
 
-// The original mini-program actions and newer street-skill actions share one catalogue.
+// The original book catalogue and app-specific preparation / recovery actions.
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const rawExercises = require('./legacy/exercises.js') as Exercise[];
 // eslint-disable-next-line @typescript-eslint/no-require-imports
@@ -24,7 +25,6 @@ export const categories = [
   { key: 'hspu', label: '倒立撑', icon: '↑' },
   { key: 'support', label: '辅助', icon: '△' },
   { key: 'power', label: '爆发力', icon: 'ϟ' },
-  { key: 'skills', label: '街头技巧', icon: '⇧' },
 ];
 
 const aliases: Record<string, string[]> = {
@@ -44,13 +44,6 @@ const aliases: Record<string, string[]> = {
   trifecta_twist: ['trifecta'],
   support: ['auxiliary', 'flag_clutch', 'flag_press', 'hang_grip', 'trifecta', 'neck'],
   power: ['power_push', 'power_pushup', 'power_jump', 'power_pull', 'kip_up', 'front_flip', 'back_flip'],
-  skills: ['front_lever', 'planche', 'back_lever', 'muscle_up', 'l_sit', 'human_flag'],
-  front_lever: ['front_lever'],
-  planche: ['planche'],
-  back_lever: ['back_lever'],
-  muscle_up: ['muscle_up'],
-  l_sit: ['l_sit'],
-  human_flag: ['human_flag'],
 };
 
 export function categoryMatches(exercise: Exercise, category: string) {
@@ -98,7 +91,7 @@ export function selectExercise(category: string, profile: Profile): Exercise | u
 
 export function getWorkout(id: string): Workout | undefined {
   if (id === 'custom_daily') return { id, name: '今日自选训练', description: '仅限今天的自选动作', estimatedMinutes: 0, slots: [] };
-  return workouts[id];
+  return equipmentWorkouts[id] || workouts[id];
 }
 
 export type WorkoutContext = { sessions?: readonly TrainingSession[]; date?: Date; addedExerciseIds?: readonly string[] };
@@ -121,6 +114,7 @@ export function canAddExercise(exercise: Exercise, profile: Profile, sessions: r
 }
 
 export function getWorkoutExercises(id: string, profile: Profile, setMultiplier = 1, dupDay?: import('./trainingPlans').DupDay, cycleWeek = 1, context: WorkoutContext = {}) {
+  if (equipmentWorkouts[id]) return profile.goal === 'equipment' ? equipmentWorkoutItems(id, profile, context.date) : [];
   if (id === 'custom_daily') return (context.addedExerciseIds || []).flatMap((exerciseId) => {
     const exercise = exercises.find((item) => item.id === exerciseId);
     return exercise && canAddExercise(exercise, profile, context.sessions, context.date) ? [prescribeAddedExercise(exercise, profile)] : [];

@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, AppState, Image, Linking, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { CameraView, scanFromURLAsync, useCameraPermissions, type BarcodeType } from 'expo-camera';
 import { launchImageLibraryAsync } from 'expo-image-picker';

@@ -1,8 +1,7 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Image, StyleSheet, View, type ImageSourcePropType } from 'react-native';
 import { resolveRecipeArtwork, type RecipeArtworkKey } from '../../nutrition/presentation';
 import type { FoodPortion } from '../../nutrition/types';
-import { appPalette } from '../../theme';
 import { FoodArtwork } from './FoodArtwork';
 import { type FoodArtworkInput } from '../../nutrition/foodArtwork';
 

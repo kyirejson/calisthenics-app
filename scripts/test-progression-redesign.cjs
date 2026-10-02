@@ -7,14 +7,13 @@ require.extensions['.ts'] = (module, filename) => module._compile(ts.transpileMo
   compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 },
 }).outputText, filename);
 for (const ext of ['.png', '.jpeg', '.jpg']) require.extensions[ext] = (module, filename) => { module.exports = filename; };
-const { exercises } = require('../src/data/catalog.ts');
-const { getProgressionStatus, getProgressionStageState, getAllProgressionStatuses, getFinalFormProgress, applyProgressionUnlock } = require('../src/data/progression.ts');
+const { exercises, categories, selectExercise, getWorkoutExercises } = require('../src/data/catalog.ts');
+const { getProgressionStatus, getProgressionStageState, getAllProgressionStatuses, getFinalFormProgress, applyProgressionUnlock, progressionGroups, progressionSeries } = require('../src/data/progression.ts');
 const { getExerciseArtwork, rejectedArtwork } = require('../src/data/exerciseArtwork.ts');
 const { getOriginalActionFrames, getOriginalActionImage } = require('../src/data/originalResources.ts');
 const { originalTexts } = require('../src/data/private/originalTexts.ts');
 const { originalImageMap } = require('../src/data/private/imageMap.ts');
 const privateBookTest = { skip: Object.keys(originalTexts).length === 0 || Object.keys(originalImageMap).length === 0 ? 'Private book resources are not distributed in public checkouts' : false };
-const reviewedPhotoTest = { skip: privateBookTest.skip || !fs.existsSync(path.join(__dirname, '../assets/skills-images')) ? 'Private reviewed photos are not distributed in public checkouts' : false };
 const { loadedImageDimensions } = require('../src/utils/imageDimensions.ts');
 const { getSubjectFrame, fitSubjectFrame, photoAspect } = require('../src/utils/exerciseFraming.ts');
 const profile = { levels: { push: 5 }, planLevels: { push: 5 } };
@@ -26,6 +25,22 @@ function exam(id, at, key = 'push', selected = profile) {
       sets: Array.from({ length: criteria.sets }, () => ({ completed: true, reps: criteria.value, unit: criteria.unit })) }] };
 }
 const exams = () => [exam('a', '2026-09-25T10:00:00Z'), exam('b', '2026-09-27T10:00:00Z')];
+
+test('removed module cannot reappear in routes, search catalogue, progress or daily extras', () => {
+  const removedCategories = ['front_lever', 'planche', 'back_lever', 'muscle_up', 'l_sit', 'human_flag'];
+  assert.deepEqual(progressionGroups.map(group => group.key), ['六艺基础', '关节与支援', '爆发六功']);
+  assert.equal(categories.some(category => category.key === 'skills'), false);
+  assert.equal(exercises.some(exercise => removedCategories.includes(exercise.category)), false);
+  const saved = { ...profile, goal: 'street_mastery', levels: { push: 5, ...Object.fromEntries(removedCategories.map(key => [key, 100])) } };
+  assert.deepEqual(getFinalFormProgress(getAllProgressionStatuses(saved, [])), { unlocked: 0, total: 17, percent: 0 });
+  for (const key of removedCategories) {
+    assert.equal(progressionSeries.some(series => series.key === key), false);
+    assert.equal(getProgressionStatus(key, saved, []), null);
+    assert.equal(selectExercise(key, saved), undefined);
+  }
+  assert.deepEqual(getWorkoutExercises('custom_daily', saved, 1, undefined, 1, { addedExerciseIds: ['fl_01', 'pl_01', 'bl_01', 'mu_01', 'ls_01', 'hf_01'] }), []);
+  for (const key of ['flag_clutch', 'flag_press', 'trifecta', 'power_pull']) assert.ok(getProgressionStatus(key, saved, []), key);
+});
 
 test('manual high-step selection passes earlier levels without invented exams or records', () => {
   const sessions = [], selected = { levels: { push: 8 }, planLevels: { push: 8 } };
@@ -41,7 +56,7 @@ test('manual high-step selection passes earlier levels without invented exams or
 });
 test('choosing a core extension acknowledges the core final, not a new final', () => {
   const statuses = getAllProgressionStatuses({ levels: { push: 16 } }, []);
-  assert.deepEqual(getFinalFormProgress(statuses), { unlocked: 1, total: 23, percent: 4 });
+  assert.deepEqual(getFinalFormProgress(statuses), { unlocked: 1, total: 17, percent: 6 });
   const status = statuses.find(item => item.series.key === 'push');
   assert.equal(status.current.id, 'push_10');
   assert.equal(status.complete, true);
@@ -149,14 +164,14 @@ test('a deliberately different planned variant is preserved on recorded advancem
   assert.equal(result.levels.push, 6); assert.equal(result.planLevels.push, 8);
 });
 test('all explicitly rejected pictures are absent from the rendering resolver', () => {
-  assert.equal(Object.keys(rejectedArtwork).length, 24);
+  assert.equal(Object.keys(rejectedArtwork).length, 12);
   for (const id of Object.keys(rejectedArtwork)) {
     const artwork = getExerciseArtwork(exercises.find(exercise => exercise.id === id));
     assert.equal(artwork.cover, undefined, id); assert.deepEqual(artwork.frames, [], id); assert.ok(artwork.missingReason);
   }
 });
-test('replaced photos use the reviewed sources, not a different movement', reviewedPhotoTest, () => {
-  for (const [id, filename] of [['pl_02', 'pl_02_reviewed.jpeg'], ['bl_04', 'bl_04_reviewed.jpeg'], ['mu_01', 'image01454.jpeg'], ['mu_02', 'image01471.jpeg'], ['legRaise_demon_05', 'image00653.jpeg']]) {
+test('replaced photos use the reviewed sources, not a different movement', privateBookTest, () => {
+  for (const [id, filename] of [['legRaise_demon_05', 'image00653.jpeg']]) {
     const artwork = getExerciseArtwork(exercises.find(exercise => exercise.id === id));
     assert.equal(path.basename(artwork.cover.source), filename);
   }

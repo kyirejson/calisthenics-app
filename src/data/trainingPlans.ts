@@ -1,6 +1,7 @@
 import type { Profile } from '../types';
 import { preferredSessionMinutes } from './trainingPrescription';
 import { trainingGoalLabel } from './trainingGoals';
+import { EQUIPMENT_PLAN_ID, equipmentFrequency, equipmentScheduleOffsets, equipmentWorkoutId, equipmentWorkouts } from './equipmentTraining';
 
 export const PERSONAL_PLAN_ID = 'personal_v1';
 export const PRISONER_PLAN_ID = 'prisoner_six_arts_v1';
@@ -123,7 +124,7 @@ const retiredDay = (day: number): PlanDay => ({
 });
 
 export function recommendPlanId(profile: Pick<Profile, 'goal'>) {
-  return profile.goal === 'weight_loss' ? PERSONAL_PLAN_ID : profile.goal === 'street_mastery' ? PRISONER_PLAN_ID : RETIRED_PLAN_ID;
+  return profile.goal === 'equipment' ? EQUIPMENT_PLAN_ID : profile.goal === 'weight_loss' ? PERSONAL_PLAN_ID : profile.goal === 'street_mastery' ? PRISONER_PLAN_ID : RETIRED_PLAN_ID;
 }
 
 export function prisonerGoalDate(profile: Pick<Profile, 'planStartedAt'>) {
@@ -154,14 +155,13 @@ export function getCycleMeta(profile: Pick<Profile, 'planStartedAt' | 'goal'> & 
   const nowDay = localDayNumber(date);
   const week = Math.max(1, Math.floor((nowDay - startDay) / 7) + 1);
   const cycleWeek = ((week - 1) % 4) + 1;
+  if (profile.goal === 'equipment') return { week, cycleWeek, label: `器械训练 · 第 ${week} 周`, setMultiplier: 1, rirTarget: 3, note: '先校准负荷，保留 2–3 次余力；不自动加重。', isDeload: false, dupDay: 'volume' };
   if (profile.goal === 'street_mastery') {
     if (profile.experience !== 'elite' && profile.experience !== 'supermax' && profile.frequency === 3) {
       return { week, cycleWeek, label: `渐入佳境 · 第${week}周`, setMultiplier: 1, rirTarget: 2,
         note: '不设固定减量周。保持每艺两个正式组；按实际表现增加次数，疲劳或动作质量下降时主动减少训练或休息。', isDeload: false, dupDay: 'volume' };
     }
     const deload = cycleWeek === 4;
-    const horizon = 365;
-    const elapsed = Math.max(0, nowDay - startDay);
     const blockPhase = cycleWeek === 1
       ? '基准建立'
       : cycleWeek === 2
@@ -369,6 +369,15 @@ function weightLossTrainingDays(profile: Profile): PlanDay[] {
 
 export function getPlanDay(profile: Profile, date = new Date()) {
   const dayOfWeek = date.getDay();
+  if (profile.goal === 'equipment') {
+    const frequency = equipmentFrequency(profile.frequency, profile.equipmentSplit);
+    const elapsed = localDayNumber(date) - localDayNumber(new Date(profile.planStartedAt));
+    const slot = equipmentScheduleOffsets(profile).indexOf(((elapsed % 7) + 7) % 7);
+    const workout = slot >= 0 && elapsed >= 0 ? equipmentWorkouts[equipmentWorkoutId(profile, slot, date)] : undefined;
+    const plan: TrainingPlanDefinition = { id: EQUIPMENT_PLAN_ID, name: '器械均衡增肌', shortName: '器械训练', frequency };
+    const day: PlanDay = workout ? { day: dayOfWeek, type: 'strength', title: workout.name, workoutId: workout.id, tip: '先完成递增热身组，再以可控负荷练习，保留 2–3 次余力。' } : recovery(dayOfWeek);
+    return { plan, day, cycle: getCycleMeta(profile, date), phase: 'regular' as const };
+  }
   if ((profile.goal !== 'weight_loss' && profile.goal !== 'street_mastery') || profile.planId === RETIRED_PLAN_ID) {
     const plan: TrainingPlanDefinition = { id: RETIRED_PLAN_ID, name: '暂无训练计划', shortName: '暂无训练计划', frequency: 0 };
     return { plan, day: retiredDay(dayOfWeek), cycle: getCycleMeta(profile, date), phase: 'regular' as const };

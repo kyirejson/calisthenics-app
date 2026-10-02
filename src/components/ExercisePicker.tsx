@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { FlatList, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { canAddExercise, categories, categoryMatches, exercises } from '../data/catalog';
 import { useAppStore } from '../store/AppStore';

@@ -2,9 +2,11 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createHash } from 'node:crypto';
+import { gzipSync } from 'node:zlib';
 const project = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+if (process.argv.slice(2).length > 1 || process.argv.slice(2).some(arg => arg.startsWith('--'))) throw Error('仅支持一个囚徒健身原始资料目录参数。');
 const root = path.resolve(process.argv[2] || path.join(project, '..', '001号', '囚徒健身全集'));
-if (!fs.statSync(root).isDirectory()) throw Error('未找到囚徒健身原始资料目录。');
+if (!fs.statSync(root).isDirectory()) throw Error('未找到原始书籍资料目录。');
 const chunks = [], files = [];
 for (const book of fs.readdirSync(root).filter(name => /^0[1-4]_/u.test(name)).sort()) {
   const folder = path.join(root, book);
@@ -24,7 +26,13 @@ for (const book of fs.readdirSync(root).filter(name => /^0[1-4]_/u.test(name)).s
     flush();
   }
 }
+if (!chunks.length) throw Error('囚徒健身资料为空，未覆盖现有索引。');
 const output = path.join(project, 'server', 'private', 'prisoner-index.json');
+const serialized = JSON.stringify({ version: 1, builtAt: new Date().toISOString(), files, chunks });
+const renderPayload = gzipSync(serialized, { level: 9 }).toString('base64');
+if (Buffer.byteLength(renderPayload) >= 1024 * 1024) throw Error('压缩索引超过 Render Secret Files 限制，未覆盖现有索引。');
 fs.mkdirSync(path.dirname(output), { recursive: true });
-fs.writeFileSync(output, JSON.stringify({ version: 1, builtAt: new Date().toISOString(), files, chunks }));
-console.log(JSON.stringify({ documents: files.length, chunks: chunks.length, bytes: fs.statSync(output).size, output }));
+fs.writeFileSync(output, serialized);
+const renderOutput = output + '.gz.b64';
+fs.writeFileSync(renderOutput, renderPayload);
+console.log(JSON.stringify({ documents: files.length, chunks: chunks.length, bytes: fs.statSync(output).size, output, renderOutput, renderBytes: Buffer.byteLength(renderPayload), sha256: createHash('sha256').update(renderPayload).digest('hex') }));

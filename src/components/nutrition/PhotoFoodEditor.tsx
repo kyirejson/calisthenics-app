@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { FOODS } from '../../nutrition/catalog';
 import { captureServings } from '../../nutrition/captureServings';

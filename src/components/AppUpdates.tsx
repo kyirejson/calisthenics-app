@@ -1,4 +1,4 @@
-import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { AppState, Linking, Modal, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import * as Updates from 'expo-updates';
 import { checkForUpdates, type AvailableUpdate } from '../services/updateChecker';
@@ -10,6 +10,11 @@ type Phase = 'idle' | 'checking' | 'available' | 'downloading' | 'ready' | 'curr
 type UpdateContext = { phase: Phase; status: string; open: () => void; setSafeScreen: (safe: boolean) => void; blockUpdates: () => () => void };
 const Context = createContext<UpdateContext | null>(null);
 export function useAppUpdates() { const value = useContext(Context); if (!value) throw new Error('Missing AppUpdatesProvider'); return value; }
+
+export function useUpdateBlock(active: boolean) {
+  const { blockUpdates } = useAppUpdates();
+  useLayoutEffect(() => { if (active) return blockUpdates(); }, [active, blockUpdates]);
+}
 
 export function AppUpdatesProvider({ children }: { children: React.ReactNode }) {
   const native = Platform.OS !== 'web';

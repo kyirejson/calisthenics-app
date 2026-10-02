@@ -284,6 +284,8 @@ export function compareWithPrevious(session: TrainingSession, sessions: Training
     }
   }
   return [...measured.values()].map(({ exercise, unit }) => {
+    // Equipment repetitions without matched device/load are not evidence of strength gains.
+    if (exercise.exerciseId.startsWith('equipment_')) return { exercise, best: sessionExerciseBest(exercise, unit), prevBest: null, delta: null, unit };
     let prevBest: number | null = null;
     for (const previous of earlier) {
       const values = (previous.exercises || []).filter(item => item.exerciseId === exercise.exerciseId)

@@ -25,13 +25,7 @@ jobs:
         run: test -n "$EXPO_TOKEN" || { echo 'Configure EXPO_TOKEN first; default debug signing is not allowed'; exit 1; }
       - run: npm ci
       - run: npm run typecheck
-      - run: npm run test:domain
-      - run: npm run test:updates
-      - run: npm run test:history
-      - run: npm run test:run
-      - run: npm run test:weight
-      - run: npm run test:nutrition
-      - run: npm run test:nutrition-service
+      - run: npm test
       - name: Build with existing dedicated signing credentials
         run: npx eas-cli@24.8.0 build --platform android --profile production --non-interactive --freeze-credentials --wait --json > build-result.json
       - name: Download completed APK

@@ -22,7 +22,7 @@ const presentStep = (onStep: (step: PlanGenerationStep) => void, progress: numbe
 
 export async function generatePersonalPlan(profile: Profile, save: (profile: Profile) => Promise<void>, onStep: (step: PlanGenerationStep) => void, sessions: TrainingSession[] = []) {
   if (profile.goal !== 'weight_loss' && profile.goal !== 'street_mastery') throw new Error('当前目标暂无训练计划');
-  if (profile.goal === 'street_mastery' && ![2, 3, 6].includes(profile.frequency)) throw new Error('囚徒健身每周可选 2、3 或 6 练');
+  if (profile.goal === 'street_mastery' && ![2, 3, 6].includes(profile.frequency)) throw new Error('街头健身每周可选 2、3 或 6 练');
   const isPrisoner = profile.goal === 'street_mastery';
   const stageName = profile.experience === 'supermax'
     ? '登峰造极'
@@ -55,7 +55,7 @@ export async function generatePersonalPlan(profile: Profile, save: (profile: Pro
     underTargetDays: next.goal === 'street_mastery' ? 0 : estimates.filter((minutes) => minutes < next.sessionMinutes - 10).length,
     overBudgetDays: next.goal === 'street_mastery' ? 0 : estimates.filter((minutes) => minutes > next.sessionMinutes).length,
   };
-  await presentStep(onStep, 90, isPrisoner ? '保存囚徒专属计划到本机' : '保存专属计划到本机');
+  await presentStep(onStep, 90, isPrisoner ? '保存街头健身计划到本机' : '保存专属计划到本机');
   await save(next);
   onStep({ progress: 100, label: isPrisoner ? `《${stageName}》专属计划已生成` : '专属计划已生成' });
   return summary;

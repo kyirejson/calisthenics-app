@@ -25,7 +25,11 @@ yarn-error.*
 /android
 /src/data/private/
 /assets/original-images/
-/assets/skills-images/
+/assets/supplemental-images/
+/assets/equipment-images/
+/assets/equipment-demos/sources.local/
+/assets/equipment-demos/prompts.json
+/assets/equipment-demos/provenance.json
 /assets/demon-images/
 /assets/raw-sources/
 __pycache__/
@@ -45,6 +49,7 @@ credentials.json
 /scripts/test-*.cjs
 /scripts/smoke-*.cjs
 /scripts/nutrition-smoke-utils.cjs
+/scripts/dev-nutrition-proxy.mjs
 /scripts/*subagent*
 /scripts/*demon*
 /scripts/*book*

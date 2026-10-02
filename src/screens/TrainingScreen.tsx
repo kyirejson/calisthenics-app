@@ -1,9 +1,13 @@
 import * as Haptics from 'expo-haptics';
-import React, { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Animated, BackHandler, Modal, Platform, Pressable, SafeAreaView, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Button, ProgressBar, UITheme } from '../components/ui';
 import { ExerciseDetailedGuide, ExerciseMedia } from '../components/ExerciseResource';
 import { AppGlyph } from '../components/AppGlyph';
+import { EquipmentPhoto } from '../components/EquipmentPhoto';
+import { EquipmentMovementGuide } from '../components/EquipmentMovementGuide';
+import { equipmentLoadLabel, equipmentSessionPlan, equipmentProgressionSuggestion, type EquipmentSessionPlan } from '../data/equipmentTraining';
+import { equipmentRecoveryAfterSet, estimateEquipmentSession } from '../data/equipmentTimeline';
 import { useReducedMotion, useRouteReveal } from '../components/useProgressMotion';
 import { ExercisePicker } from '../components/ExercisePicker';
 import { WarmupGuide, CooldownGuide } from '../components/WarmupCooldown';
@@ -15,27 +19,37 @@ import { getPlanDay } from '../data/trainingPlans';
 import { cleanSession, dailyWorkoutKey, trainingDateKey } from '../data/sessionRecords';
 import { useAppStore } from '../store/AppStore';
 import { appPalette, fitnessColors as colors, progressPageLayout } from '../theme';
-import type { Exercise, SessionExercise, TrainingSession } from '../types';
+import type { Exercise, SessionExercise, TrainingSession, TrainingInteractionEvent } from '../types';
 import { confirmAction } from '../utils/confirm';
 
-type SetState = { reps: string; completed: boolean; completedAt?: string };
+type SetState = { reps: string; load?: string; rir?: string; completed: boolean; completedAt?: string };
 type SessionQuality = NonNullable<TrainingSession['quality']>;
-type TrainingProps = { workoutId: string; exerciseId?: string; setMultiplier?: number; rirTarget?: number; onBack: () => void; onComplete: () => void };
+type TrainingProps = { workoutId: string; exerciseId?: string; setMultiplier?: number; rirTarget?: number; equipmentPlan?: EquipmentSessionPlan; onBack: () => void; onComplete: () => void };
 const unitLabel = (unit: TargetUnit) => ({ reps: '次', seconds: '秒', steps: '步', meters: '米' })[unit];
 const timeLabel = (seconds: number) => String(Math.floor(seconds / 60)).padStart(2, '0') + ':' + String(Math.max(0, seconds % 60)).padStart(2, '0');
-const initialSets = (item: PrescribedExercise) => Array.from({ length: item.targetSets }, () => ({ reps: String(item.targetValue), completed: false }));
+const initialSets = (item: PrescribedExercise): SetState[] => Array.from({ length: item.targetSets }, () => ({ reps: item.repRange ? '' : String(item.targetValue), load: '', rir: '', completed: false }));
+const validEquipmentSet = (item: PrescribedExercise, set: SetState) => !item.loadBasis || ((item.loadBasis === 'bodyweight' || (set.load?.trim() !== '' && set.load !== undefined && Number.isFinite(Number(set.load)) && Number(set.load) >= 0 && Number(set.load) <= 2000)) && (!set.rir?.trim() || (Number.isInteger(Number(set.rir)) && Number(set.rir) >= 0 && Number(set.rir) <= 10)));
 
-export function TrainingScreen({ workoutId, exerciseId, setMultiplier = 1, rirTarget, onBack, onComplete }: TrainingProps) {
+export function TrainingScreen({ workoutId, exerciseId, setMultiplier = 1, rirTarget, equipmentPlan, onBack, onComplete }: TrainingProps) {
   const { profile, sessions, settings, dailyEdits, addDailyExercise, saveSession, deleteSession } = useAppStore();
   const startedAt = useRef(new Date());
   const sessionId = useRef('session_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7));
   const trainingDate = trainingDateKey(startedAt.current);
+  const [courseProfile] = useState(() => profile);
+  const [plan] = useState(() => equipmentPlan || (profile?.goal === 'equipment' && workoutId.startsWith('equipment_') ? equipmentSessionPlan(workoutId, profile, startedAt.current) : undefined));
+  const interactions = useRef<TrainingInteractionEvent[]>([]);
+  const [interactionRevision, setInteractionRevision] = useState(0);
+  const logInteraction = (kind: TrainingInteractionEvent['kind'], exerciseId?: string, plannedSeconds?: number, setIndex?: number) => {
+    interactions.current.push({ kind, at: new Date().toISOString(), exerciseId, plannedSeconds, setIndex });
+    setInteractionRevision(value => value + 1);
+  };
   const selectedExercise = exerciseId ? exercises.find((item) => item.id === exerciseId) : undefined;
   const mastery = selectedExercise ? parseMasteryCriteria(selectedExercise) : undefined;
   const workout = selectedExercise ? { id: workoutId, name: selectedExercise.name + '专项' } : getWorkout(workoutId);
   // Freeze a course on entry. Saving a record must not replace its active rows.
   const [items, setItems] = useState<PrescribedExercise[]>(() => {
     if (!profile) return [];
+    if (plan) return plan.status === 'feasible' ? plan.items : [];
     if (selectedExercise && mastery) {
       if (!canAddExercise(selectedExercise, profile, sessions)) return [];
       const initial = prescribeAddedExercise(selectedExercise, profile);
@@ -48,7 +62,7 @@ export function TrainingScreen({ workoutId, exerciseId, setMultiplier = 1, rirTa
   const [sets, setSets] = useState<Record<string, SetState[]>>(() => Object.fromEntries(items.map((item) => [item.id, initialSets(item)])));
   const [index, setIndex] = useState(0);
   const [elapsed, setElapsed] = useState(0);
-  const [timerKind, setTimerKind] = useState<'rest' | 'hold' | null>(null);
+  const [timerKind, setTimerKind] = useState<'rest' | 'transition' | 'hold' | null>(null);
   const [remaining, setRemaining] = useState(0);
   const [paused, setPaused] = useState(false);
   const deadline = useRef(0);
@@ -66,13 +80,18 @@ export function TrainingScreen({ workoutId, exerciseId, setMultiplier = 1, rirTa
   const [constraintsConfirmed, setConstraintsConfirmed] = useState(false);
   const [warmupDone, setWarmupDone] = useState(false);
   const current = items[index];
+  const equipment = !!current?.loadBasis;
   const reduced = useReducedMotion();
   const actionReveal = useRouteReveal(current?.id || '', reduced);
   const currentSets = current ? sets[current.id] || [] : [];
   const allSetCount = Object.values(sets).flat().length;
   const completedCount = Object.values(sets).flat().filter((set) => set.completed).length;
   const estimateItems = items.map((item) => ({ ...item, targetSets: sets[item.id]?.length || item.targetSets }));
-  const estimate = estimateStrengthSession(estimateItems, profile?.sessionMinutes, profile?.goal === 'street_mastery');
+  const estimate = estimateStrengthSession(estimateItems, plan ? undefined : courseProfile?.sessionMinutes, courseProfile?.goal === 'street_mastery');
+  const pendingItems = estimateItems.map(item => ({ ...item, targetSets: (sets[item.id] || []).filter(set => !set.completed).length })).filter(item => item.targetSets > 0);
+  const pendingEstimate = plan ? estimateEquipmentSession(pendingItems) : undefined;
+  const remainingPlanSeconds = pendingEstimate ? (pendingItems.length ? Math.max(0, pendingEstimate.totalSeconds - (warmupDone ? Math.min(120, pendingEstimate.warmupSeconds) : 0)) : 120) + (timerKind && timerKind !== 'hold' ? remaining : 0) : 0;
+  const progression = equipment ? equipmentProgressionSuggestion(current, sessions.filter(session => session.id !== sessionId.current)) : '';
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -85,6 +104,7 @@ export function TrainingScreen({ workoutId, exerciseId, setMultiplier = 1, rirTa
     if (timerKind && remaining === 0 && !paused) {
       deadline.current = 0;
       setTimerKind(null);
+      if (plan && timerKind !== 'hold') logInteraction('timer_finished');
       if (settings.vibration) void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => undefined);
     }
   }, [remaining, paused, timerKind, settings.vibration]);
@@ -94,28 +114,32 @@ export function TrainingScreen({ workoutId, exerciseId, setMultiplier = 1, rirTa
     return () => listener.remove();
   }, []);
 
-  const startTimer = (kind: 'rest' | 'hold', seconds: number) => {
+  const startTimer = (kind: 'rest' | 'transition' | 'hold', seconds: number) => {
     const duration = Math.max(1, Math.round(seconds));
     deadline.current = Date.now() + duration * 1000;
     setRemaining(duration); setPaused(false); setTimerKind(kind);
+    if (plan && kind !== 'hold') logInteraction(kind === 'transition' ? 'transition_started' : 'rest_started', current?.id, duration);
   };
-  const stopTimer = () => { deadline.current = 0; setTimerKind(null); setRemaining(0); setPaused(false); };
+  const stopTimer = () => { if (plan && timerKind) logInteraction('timer_skipped', current?.id, remaining); deadline.current = 0; setTimerKind(null); setRemaining(0); setPaused(false); };
   const togglePause = () => {
     if (paused) deadline.current = Date.now() + remaining * 1000;
     else deadline.current = 0;
     setPaused(!paused);
+    if (plan) logInteraction(paused ? 'timer_resumed' : 'timer_paused', current?.id, remaining);
   };
   const extendRest = () => {
     setRemaining((value) => value + 30);
     if (!paused) deadline.current = Math.max(Date.now(), deadline.current) + 30000;
+    if (plan) logInteraction('timer_extended', current?.id, 30);
   };
-  const invalidCheckedSet = () => items.some((item) => (sets[item.id] || []).some((set) => set.completed && (!Number.isFinite(Number(set.reps)) || Number(set.reps) <= 0 || (item.targetUnit !== 'meters' && !Number.isInteger(Number(set.reps))))));
+  const invalidCheckedSet = () => items.some((item) => (sets[item.id] || []).some((set) => set.completed && (!Number.isFinite(Number(set.reps)) || Number(set.reps) <= 0 || (item.targetUnit !== 'meters' && !Number.isInteger(Number(set.reps))) || !validEquipmentSet(item, set))));
 
   const createRecord = (quality?: SessionQuality, finalized = false) => {
     const sessionExercises: SessionExercise[] = items.map((item) => ({
       exerciseId: item.id, name: item.name, category: item.category,
-      sets: (sets[item.id] || []).map((set) => ({ reps: Number(set.reps), completed: set.completed && (item.targetUnit === 'meters' || Number.isInteger(Number(set.reps))), unit: item.targetUnit, completedAt: set.completedAt })),
-      targetSnapshot: { sets: sets[item.id]?.length || item.targetSets, value: item.targetValue, unit: item.targetUnit },
+      sets: (sets[item.id] || []).map((set) => ({ reps: Number(set.reps), completed: set.completed && validEquipmentSet(item, set) && (item.targetUnit === 'meters' || Number.isInteger(Number(set.reps))), unit: item.targetUnit, completedAt: set.completedAt,
+        ...(item.loadBasis ? { loadKg: item.loadBasis === 'bodyweight' ? undefined : Number(set.load), rir: set.rir?.trim() ? Number(set.rir) : undefined } : {}) })),
+      targetSnapshot: { sets: sets[item.id]?.length || item.targetSets, value: item.targetValue, unit: item.targetUnit, repRange: item.repRange, perSide: item.perSide, loadBasis: item.loadBasis, restSeconds: item.restSeconds, rirTarget: item.defaultPrescription?.rirTarget },
       constraintsConfirmed: selectedExercise && items.length === 1 ? !mastery?.manual || constraintsConfirmed : undefined,
     }));
     return cleanSession({ id: sessionId.current, workoutId, workoutName: workout?.name || '自选训练',
@@ -123,6 +147,7 @@ export function TrainingScreen({ workoutId, exerciseId, setMultiplier = 1, rirTa
       durationSeconds: Math.max(1, Math.floor((Date.now() - startedAt.current.getTime()) / 1000)),
       exercises: sessionExercises, totalReps: 0, kind: 'strength', quality,
       completion: finalized && completedCount === allSetCount ? 'complete' : 'partial',
+      ...(plan ? { planSnapshot: { schemaVersion: plan.schemaVersion, revision: plan.revision, workoutId, estimate: plan.estimate, targets: plan.items.map(item => ({ id: item.id, sets: item.targetSets, range: item.repRange, restSeconds: item.restSeconds, rir: item.defaultPrescription?.rirTarget, perSide: item.perSide, loadBasis: item.loadBasis })) }, interactionEvents: interactions.current.slice() } : {}),
     });
   };
   const draftFactory = useRef(createRecord);
@@ -134,7 +159,7 @@ export function TrainingScreen({ workoutId, exerciseId, setMultiplier = 1, rirTa
     draftSaved.current = record.exercises.length > 0;
     const operation = record.exercises.length ? saveSession(record) : deleteSession(sessionId.current);
     void operation.catch(() => { if (!finishing.current) setError('自动暂存失败，请保持此页打开，并在结束时重试保存。'); });
-  }, [sets, items, saveSession, deleteSession]);
+  }, [sets, items, interactionRevision, saveSession, deleteSession]);
 
   const save = async (quality?: SessionQuality, leave = false) => {
     if (finishing.current) return;
@@ -167,17 +192,25 @@ export function TrainingScreen({ workoutId, exerciseId, setMultiplier = 1, rirTa
     const previous = currentSets[setIndex];
     const value = Number(previous.reps);
     if (!previous.completed && (!Number.isFinite(value) || value <= 0 || (current.targetUnit !== 'meters' && !Number.isInteger(value)))) { setError('填写实际完成数量后再勾选。'); return; }
+    if (!previous.completed && !validEquipmentSet(current, previous)) { setError('请填写有效重量（kg）；余力可留空，填写时为 0–10。'); return; }
     setSets((old) => ({ ...old, [current.id]: old[current.id].map((set, i) => i === setIndex ? { ...set, completed: !set.completed, completedAt: set.completed ? undefined : new Date().toISOString() } : set) }));
     setError('');
     if (!previous.completed) {
       if (settings.vibration) void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => undefined);
-      if (completedCount + 1 < allSetCount) startTimer('rest', current.restSeconds || settings.restSeconds);
+      if (plan) {
+        logInteraction('set_completed', current.id, undefined, setIndex);
+        const completed = Object.fromEntries(items.map(item => [item.id, (sets[item.id] || []).map((set, i) => item.id === current.id && i === setIndex ? true : set.completed)]));
+        const recovery = equipmentRecoveryAfterSet(estimateItems, completed, current.id);
+        if (recovery.seconds) startTimer(recovery.kind === 'transition' ? 'transition' : 'rest', recovery.seconds); else stopTimer();
+      } else if (completedCount + 1 < allSetCount) startTimer('rest', current.restSeconds || settings.restSeconds);
       else stopTimer();
+    } else if (plan) {
+      logInteraction('set_unchecked', current.id, undefined, setIndex);
     }
   };
   const addSet = () => {
     if (!current) return;
-    setSets((old) => ({ ...old, [current.id]: [...old[current.id], { reps: String(current.targetValue), completed: false }] }));
+    setSets((old) => ({ ...old, [current.id]: [...old[current.id], initialSets({ ...current, targetSets: 1 })[0]] }));
   };
   const addExercise = async (exercise: Exercise) => {
     if (!profile || items.some((item) => item.id === exercise.id)) return;
@@ -194,42 +227,48 @@ export function TrainingScreen({ workoutId, exerciseId, setMultiplier = 1, rirTa
     else setShowQuality(true);
   };
 
-  if (!profile || !workout || !current) return <UITheme><SafeAreaView style={styles.safe}><View style={styles.empty}><Text style={styles.actionTitle}>当前没有可训练动作</Text><Text style={styles.note}>请查看今日页的倒立解锁条件；颈桥还需标准桥基础及适宜性确认。可先选择准备动作。</Text><Button label="返回" onPress={onBack} /></View></SafeAreaView></UITheme>;
+  if (!profile || !workout || !current) return <UITheme><SafeAreaView style={styles.safe}><View style={styles.empty}><Text style={styles.actionTitle}>当前没有可训练动作</Text><Text style={styles.note}>{plan ? plan.notice : '请查看今日页的倒立解锁条件；颈桥还需标准桥基础及适宜性确认。可先选择准备动作。'}</Text><Button label="返回" onPress={onBack} /></View></SafeAreaView></UITheme>;
 
   return <UITheme><SafeAreaView style={styles.safe}>
-    <View style={styles.top}><Pressable disabled={saving} accessibilityRole="button" accessibilityLabel="保存并退出训练" onPress={confirmExit} style={styles.close}><AppGlyph name="back" color={colors.ink} /></Pressable><View style={{ flex: 1 }}><Text testID="training-screen-title" style={styles.workoutName}>训练中</Text><Text style={styles.topSub}>{completedCount} / {allSetCount} 组完成 · 预计 {estimate.totalMinutes} 分钟</Text></View><View style={styles.elapsedBox}><Text style={styles.clockLabel}>训练计时</Text><Text style={styles.elapsed}>{timeLabel(elapsed)}</Text></View></View>
+    <View style={styles.top}><Pressable disabled={saving} accessibilityRole="button" accessibilityLabel="保存并退出训练" onPress={confirmExit} style={styles.close}><AppGlyph name="back" color={colors.ink} /></Pressable><View style={{ flex: 1 }}><Text testID="training-screen-title" style={styles.workoutName}>训练中</Text><Text testID="training-plan-estimate" style={styles.topSub}>{completedCount} / {allSetCount} 组完成 · {plan ? `本课约 ${plan.estimate.rangeMinutes.join('–')} 分钟` : `预计 ${estimate.totalMinutes} 分钟`}</Text></View><View style={styles.elapsedBox}><Text style={styles.clockLabel}>训练计时</Text><Text style={styles.elapsed}>{timeLabel(elapsed)}</Text></View></View>
     <View style={styles.overallProgress}><ProgressBar value={completedCount / Math.max(1, allSetCount) * 100} color={colors.lime} /></View>
     <ScrollView testID="training-scroll" contentContainerStyle={styles.content} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
-      <Pressable accessibilityRole="button" accessibilityLabel="查看今日热身动作" onPress={() => setShowWarmup(true)} style={styles.warmup}><View style={{ flex: 1 }}><Text style={styles.warmupTitle}>{warmupDone ? '✓ 已完成热身' : '先做热身'} · 约 {Math.ceil(estimate.warmupSeconds / 60)} 分钟</Text><Text style={styles.note}>查看具体动作与热身组 · 不计入正式组</Text></View><Text style={styles.arrow}>›</Text></Pressable>
+      {plan ? <Text testID="training-remaining-plan" style={styles.helper}>剩余计划约 {Math.ceil(remainingPlanSeconds / 60)} 分钟 · 仅作参考，不限制训练时长；等待器械另计</Text> : null}
+      <Pressable accessibilityRole="button" accessibilityLabel="查看今日热身动作" onPress={() => setShowWarmup(true)} style={styles.warmup}><View style={{ flex: 1 }}><Text style={styles.warmupTitle}>{warmupDone ? '✓ 已查看准备' : '先做热身'} · 约 {Math.ceil(estimate.warmupSeconds / 60)} 分钟</Text><Text style={styles.note}>{plan ? '通用准备后，每个动作开始前递增试做' : '查看具体动作与热身组 · 不计入正式组'}</Text></View><Text style={styles.arrow}>›</Text></Pressable>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.exerciseTabs}>{items.map((item, position) => <Pressable key={item.id} onPress={() => setIndex(position)} style={[styles.exerciseTab, position === index && styles.exerciseTabActive]}><Text style={[styles.exerciseTabText, position === index && styles.exerciseTabTextActive]}>{position + 1}. {item.name}</Text></Pressable>)}</ScrollView>
       <Animated.View testID="training-action-reveal" style={[styles.actionCard, { opacity: actionReveal, transform: [{ translateY: actionReveal.interpolate({ inputRange: [0, 1], outputRange: [8, 0] }) }] }]}>
-        <View style={styles.actionInfo}><Text style={styles.eyebrow}>动作 {index + 1} / {items.length}{current.step ? ' · 第 ' + current.step + ' 式' : ''}</Text><View style={styles.actionHeading}><Text style={styles.actionTitle}>{current.name}</Text><Pressable accessibilityRole="button" accessibilityLabel="查看当前动作指导" onPress={() => setShowGuide(true)} style={styles.link}><Text style={styles.linkText}>动作指导与原文  ›</Text></Pressable></View></View>
-        <ExerciseMedia key={current.id} exercise={current} minHeight={100} maxHeight={190} testID="training-action-photo" style={styles.actionStage} />
-        <View style={styles.actionFooter}><Text style={styles.prescription}>{currentSets.length} 组 × {current.targetValue} {unitLabel(current.targetUnit)} · 休息 {current.restSeconds} 秒{current.targetUnit !== 'seconds' ? ' · RIR ' + (rirTarget ?? current.defaultPrescription?.rirTarget ?? 2) : ''}</Text>
+        <View style={styles.actionInfo}><Text style={styles.eyebrow}>动作 {index + 1} / {items.length}{current.step ? ' · 第 ' + current.step + ' 式' : ''}</Text><View style={styles.actionHeading}><Text style={styles.actionTitle}>{current.name}</Text><Pressable accessibilityRole="button" accessibilityLabel="查看当前动作指导" onPress={() => setShowGuide(true)} style={styles.link}><Text style={styles.linkText}>{equipment ? '动作指导' : '动作指导与原文'}  ›</Text></Pressable></View></View>
+        {equipment ? <View style={styles.equipmentStage}><EquipmentPhoto key={current.id} exerciseId={current.id} name={current.name} /></View> : <ExerciseMedia key={current.id} exercise={current} minHeight={100} maxHeight={190} testID="training-action-photo" style={styles.actionStage} />}
+        <View style={styles.actionFooter}><Text style={styles.prescription}>{currentSets.length} 组 × {current.repRange ? current.repRange.join('–') : current.targetValue} {unitLabel(current.targetUnit)}{current.perSide ? ' / 侧' : ''} · 休息 {current.restSeconds} 秒{current.targetUnit !== 'seconds' ? ' · 目标 RIR ' + (rirTarget ?? current.defaultPrescription?.rirTarget ?? 2) : ''}</Text>
+          {equipment ? <Text style={styles.tempo}>{equipmentLoadLabel(current.loadBasis)}{current.loadBasis !== 'bodyweight' ? '（kg）· 不同设备的重量不直接比较' : ''}{current.perSide ? '；左右均完成后勾选，次数记录每侧值' : ''}</Text> : null}
           {current.id === 'aux_singleLegCalf' ? <Text style={styles.tempo}>每组左右各 {current.targetValue / 2} 次；记录两侧实际合计，双侧完成后打钩。</Text> : null}
           {current.category === 'hspu' || current.riskLevel === 'high' ? <Text style={styles.risk}>解锁不等于安全评估。头颈、肩腕不适时停止；倒立应在合适防护和专业指导下练习。</Text> : null}
         </View>
       </Animated.View>
-      <View testID="training-timer-card" style={styles.timerPanel}><Text style={styles.clockLabel}>{timerKind === 'hold' ? '动作保持' : '组间休息'}{paused ? ' · 已暂停' : ''}</Text><Text testID="training-rest-time" numberOfLines={1} accessibilityRole="timer" style={styles.countdown}>{timeLabel(timerKind ? remaining : current.restSeconds)}</Text><View style={styles.timerActions}>
-        {timerKind ? <><Pressable accessibilityRole="button" onPress={togglePause} style={styles.timerButton}><Text style={styles.timerButtonText}>{paused ? '继续' : '暂停'}</Text></Pressable>{timerKind === 'rest' ? <Pressable accessibilityRole="button" onPress={extendRest} style={styles.timerButton}><Text style={styles.timerButtonText}>＋30 秒</Text></Pressable> : null}<Pressable accessibilityRole="button" accessibilityLabel={timerKind === 'rest' ? '结束休息' : '停止计时'} onPress={stopTimer} style={styles.timerButton}><Text style={styles.timerButtonText}>{timerKind === 'rest' ? '跳过休息' : '停止计时'}</Text></Pressable></> : <Pressable accessibilityRole="button" onPress={() => startTimer(current.targetUnit === 'seconds' ? 'hold' : 'rest', current.targetUnit === 'seconds' ? Number(currentSets.find(set => !set.completed)?.reps) || current.targetValue : current.restSeconds)} style={styles.timerButton}><Text style={styles.timerButtonText}>{current.targetUnit === 'seconds' ? '开始保持计时' : '手动开始休息'}</Text></Pressable>}
+      {progression ? <Text style={styles.helper}>{progression}</Text> : null}
+      <View testID="training-timer-card" style={styles.timerPanel}><Text style={styles.clockLabel}>{timerKind === 'hold' ? '动作保持' : timerKind === 'transition' ? '跨动作恢复与换器械' : '组间休息'}{paused ? ' · 已暂停' : ''}</Text><Text testID="training-rest-time" numberOfLines={1} accessibilityRole="timer" style={styles.countdown}>{timeLabel(timerKind ? remaining : current.restSeconds)}</Text><View style={styles.timerActions}>
+        {timerKind ? <><Pressable accessibilityRole="button" onPress={togglePause} style={styles.timerButton}><Text style={styles.timerButtonText}>{paused ? '继续' : '暂停'}</Text></Pressable>{timerKind !== 'hold' ? <Pressable accessibilityRole="button" onPress={extendRest} style={styles.timerButton}><Text style={styles.timerButtonText}>＋30 秒</Text></Pressable> : null}<Pressable accessibilityRole="button" accessibilityLabel={timerKind !== 'hold' ? '结束休息' : '停止计时'} onPress={stopTimer} style={styles.timerButton}><Text style={styles.timerButtonText}>{timerKind !== 'hold' ? '跳过休息' : '停止计时'}</Text></Pressable></> : <Pressable accessibilityRole="button" onPress={() => startTimer(current.targetUnit === 'seconds' ? 'hold' : 'rest', current.targetUnit === 'seconds' ? Number(currentSets.find(set => !set.completed)?.reps) || current.targetValue : current.restSeconds)} style={styles.timerButton}><Text style={styles.timerButtonText}>{current.targetUnit === 'seconds' ? '开始保持计时' : '手动开始休息'}</Text></Pressable>}
       </View></View>
       <View style={styles.sectionHead}><Text style={styles.sectionTitle}>训练组</Text><Pressable accessibilityRole="button" disabled={saving} onPress={addSet} style={styles.addSet}><Text style={styles.addSetText}>＋ 加一组</Text></Pressable></View>
-      <View style={styles.tableHeader}><Text style={styles.colNumber}>组</Text><Text style={styles.colValue}>实际完成 / {unitLabel(current.targetUnit)}</Text><Text style={styles.colCheck}>完成</Text></View>
+      <View style={styles.tableHeader}><Text style={[styles.colNumber, equipment && styles.equipmentNumber]}>组</Text>{equipment && current.loadBasis !== 'bodyweight' ? <Text style={styles.colValue}>重量 / kg</Text> : null}<Text style={styles.colValue}>{equipment ? (current.perSide ? '每侧次数' : '次数') : '实际完成 / ' + unitLabel(current.targetUnit)}</Text>{equipment ? <Text style={styles.rirHead}>余力</Text> : null}<Text style={styles.colCheck}>完成</Text></View>
       {currentSets.map((set, setIndex) => <View key={setIndex} style={[styles.setRow, set.completed && styles.setRowDone]}>
-        <Text style={styles.setNumber}>{String(setIndex + 1).padStart(2, '0')}</Text>
-        <View style={styles.inputColumn}><TextInput accessibilityLabel={'第' + (setIndex + 1) + '组' + unitLabel(current.targetUnit)} editable={!saving} value={set.reps} onChangeText={(value) => setSets((old) => ({ ...old, [current.id]: old[current.id].map((entry, i) => i === setIndex ? { ...entry, reps: value } : entry) }))} keyboardType={current.targetUnit === 'meters' ? 'decimal-pad' : 'number-pad'} selectTextOnFocus style={styles.repsInput} />
+        <Text style={[styles.setNumber, equipment && styles.equipmentNumber]}>{String(setIndex + 1).padStart(2, '0')}</Text>
+        {equipment && current.loadBasis !== 'bodyweight' ? <View style={styles.inputColumn}><TextInput accessibilityLabel={'第' + (setIndex + 1) + '组重量kg'} editable={!saving} value={set.load || ''} placeholder="待填" placeholderTextColor={appPalette.faint} onChangeText={value => setSets(old => ({ ...old, [current.id]: old[current.id].map((entry, i) => i === setIndex ? { ...entry, load: value, completed: false, completedAt: undefined } : entry) }))} keyboardType="decimal-pad" selectTextOnFocus style={[styles.repsInput, styles.equipmentInput]} /></View> : null}
+        <View style={styles.inputColumn}><TextInput accessibilityLabel={'第' + (setIndex + 1) + '组' + unitLabel(current.targetUnit)} editable={!saving} value={set.reps} placeholder={current.repRange?.join('–')} placeholderTextColor={appPalette.faint} onChangeText={(value) => setSets((old) => ({ ...old, [current.id]: old[current.id].map((entry, i) => i === setIndex ? { ...entry, reps: value, ...(equipment ? { completed: false, completedAt: undefined } : {}) } : entry) }))} keyboardType={current.targetUnit === 'meters' ? 'decimal-pad' : 'number-pad'} selectTextOnFocus style={[styles.repsInput, equipment && styles.equipmentInput]} />
           {!set.completed && setIndex >= current.targetSets ? <Pressable accessibilityLabel={'移除新增的第' + (setIndex + 1) + '组'} onPress={() => setSets((old) => ({ ...old, [current.id]: old[current.id].filter((_, i) => i !== setIndex) }))} style={styles.removeSet}><Text style={styles.note}>移除</Text></Pressable> : null}
         </View>
+        {equipment ? <View style={styles.rirColumn}><TextInput accessibilityLabel={'第' + (setIndex + 1) + '组实际余力'} editable={!saving} value={set.rir || ''} placeholder="—" placeholderTextColor={appPalette.faint} onChangeText={value => setSets(old => ({ ...old, [current.id]: old[current.id].map((entry, i) => i === setIndex ? { ...entry, rir: value, completed: false, completedAt: undefined } : entry) }))} keyboardType="number-pad" selectTextOnFocus style={[styles.repsInput, styles.equipmentInput]} /></View> : null}
         <View style={styles.checkColumn}><Pressable disabled={saving} accessibilityRole="checkbox" accessibilityLabel={'第' + (setIndex + 1) + '组完成'} accessibilityState={{ checked: set.completed, disabled: saving }} aria-checked={set.completed} aria-disabled={saving} onPress={() => toggleSet(setIndex)} style={[styles.check, set.completed && styles.checkDone]}><Text style={styles.checkText}>{set.completed ? '✓' : ''}</Text></Pressable></View>
       </View>)}
-      <View style={styles.inlineTools}><Pressable accessibilityRole="button" disabled={saving} onPress={() => setShowPicker(true)} style={styles.secondaryButton}><Text style={styles.secondaryText}>＋ 添加动作</Text></Pressable><Pressable accessibilityRole="button" onPress={() => setShowPrehab(true)} style={styles.secondaryButton}><Text style={styles.secondaryText}>训练安全 ›</Text></Pressable></View>
+      <View style={styles.inlineTools}>{!equipment ? <Pressable accessibilityRole="button" disabled={saving} onPress={() => setShowPicker(true)} style={styles.secondaryButton}><Text style={styles.secondaryText}>＋ 添加动作</Text></Pressable> : null}<Pressable accessibilityRole="button" onPress={() => equipment ? setShowGuide(true) : setShowPrehab(true)} style={styles.secondaryButton}><Text style={styles.secondaryText}>训练安全 ›</Text></Pressable></View>
+      {equipment ? <Text style={styles.helper}>余力（RIR）是做完本组还能完成几次，选填 0–10；不知道就留空，目标余力不会代填为实际表现。</Text> : null}
       <Text style={styles.helper}>已勾选组自动暂存到本机。计时结束不会自动打钩；请按实际完成数量填写。</Text>
       <Pressable onPress={() => setShowCooldown(true)} style={styles.cooldownLink}><Text style={styles.linkText}>查看训练后整理建议  ›</Text></Pressable>
     </ScrollView>
     <View style={styles.bottom}>{error ? <Text style={styles.error}>{error}</Text> : null}<View style={styles.navigation}>{index > 0 ? <Pressable disabled={saving} onPress={() => setIndex(index - 1)} style={styles.previous}><Text style={styles.secondaryText}>上一个</Text></Pressable> : null}<View style={{ flex: 1 }}><Button label={saving ? '保存中…' : index < items.length - 1 ? '下一个动作 →' : '保存训练'} variant="lime" disabled={saving} onPress={() => index < items.length - 1 ? setIndex(index + 1) : requestFinish()} /></View>{index < items.length - 1 ? <Pressable disabled={saving} onPress={requestFinish} style={styles.previous}><Text style={styles.secondaryText}>结束</Text></Pressable> : null}</View></View>
     <ExercisePicker visible={showPicker} onClose={() => setShowPicker(false)} onSelect={addExercise} excludedIds={items.map((item) => item.id)} />
-    <Modal transparent visible={showGuide} animationType="fade" onRequestClose={() => setShowGuide(false)}><View style={styles.shade}><View style={styles.sheet}><View style={styles.modalHead}><Text style={styles.modalTitle}>{current.name}</Text><Pressable accessibilityLabel="关闭动作指导" onPress={() => setShowGuide(false)} style={styles.close}><Text style={styles.modalClose}>×</Text></Pressable></View><ScrollView contentContainerStyle={styles.guideContent}><ExerciseDetailedGuide key={current.id} exercise={current} /></ScrollView><View style={styles.modalFoot}><Button label="返回训练" variant="lime" onPress={() => setShowGuide(false)} /></View></View></View></Modal>
-    <Modal visible={showWarmup} animationType="slide" onRequestClose={() => setShowWarmup(false)}><WarmupGuide items={items} minutes={estimate.warmupSeconds / 60} onSkip={() => setShowWarmup(false)} onComplete={() => { setWarmupDone(true); setShowWarmup(false); }} /></Modal>
+    <Modal transparent visible={showGuide} animationType="fade" onRequestClose={() => setShowGuide(false)}><View style={styles.shade}><View style={styles.sheet}><View style={styles.modalHead}><Text style={styles.modalTitle}>{current.name}</Text><Pressable accessibilityLabel="关闭动作指导" onPress={() => setShowGuide(false)} style={styles.close}><Text style={styles.modalClose}>×</Text></Pressable></View><ScrollView contentContainerStyle={styles.guideContent}>{equipment ? <EquipmentMovementGuide exerciseId={current.id} /> : <ExerciseDetailedGuide key={current.id} exercise={current} />}</ScrollView><View style={styles.modalFoot}><Button label="返回训练" variant="lime" onPress={() => setShowGuide(false)} /></View></View></View></Modal>
+    <Modal visible={showWarmup} animationType="slide" onRequestClose={() => setShowWarmup(false)}><WarmupGuide items={items} minutes={estimate.warmupSeconds / 60} onSkip={() => setShowWarmup(false)} onComplete={() => { setWarmupDone(true); if (plan) logInteraction('warmup_acknowledged'); setShowWarmup(false); }} /></Modal>
     <Modal visible={showCooldown} animationType="slide" onRequestClose={() => setShowCooldown(false)}><CooldownGuide minutes={estimate.cooldownSeconds / 60} onComplete={() => setShowCooldown(false)} /></Modal>
     <PrehabGuideModal visible={showPrehab} onClose={() => setShowPrehab(false)} profile={profile} />
     <Modal transparent visible={showQuality} animationType="fade" onRequestClose={() => { if (!saving) setShowQuality(false); }}><View style={styles.shade}><View style={[styles.sheet, styles.qualitySheet]}>
@@ -251,6 +290,7 @@ const styles = StyleSheet.create({
   exerciseTabs: { gap: 7, paddingBottom: 10 }, exerciseTab: { minHeight: 44, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.card, borderWidth: 1, borderColor: colors.line, borderRadius: 14, paddingHorizontal: 12 }, exerciseTabActive: { backgroundColor: appPalette.olive, borderColor: appPalette.oliveBorder }, exerciseTabText: { color: colors.inkMuted, fontSize: 11, fontWeight: '700' }, exerciseTabTextActive: { color: colors.lime },
   actionCard: { backgroundColor: colors.card, borderRadius: 20, borderWidth: 1, borderColor: colors.line, overflow: 'hidden' }, actionInfo: { paddingHorizontal: 14, paddingTop: 12 }, actionHeading: { flexDirection: 'row', alignItems: 'center', gap: 8 }, actionTitle: { ...progressPageLayout.actionTitle, color: colors.ink, flex: 1, lineHeight: 23 }, eyebrow: { color: colors.lime, fontSize: 10, fontWeight: '700', marginBottom: 4 },
   actionStage: { borderRadius: 0 }, actionFooter: { paddingHorizontal: 14, paddingVertical: 10 }, prescription: { color: colors.inkMuted, fontSize: 11, lineHeight: 18 }, tempo: { color: colors.inkMuted, fontSize: 11, lineHeight: 18, marginTop: 6 }, risk: { color: appPalette.warning, backgroundColor: appPalette.warningBackground, borderRadius: 12, padding: 11, fontSize: 11, lineHeight: 18, marginTop: 8 },
+  equipmentStage: { paddingHorizontal: 10, maxWidth: 310, width: '100%', alignSelf: 'center' }, equipmentNumber: { width: 28 }, equipmentInput: { width: '88%', minWidth: 40, fontSize: 14 }, rirColumn: { width: 44, alignItems: 'center' }, rirHead: { width: 44, textAlign: 'center', color: colors.inkMuted, fontSize: 11 },
   link: { minHeight: 44, justifyContent: 'center', paddingHorizontal: 4 }, linkText: { color: colors.green, fontSize: 11, fontWeight: '700' },
   timerPanel: { marginTop: 12, borderRadius: 20, backgroundColor: colors.card, borderWidth: 1, borderColor: colors.line, padding: 14, alignItems: 'center' }, countdown: { color: colors.ink, fontSize: 56, lineHeight: 68, fontWeight: '900', fontVariant: ['tabular-nums'], letterSpacing: 1, marginVertical: 3 }, timerActions: { flexDirection: 'row', gap: 8, width: '100%' }, timerButton: { flex: 1, minHeight: 44, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 6, borderRadius: 12, backgroundColor: appPalette.raised, borderWidth: 1, borderColor: colors.line }, timerButtonText: { color: colors.ink, fontSize: 11, fontWeight: '700' },
   sectionHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 16, marginBottom: 8 }, sectionTitle: { ...progressPageLayout.sectionTitle, color: colors.ink }, addSet: { minHeight: 44, justifyContent: 'center', borderRadius: 12, paddingHorizontal: 12, backgroundColor: colors.card, borderWidth: 1, borderColor: colors.line }, addSetText: { color: colors.lime, fontSize: 12, fontWeight: '800' },

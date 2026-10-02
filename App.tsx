@@ -3,9 +3,11 @@ import React, { useCallback, useEffect, useLayoutEffect, useState } from 'react'
 import { ActivityIndicator, Alert, BackHandler, Platform, StyleSheet, View } from 'react-native';
 import { TabBar, type TabKey } from './src/components/TabBar';
 import { ConfirmHost } from './src/components/ConfirmHost';
+import { StorageRecovery } from './src/components/StorageRecovery';
 import { AppStoreProvider, useAppStore } from './src/store/AppStore';
 import { DataScreen } from './src/screens/DataScreen';
 import { ExerciseDetailScreen } from './src/screens/ExerciseDetailScreen';
+import { EquipmentDetailScreen } from './src/screens/EquipmentDetailScreen';
 import { NutritionScreen } from './src/screens/NutritionScreen';
 import { OnboardingScreen } from './src/screens/OnboardingScreen';
 import { ProfileScreen } from './src/screens/ProfileScreen';
@@ -37,7 +39,7 @@ function useWebDocumentSetup() {
 }
 
 function AppShell() {
-  const { ready, profile } = useAppStore();
+  const { ready, profile, storageIssues } = useAppStore();
   const { setSafeScreen } = useAppUpdates();
   const [tab, setTab] = useState<TabKey>('today');
   const [route, setRoute] = useState<Route>({ name: 'tabs' });
@@ -59,9 +61,9 @@ function AppShell() {
   }, [returnFromActiveSession]);
 
   useLayoutEffect(() => {
-    setSafeScreen(ready && Boolean(profile) && route.name === 'tabs');
+    setSafeScreen(ready && Boolean(profile) && route.name === 'tabs' && !Object.keys(storageIssues).length);
     return () => setSafeScreen(false);
-  }, [ready, Boolean(profile), route.name, setSafeScreen]);
+  }, [ready, Boolean(profile), route.name, storageIssues, setSafeScreen]);
 
   useEffect(() => {
     if (Platform.OS !== 'android' || !ready) return;
@@ -104,16 +106,17 @@ function AppShell() {
   }, [profile, route.name, tab]);
 
   if (!ready) return <View style={styles.loading}><ActivityIndicator color={colors.ink} size="large" /></View>;
-  if (!profile) return <><StatusBar style="light" /><OnboardingScreen /></>;
+  if (!profile) return <><StatusBar style="light" />{Object.keys(storageIssues).length ? <StorageRecovery full /> : <OnboardingScreen />}</>;
 
-  if (route.name === 'exercise') return <><StatusBar style="light" /><ExerciseDetailScreen exerciseId={route.exerciseId} onBack={returnToTabs} onStart={(exerciseId) => setRoute({ name: 'training', workoutId: `single_${exerciseId}`, exerciseId })} /></>;
-  if (route.name === 'training') return <><StatusBar style="light" /><TrainingScreen workoutId={route.workoutId} exerciseId={route.exerciseId} setMultiplier={route.setMultiplier} rirTarget={route.rirTarget} onBack={returnFromActiveSession} onComplete={() => { setTab('today'); returnToTabs(); }} /></>;
+  if (route.name === 'exercise') return <><StatusBar style="light" />{route.exerciseId.startsWith('equipment_') ? <EquipmentDetailScreen exerciseId={route.exerciseId} onBack={returnToTabs} /> : <ExerciseDetailScreen exerciseId={route.exerciseId} onBack={returnToTabs} onStart={(exerciseId) => setRoute({ name: 'training', workoutId: `single_${exerciseId}`, exerciseId })} />}</>;
+  if (route.name === 'training') return <><StatusBar style="light" /><TrainingScreen workoutId={route.workoutId} exerciseId={route.exerciseId} setMultiplier={route.setMultiplier} rirTarget={route.rirTarget} equipmentPlan={route.equipmentPlan} onBack={returnFromActiveSession} onComplete={() => { setTab('today'); returnToTabs(); }} /></>;
   if (route.name === 'run') return <><StatusBar style="light" /><RunScreen onBack={leaveActiveSession} onComplete={() => { setTab('today'); returnToTabs(); }} /></>;
   if (route.name === 'nutrition') return <><StatusBar style="light" /><NutritionScreen onBack={returnToTabs} /></>;
 
   return <View style={[styles.root, { backgroundColor: progressPageLayout.background }]}>
     <StatusBar style="light" />
-    {tab === 'today' ? <TodayScreen onStart={(workoutId, setMultiplier, rirTarget) => setRoute({ name: 'training', workoutId, setMultiplier, rirTarget })} onRun={() => setRoute({ name: 'run' })} onNutrition={() => setRoute({ name: 'nutrition' })} onOpenExercise={(exerciseId) => setRoute({ name: 'exercise', exerciseId })} /> : null}
+    <StorageRecovery />
+    {tab === 'today' ? <TodayScreen onStart={(workoutId, setMultiplier, rirTarget, equipmentPlan) => setRoute({ name: 'training', workoutId, setMultiplier, rirTarget, equipmentPlan })} onRun={() => setRoute({ name: 'run' })} onNutrition={() => setRoute({ name: 'nutrition' })} onOpenExercise={(exerciseId) => setRoute({ name: 'exercise', exerciseId })} /> : null}
     {tab === 'progress' ? <ProgressScreen onOpen={(exerciseId) => setRoute({ name: 'exercise', exerciseId })} /> : null}
     {tab === 'data' ? <DataScreen onOpenExercise={(exerciseId) => setRoute({ name: 'exercise', exerciseId })} /> : null}
     {tab === 'profile' ? <ProfileScreen onNutrition={() => setRoute({ name: 'nutrition' })} onOpenExercise={(exerciseId) => setRoute({ name: 'exercise', exerciseId })} /> : null}

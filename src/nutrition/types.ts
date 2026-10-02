@@ -145,6 +145,7 @@ export type NutritionJournal = {
   photoConsentAt: string | null;
   assistant: import('./assistantState').AssistantState;
   preferences: NutritionPreferences | null;
+  manualAllergens?: Allergen[];
   entries: IntakeEntry[];
   mealRevisions: Record<string, number>;
   customFoods: Food[];

@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Modal, Pressable, SafeAreaView, ScrollView, StyleSheet, Text, View, type NativeScrollEvent, type NativeSyntheticEvent } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Button, Page, ProgressBar } from '../components/ui';
@@ -10,7 +10,7 @@ import { YearSchedule } from '../components/YearSchedule';
 import { AppGlyph } from '../components/AppGlyph';
 import { canPlanNeckBridges, getWorkout, getWorkoutExercises, workoutDisplayTitle } from '../data/catalog';
 import { getDayTrainingState, getDisplayedSchedule, localDateKey } from '../data/planProgress';
-import { getPlanDay, getWeekSchedule, recommendPlanId, RETIRED_PLAN_ID, weightLossWeekSummary } from '../data/trainingPlans';
+import { getPlanDay, getWeekSchedule, RETIRED_PLAN_ID, weightLossWeekSummary } from '../data/trainingPlans';
 import { estimateStrengthSession, preferredSessionMinutes } from '../data/trainingPrescription';
 import { buildPlanDraft, generatePersonalPlan, type PersonalPlanSummary, type PlanGenerationStep } from '../data/personalPlan';
 import { useAppStore } from '../store/AppStore';
@@ -21,9 +21,12 @@ import { groupHistoryByDay } from '../data/trainingHistory';
 import type { ExperienceLevel, Goal } from '../types';
 import { NutritionScreen } from './NutritionScreen';
 import { RunningSession } from './RunScreen';
+import { TrainingGoalPicker, TrainingGoalSelector } from '../components/TrainingGoalPicker';
+import { EquipmentTodayScreen } from './EquipmentTodayScreen';
+import { useUpdateBlock } from '../components/AppUpdates';
 
 type Props = {
-  onStart: (workoutId: string, setMultiplier?: number, rirTarget?: number) => void;
+  onStart: (workoutId: string, setMultiplier?: number, rirTarget?: number, equipmentPlan?: import('../data/equipmentTraining').EquipmentSessionPlan) => void;
   onRun: () => void;
   onNutrition: () => void;
   onOpenExercise: (exerciseId: string) => void;
@@ -88,7 +91,7 @@ export function TodayScreen(props: Props) {
 }
 
 function TrainingTodayScreen({ onStart, onRun, onOpenExercise }: Props) {
-  const { profile, sessions, saveProfile, dailyEdits, addDailyExercise, removeDailyExercise, resetTrainingDay } = useAppStore();
+  const { profile, sessions, patchProfile, switchTrainingGoal, dailyEdits, addDailyExercise, removeDailyExercise, resetTrainingDay } = useAppStore();
   const [showExercisePicker, setShowExercisePicker] = useState(false);
   const [showGoal, setShowGoal] = useState(false);
   const [showCalendar, setShowCalendar] = useState(false);
@@ -114,6 +117,7 @@ function TrainingTodayScreen({ onStart, onRun, onOpenExercise }: Props) {
   const [selectedDate, setSelectedDate] = useState<string>(() => localDateKey(new Date()));
   // 日期条详情默认收起：点选中的日期展开/收起，点新日期切换并展开。
   const [dayDetailOpen, setDayDetailOpen] = useState(false);
+  useUpdateBlock(showFrequency || savingFrequency || showExercisePicker || showGoal || savingGoal || savingNeck || resetting);
   if (!profile) return null;
 
   const selectGoal = async (goal: Goal) => {
@@ -122,16 +126,7 @@ function TrainingTodayScreen({ onStart, onRun, onOpenExercise }: Props) {
     setSavingGoal(true);
     setGoalError('');
     try {
-      await saveProfile({
-        ...profile,
-        goal,
-        frequency: goal === 'street_mastery' && ![2, 3, 6].includes(profile.frequency) ? 3 : profile.frequency,
-        planId: recommendPlanId({ goal }),
-        nutritionGoal: goal === 'street_mastery' ? 'performance' : 'rapid_loss',
-        dietPattern: goal === 'street_mastery' ? 'balanced_cn' : profile.dietPattern,
-        trainingRestSeconds: goal === 'street_mastery' ? 180 : profile.trainingRestSeconds,
-        planStartedAt: new Date().toISOString(),
-      });
+      await switchTrainingGoal(goal);
       return true;
     } catch {
       setGoalError('切换失败，请重试。');
@@ -141,15 +136,17 @@ function TrainingTodayScreen({ onStart, onRun, onOpenExercise }: Props) {
     }
   };
 
+  if (profile.goal === 'equipment') return <EquipmentTodayScreen onStart={onStart} onOpenExercise={onOpenExercise} onSelectGoal={selectGoal} goalError={goalError} savingGoal={savingGoal} />;
+
   if ((profile.goal !== 'weight_loss' && profile.goal !== 'street_mastery') || profile.planId === RETIRED_PLAN_ID) return <Page tone="dark">
     <View style={styles.unavailableCard}>
       <Text style={styles.unavailableEyebrow}>训练计划已移除</Text>
       <Text style={styles.unavailableTitle}>当前目标暂无课程</Text>
       <Text style={styles.unavailableBody}>当前旧目标的课程已移除。档案、动作阶数和历史训练记录仍会保留。</Text>
-      <Text style={styles.unavailableBody}>可主动选择减肥控重或囚徒健身六艺专题。</Text>
+      <Text style={styles.unavailableBody}>可主动选择减肥控重或街头健身专题。</Text>
       {goalError ? <Text style={styles.unavailableError}>{goalError}</Text> : null}
       <Button label={savingGoal ? '切换中…' : '启用减肥控重计划'} variant="lime" disabled={savingGoal} onPress={() => void selectGoal('weight_loss')} />
-      <Button label={savingGoal ? '切换中…' : '启用囚徒健身六艺专题'} variant="lime" disabled={savingGoal} onPress={() => void selectGoal('street_mastery')} />
+      <Button label={savingGoal ? '切换中…' : '启用街头健身专题'} variant="lime" disabled={savingGoal} onPress={() => void selectGoal('street_mastery')} />
     </View>
   </Page>;
 
@@ -197,7 +194,7 @@ function TrainingTodayScreen({ onStart, onRun, onOpenExercise }: Props) {
   const changeNeckPreparation = () => {
     const save = async (enabled: boolean) => {
       setSavingNeck(true); setDayEditError('');
-      try { await saveProfile({ ...profile, neckBridgeConsent: enabled }); }
+      try { await patchProfile({ neckBridgeConsent: enabled }); }
       catch { setDayEditError('颈部训练设置保存失败，请重试。'); }
       finally { setSavingNeck(false); }
     };
@@ -216,7 +213,14 @@ function TrainingTodayScreen({ onStart, onRun, onOpenExercise }: Props) {
     setSavingFrequency(true);
     setFrequencyError('');
     try {
-      const summary = await generatePersonalPlan(buildPlanDraft(profile, days, minutes, experience, draftRest, draftBaseline), saveProfile, setGenerationStep, sessions);
+      const summary = await generatePersonalPlan(buildPlanDraft(profile, days, minutes, experience, draftRest, draftBaseline), async next => {
+        await patchProfile(current => {
+          if (current.goal !== next.goal) throw new Error('训练专题已变化，请重新生成计划。');
+          const updated = buildPlanDraft(current, days, minutes, experience, draftRest, draftBaseline);
+          return { frequency: updated.frequency, sessionMinutes: updated.sessionMinutes, experience: updated.experience,
+            trainingRestSeconds: updated.trainingRestSeconds, planLevels: updated.planLevels, planId: next.planId, planStartedAt: next.planStartedAt };
+        });
+      }, setGenerationStep, sessions);
       setGenerationSummary(summary);
       setShowTodayDetails(true);
     } catch {
@@ -233,7 +237,7 @@ function TrainingTodayScreen({ onStart, onRun, onOpenExercise }: Props) {
 
   return <Page tone="dark" testID="today-training-content" scrollRef={pageScroll}>
     <View style={styles.goalRow}>
-      <Pressable accessibilityRole="button" accessibilityLabel="选择训练目标" onPress={() => setShowGoal(true)} style={styles.goalSelector}><Text style={styles.goalText}>{prisoner ? '囚徒健身' : '减肥控重'}</Text><Text style={styles.goalChevron}>⌄</Text></Pressable>
+      <TrainingGoalSelector goal={profile.goal} disabled={savingGoal} onPress={() => setShowGoal(true)} />
       <View accessibilityLabel={'连续训练' + streakDays + '天'} style={styles.streak}><AppGlyph name="flame" color={streakDays ? colors.lime : appPalette.faint} size={20} /><Text style={styles.streakText}>连续 <Text style={styles.streakNumber}>{streakDays}</Text> 天</Text></View>
     </View>
     {/* 今日安排、训练进度与动作详情合为一张卡 */}
@@ -353,7 +357,7 @@ function TrainingTodayScreen({ onStart, onRun, onOpenExercise }: Props) {
         />
       </View>
     ) : workoutExercises.length ? <View testID="today-workout-list" style={styles.todayWorkoutList}>
-      {workoutExercises.map((exercise, index) => <View key={exercise.id}>
+      {workoutExercises.map((exercise) => <View key={exercise.id}>
         <Pressable accessibilityRole="button" accessibilityLabel={`查看${exercise.name}动作指导`} onPress={() => onOpenExercise(exercise.id)} style={styles.heroExerciseRow}>
           <ExerciseMedia exercise={exercise} width={82} minHeight={56} maxHeight={96} />
           <View style={styles.heroExerciseContent}><Text style={styles.heroExerciseName}>{exercise.name}</Text><Text style={styles.heroExerciseMeta}>{exercise.targetSets} 组 × {exercise.targetValue} {exercise.targetUnit === 'seconds' ? '秒' : exercise.targetUnit === 'meters' ? '米' : exercise.targetUnit === 'steps' ? '步' : '次'}{exercise.id === 'aux_singleLegCalf' ? '（左右合计）' : ''} · 休息 {exercise.restSeconds} 秒</Text></View><AppGlyph name="chevron" size={16} />
@@ -363,7 +367,7 @@ function TrainingTodayScreen({ onStart, onRun, onOpenExercise }: Props) {
     </View> : null}
 
     {showCalendar ? <YearSchedule profile={profile} sessions={sessions} anchor={now} onSelect={() => {}} onOpenExercise={id => { setShowCalendar(false); onOpenExercise(id); }} onClose={() => setShowCalendar(false)} /> : null}
-    <Modal transparent visible={showGoal} animationType="fade" onRequestClose={() => setShowGoal(false)}><View style={styles.frequencyBackdrop}><Pressable accessibilityRole="button" accessibilityLabel="关闭训练目标" onPress={() => setShowGoal(false)} style={StyleSheet.absoluteFill} /><View style={[styles.frequencyCard, { padding: 20, gap: 12 }]}><Text style={styles.frequencyTitle}>训练目标</Text>{([['street_mastery', '囚徒健身', '按六艺阶数循序训练，逐步掌握最终式。'], ['weight_loss', '减肥控重', '力量保肌与低冲击有氧结合，配合饮食控重。']] as const).map(([goal, title, description]) => <Pressable key={goal} accessibilityRole="button" accessibilityLabel={'选择' + title} disabled={savingGoal} onPress={() => void selectGoal(goal).then(saved => { if (saved) setShowGoal(false); })} style={[styles.goalOption, profile.goal === goal && styles.goalOptionActive]}><Text style={styles.goalText}>{title}</Text><Text style={styles.frequencyInfo}>{description}</Text></Pressable>)}{goalError ? <Text style={styles.frequencyError}>{goalError}</Text> : null}<Button label="关闭" variant="ghost" onPress={() => setShowGoal(false)} /></View></View></Modal>
+    <TrainingGoalPicker visible={showGoal} goal={profile.goal} saving={savingGoal} error={goalError} onClose={() => setShowGoal(false)} onSelect={goal => selectGoal(goal).then(saved => { if (saved) setShowGoal(false); })} />
 
     <Modal transparent visible={showGateDetails} animationType="none" onRequestClose={() => setShowGateDetails(false)}>
       <View style={styles.frequencyBackdrop}>
@@ -398,7 +402,7 @@ function TrainingTodayScreen({ onStart, onRun, onOpenExercise }: Props) {
             <Text style={styles.frequencySection}>计划已生成</Text>
             <Text style={styles.frequencyInfo}>每周 {generationSummary.strengthDays} 天力量{generationSummary.cardioDays ? ` · ${generationSummary.cardioDays} 天${prisoner ? '轻松活动' : '有氧'}` : ''}；力量课预计 {generationSummary.longestMinutes} 分钟。</Text>
           </> : prisoner ? <>
-            <Text style={styles.frequencyTitle}>选择囚徒进阶阶段</Text>
+            <Text style={styles.frequencyTitle}>选择街头健身进阶阶段</Text>
             <Text style={styles.frequencyInfo}>原著《囚徒健身》官方五大进阶日程，选择对应你体能与恢复能力的阶段：</Text>
             <View style={styles.prisonerStageList}>
               {([
@@ -539,10 +543,7 @@ const styles = StyleSheet.create({
   todayPagerFrame: { flex: 1, minWidth: 0, overflow: 'hidden', maxWidth: 440, width: '100%', alignSelf: 'center' },
   todayPager: { flex: 1, minWidth: 0 }, todayPagerContent: { alignItems: 'stretch' }, todayPage: { height: '100%', minWidth: 0, flexShrink: 0, overflow: 'hidden' },
   goalRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginBottom: 12 },
-  goalSelector: { minHeight: 44, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 20, borderRadius: 14, paddingHorizontal: 14, borderWidth: 1, borderColor: appPalette.border, backgroundColor: appPalette.card },
-  goalText: { color: appPalette.text, fontSize: 13, fontWeight: '800' }, goalChevron: { color: appPalette.muted, fontSize: 16 },
   streak: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 6 }, streakText: { color: appPalette.muted, fontSize: 12 }, streakNumber: { color: appPalette.text, fontWeight: '800', fontVariant: ['tabular-nums'] },
-  goalOption: { padding: 14, borderWidth: 1, borderColor: appPalette.border, borderRadius: 16, backgroundColor: appPalette.card }, goalOptionActive: { borderColor: appPalette.lime, backgroundColor: appPalette.olive },
   dayTools: { flexDirection: 'row', gap: 8, marginTop: 10 }, dayTool: { flex: 1, minHeight: 44, borderWidth: 1, borderColor: appPalette.border, borderRadius: 14, alignItems: 'center', justifyContent: 'center' }, dayToolText: { color: appPalette.muted, fontSize: 12, fontWeight: '700' },
   daySmallAction: { alignSelf: 'flex-end', minHeight: 44, justifyContent: 'center', paddingHorizontal: 10 }, daySmallActionText: { color: appPalette.muted, fontSize: 11 }, dayError: { color: appPalette.danger, fontSize: 12, lineHeight: 19, marginTop: 10 },
   gateBox: { borderTopWidth: 1, borderTopColor: appPalette.border, marginTop: 10, flexDirection: 'row', alignItems: 'center', gap: 8 }, gateTitle: { flex: 1, color: appPalette.muted, fontSize: 11, fontWeight: '700' }, gateLink: { minHeight: 44, justifyContent: 'center', paddingHorizontal: 8 }, gateLinkText: { color: appPalette.lime, fontSize: 11, fontWeight: '700' },

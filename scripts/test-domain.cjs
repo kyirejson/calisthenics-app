@@ -236,19 +236,19 @@ const profile = {
 };
 
 test('book actions and labelled app support actions belong to the catalogue', () => {
-  assert.equal(exercises.length, 223);
+  assert.equal(exercises.length, 195);
   const statuses = progression.getAllProgressionStatuses(profile, []);
-  assert.equal(statuses.length, 23);
-  assert.equal(statuses.reduce((sum, status) => sum + status.totalLevels, 0), 179);
+  assert.equal(statuses.length, 17);
+  assert.equal(statuses.reduce((sum, status) => sum + status.totalLevels, 0), 151);
   assert.equal(progression.getSeriesExercises('push').length, 16, 'later variants remain browsable');
   assert.equal(progression.getProgressionStatus('push', profile, []).totalLevels, 10);
 });
 
 test('overall unlock counts final forms, not all intermediate stages', () => {
   const starting = progression.getFinalFormProgress(progression.getAllProgressionStatuses(profile, []));
-  assert.deepEqual(starting, { unlocked: 0, total: 23, percent: 0 });
+  assert.deepEqual(starting, { unlocked: 0, total: 17, percent: 0 });
   const oneFinal = progression.getFinalFormProgress(progression.getAllProgressionStatuses({ ...profile, levels: { push: 11 } }, []));
-  assert.deepEqual(oneFinal, { unlocked: 1, total: 23, percent: 4 });
+  assert.deepEqual(oneFinal, { unlocked: 1, total: 17, percent: 6 });
   const finalPending = progression.getProgressionStatus('push', { ...profile, levels: { push: 10 } }, []);
   assert.equal(finalPending.complete, false);
   assert.equal(finalPending.next, undefined);
@@ -256,9 +256,9 @@ test('overall unlock counts final forms, not all intermediate stages', () => {
   assert.equal(getWorkoutExercises('fullA', { ...profile, levels: { push: 11 }, planLevels: {} }).find((item) => item.category === 'push').step, 10);
 });
 
-test('four browse groups cover every action exactly once', () => {
+test('three browse groups cover every action exactly once', () => {
   const statuses = progression.getAllProgressionStatuses(profile, []);
-  assert.equal(progression.progressionGroups.length, 4);
+  assert.equal(progression.progressionGroups.length, 3);
   const groupedIds = progression.progressionGroups.flatMap((group) => [
     ...statuses.filter((status) => status.series.group === group.key)
       .flatMap((status) => progression.getSeriesExercises(status.series.key).map((exercise) => exercise.id)),
@@ -353,7 +353,7 @@ test('weight-loss training frequency produces exactly that many planned days', (
 
 test('retired goals cannot schedule or generate old courses', async () => {
   const anchor = new Date(2026, 8, 23);
-  assert.deepEqual(trainingGoals.map((item) => item.key), ['weight_loss', 'street_mastery']);
+  assert.deepEqual(trainingGoals.map((item) => item.key), ['weight_loss', 'street_mastery', 'equipment']);
   for (const goal of ['fat_loss', 'gain', 'strength']) {
     const selected = { ...profile, goal, planStartedAt: anchor.toISOString() };
     assert.equal(plans.recommendPlanId(selected), plans.RETIRED_PLAN_ID);

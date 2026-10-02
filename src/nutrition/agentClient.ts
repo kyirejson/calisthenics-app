@@ -5,6 +5,10 @@ import { normalizeAgentAction } from './state';
 import { normalizeFoodLabelDraft, validFoodBarcode } from './foodImport';
 import type { FoodLabelDraft } from './types';
 import type { DailyMenu, MealSlot, Nutrients, NutritionAgentAction, NutritionPreferences, NutritionTrainingContext, TrainingTime } from './types';
+import type { MemoryEvidence, PersonalTrainingProfile } from './personalKnowledge';
+import type { AssistantAuthorization } from './assistantState';
+import type { AssistantTrainingSnapshot } from './assistantTraining';
+export type HarnessContext = { version: 2; mode: AssistantAuthorization['mode']; policyVersion: number; personalProfile: PersonalTrainingProfile | null; evidence: MemoryEvidence[]; trainingSnapshot: AssistantTrainingSnapshot | null };
 
 export type AdviceContext = {
   safetyStatus: DailyMenu['targets']['status'];
@@ -38,6 +42,9 @@ function serviceURL() {
 }
 
 async function request(path: string, body?: unknown, signal?: AbortSignal): Promise<unknown> {
+  const baseURL = serviceURL();
+  const endpoint = new URL(baseURL);
+  const local = ['127.0.0.1', 'localhost', '[::1]'].includes(endpoint.hostname);
   const controller = new AbortController();
   const cancel = () => controller.abort();
   if (signal?.aborted) { controller.abort(); throw new Error('请求已取消。'); }
@@ -46,23 +53,27 @@ async function request(path: string, body?: unknown, signal?: AbortSignal): Prom
   // Render's free instance may need about a minute to wake before the model call begins.
   const timer = setTimeout(() => { timeout = true; controller.abort(); }, 110000);
   try {
-    const response = await fetch(serviceURL() + path, { method: body === undefined ? 'GET' : 'POST',
+    const response = await fetch(baseURL + path, { method: body === undefined ? 'GET' : 'POST',
       headers: body === undefined ? undefined : { 'Content-Type': 'application/json' },
       body: body === undefined ? undefined : JSON.stringify(body), signal: controller.signal });
-    const data = await response.json();
+    if (!/application\/json/i.test(response.headers.get('content-type') || '')) throw new Error('营养服务未返回有效数据，可能正在启动，请稍后重试。');
+    let data;
+    try { data = await response.json(); } catch { throw new Error('营养服务返回内容异常，请稍后重试。'); }
     if (!response.ok) throw new Error(typeof data?.error?.message === 'string' ? data.error.message.slice(0, 250) : '营养服务暂不可用，请稍后重试。');
     return data;
   } catch (error) {
     if (controller.signal.aborted) throw new Error(timeout ? '营养服务请求超时，请稍后重试。' : '请求已取消。');
-    if (error instanceof TypeError) throw new Error('营养服务未连接，请检查网络和本地服务。');
+    if (error instanceof TypeError) throw new Error(local ? `无法连接本机营养服务（${endpoint.port || (endpoint.protocol === 'https:' ? '443' : '80')}），请启动后端后重试。` : '无法连接公网营养服务，请检查网络或服务状态。');
     throw error;
   } finally { clearTimeout(timer); signal?.removeEventListener('abort', cancel); }
 }
 
-export async function getNutritionServiceStatus(signal?: AbortSignal): Promise<{ configured: boolean; provider: string; model: string }> {
+export type NutritionServiceStatus = { configured: boolean; provider: string; model: string; readiness: 'ready' | 'degraded' | 'unconfigured' | 'unknown' };
+export async function getNutritionServiceStatus(signal?: AbortSignal): Promise<NutritionServiceStatus> {
   const data = await request('/health', undefined, signal) as Record<string, unknown>;
   if (!data || typeof data.configured !== 'boolean' || typeof data.provider !== 'string' || typeof data.model !== 'string') throw new Error('营养服务响应无效。');
-  return { configured: data.configured, provider: data.provider, model: data.model };
+  return { configured: data.configured, provider: data.provider, model: data.model,
+    readiness: data.readiness === 'ready' || data.readiness === 'degraded' || data.readiness === 'unconfigured' ? data.readiness : 'unknown' };
 }
 
 export type PhotoCaptureResult = { kind: 'ingredients'; recognition: IngredientRecognition } | { kind: 'label'; draft: FoodLabelDraft };
@@ -90,8 +101,8 @@ export async function lookupFoodBarcode(barcode: string, signal?: AbortSignal): 
   return draft;
 }
 
-export async function askNutritionAgent(question: string, context: AdviceContext, signal?: AbortSignal, history: AdviceTurn[] = [], memory: AssistantFact[] = []): Promise<NutritionAdvice> {
-  const data = await request('/v1/nutrition/advice', { question, context, history: history.slice(-6), assistantMode: true, memory: memory.slice(-40).map(({kind, text}) => ({kind, text})) }, signal) as NutritionAdvice;
+export async function askNutritionAgent(question: string, context: AdviceContext, signal?: AbortSignal, history: AdviceTurn[] = [], memory: AssistantFact[] = [], harness?: HarnessContext): Promise<NutritionAdvice> {
+  const data = await request('/v1/nutrition/advice', { question, context, history: history.slice(-12), assistantMode: true, memory: memory.map(({kind, text}) => ({kind, text})), ...(harness ? { harness } : {}) }, signal) as NutritionAdvice;
   if (!data || typeof data.answer !== 'string' || !data.answer.trim() || data.answer.length > 8000 || !Array.isArray(data.sources)
     || data.sources.length > 8 || data.sources.some(source => !source || typeof source.title !== 'string' || !source.title.trim() || source.title.length > 200 || typeof source.url !== 'string' || source.url.length > 2000
       || !/^https:\/\/(?:pmc\.ncbi\.nlm\.nih\.gov|pubmed\.ncbi\.nlm\.nih\.gov|www\.niddk\.nih\.gov|fdc\.nal\.usda\.gov)\//.test(source.url))) throw new Error('营养助手响应无效，请重试。');

@@ -6,7 +6,7 @@ require.extensions['.ts'] = (module, file) => module._compile(ts.transpileModule
 const { FOODS } = require('../src/nutrition/catalog.ts');
 const { FOOD_ARTWORK_BY_ID, FOOD_ARTWORK_CATEGORIES, resolveFoodArtwork, mealFoodArtwork, isFoodArtworkCategory } = require('../src/nutrition/foodArtwork.ts');
 const { emptyNutritionJournal, normalizeCustomFood, createCustomFoodFromLabel, normalizeNutritionJournal } = require('../src/nutrition/engine.ts');
-const { withCustomFood, withoutCustomFood, withIntakeEntry, withoutIntakeEntry, withFavoriteMeal, withoutFavoriteMeal } = require('../src/nutrition/journal.ts');
+const { withCustomFood, withoutCustomFood, withIntakeEntry, withoutIntakeEntry } = require('../src/nutrition/journal.ts');
 const { addPhotoFood, normalizePhotoEstimate } = require('../src/nutrition/vision.ts');
 const { referencedPhotoIds } = require('../src/nutrition/photoMetadata.ts');
 const time = '2026-09-29T01:30:00.000Z';
@@ -56,7 +56,7 @@ test('food image edits and library deletion preserve manual history and favorite
   let journal = withCustomFood(emptyNutritionJournal(), food());
   journal = withIntakeEntry(journal, intake(), time);
   const originalNutrients = journal.entries[0].nutrients;
-  journal = withFavoriteMeal(journal, journal.entries[0]);
+  journal = { ...journal, savedMeals: [journal.entries[0]] };
   journal = withCustomFood(journal, { ...food(), photo: photo('2234567890') });
   assert.deepEqual(new Set(referencedPhotoIds(journal)), new Set([photo().id, photo('2234567890').id]));
   journal = withoutCustomFood(journal, food().id);
@@ -65,7 +65,7 @@ test('food image edits and library deletion preserve manual history and favorite
   assert.deepEqual(referencedPhotoIds(journal), [photo().id]);
   assert.deepEqual(journal.savedMeals[0].nutrients, originalNutrients);
   assert.deepEqual(normalizeNutritionJournal(JSON.parse(JSON.stringify(journal))), journal);
-  journal = withoutFavoriteMeal(journal, journal.savedMeals[0].id);
+  journal = { ...journal, savedMeals: [] };
   assert.deepEqual(referencedPhotoIds(journal), []);
 });
 test('photo-based catalog snapshots keep personal images after removing the live food', () => {

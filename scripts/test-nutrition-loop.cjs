@@ -86,8 +86,8 @@ test('padded and legacy training dates count checked sets once without calorie c
 });
 
 test('training-time presets change meal content but not daily energy or macro targets', () => {
-  const morning = timeline.withNutritionTrainingTime(base(), 'morning');
-  const evening = timeline.withNutritionTrainingTime(base(), 'evening');
+  const morning = { ...base(), trainingTime: 'morning' };
+  const evening = { ...base(), trainingTime: 'evening' };
   const a = actions.buildNutritionMenu(profile, morning, training, date);
   const b = actions.buildNutritionMenu(profile, evening, training, date);
   assert.deepEqual(a.targets, b.targets);

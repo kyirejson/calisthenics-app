@@ -1,6 +1,7 @@
 import type { Exercise, Profile, Workout } from '../types';
 import type { DupDay } from './trainingPlans';
 import { warmupDuration } from './trainingWarmup';
+import { estimateEquipmentSession } from './equipmentTimeline';
 
 export type TargetUnit = 'reps' | 'seconds' | 'steps' | 'meters';
 export type PrescribedExercise = Exercise & {
@@ -9,6 +10,10 @@ export type PrescribedExercise = Exercise & {
   targetUnit: TargetUnit;
   restSeconds: number;
   priority?: number;
+  repRange?: [number, number];
+  perSide?: boolean;
+  loadBasis?: 'machine' | 'total' | 'per_hand' | 'bodyweight';
+  equipmentSourceId?: string;
 };
 type ResolvedWorkout = Omit<Workout, 'slots'> & { slots: Array<Workout['slots'][number] & { exercise?: Exercise }> };
 
@@ -23,9 +28,6 @@ export type SessionEstimate = {
 };
 
 const clamp = (value: number, low: number, high: number) => Math.max(low, Math.min(high, value));
-
-const skillCategories = new Set(['front_lever', 'planche', 'back_lever', 'muscle_up', 'l_sit', 'human_flag']);
-export const isSkillCategory = (category: string) => skillCategories.has(category);
 
 export function preferredSessionMinutes(profile: Pick<Profile, 'sessionMinutes'>) {
   const value = Number(profile.sessionMinutes);
@@ -78,10 +80,11 @@ function workTime(item: PrescribedExercise) {
   const phases = [...tempo.matchAll(/(\d+(?:\.\d+)?)\s*秒/g)].map((match) => Number(match[1]));
   const secondsPerRep = phases.length >= 2 ? clamp(phases.reduce((sum, seconds) => sum + seconds, 0), 2, 12) : 3;
   const directions = item.id === 'neck_03' || item.id === 'neck_04' ? 3 : 1;
-  return clamp(item.targetValue * secondsPerRep * directions + 12, 25, 600);
+  return clamp((item.repRange?.[1] || item.targetValue) * secondsPerRep * directions * (item.perSide ? 2 : 1) + 12, 25, 600);
 }
 
 export function estimateStrengthSession(items: PrescribedExercise[], sessionMinutes = 45, prisoner = false): SessionEstimate {
+  if (items.length && items.every(item => item.id.startsWith('equipment_'))) return estimateEquipmentSession(items);
   const isMicroSession = prisoner && items.length === 1;
   const cooldownByMinutes: Record<number, number> = prisoner
     ? { 20: 3, 30: 4, 45: 5, 60: 7, 75: 9 }
@@ -124,21 +127,18 @@ export function prescribeWorkout(
     const enriched = exercise as Exercise & { isHold?: boolean };
     const isHold = !!enriched.isHold || target.unit === 'seconds';
 
-    const skill = isSkillCategory(exercise.category);
     const prisoner = profile.goal === 'street_mastery' && workout.id.startsWith('prisoner');
     const isSupermax = prisoner && profile.experience === 'supermax';
     const sets = isSupermax
       ? 10
       : prisoner
       ? Math.max(1, Math.round((slot.prescription?.sets || 2) * setMultiplier))
-      : skill
-      ? clamp(Math.round((profile.experience === 'advanced' && availableMinutes >= 75 ? 3 : 2) * setMultiplier), setMultiplier < 0.8 ? 1 : 2, 3)
       : targetSets(main, availableMinutes, setMultiplier);
     const restSeconds = isSupermax
       ? 45
       : prisoner && slot.prescription?.restSeconds
       ? slot.prescription.restSeconds
-      : Math.max(targetRest(profile, isHold), skill ? 150 : 0);
+      : targetRest(profile, isHold);
     const practical = isSupermax && target.unit === 'reps'
       ? 10
       : isSupermax && exercise.id === 'hang_01' ? 30
@@ -151,7 +151,7 @@ export function prescribeWorkout(
   if (!workout.id.startsWith('prisoner_recovery')) {
     items.sort((a, b) => {
       const score = (item: PrescribedExercise) =>
-        (isSkillCategory(item.category) ? -20 : 0) + (item.priority || 3) * 10 - Math.min(item.step || 1, 8) + (item.category === 'auxiliary' ? 20 : 0);
+        (item.priority || 3) * 10 - Math.min(item.step || 1, 8) + (item.category === 'auxiliary' ? 20 : 0);
       return score(a) - score(b);
     });
   }

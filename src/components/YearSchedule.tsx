@@ -1,4 +1,4 @@
-import React, { useMemo, useRef, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { getCalendarMonths, getDisplayedSchedule, localDateKey, type ScheduledDay } from '../data/planProgress';
 import { fitnessColors as colors, appPalette, radius, progressPageLayout } from '../theme';

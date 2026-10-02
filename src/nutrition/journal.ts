@@ -1,13 +1,14 @@
-import { createIntakeEntry, normalizeCustomFood, normalizeIntakeEntry, normalizeNutritionPreferences, nutritionRevisionKey } from './engine';
+import { createIntakeEntry, normalizeCustomFood, normalizeNutritionPreferences, nutritionRevisionKey } from './engine';
 import type { Food, IntakeEntry, MealSlot, NutritionJournal, NutritionPreferences } from './types';
 import { invalidateMealLogging } from './timeline';
+import { synchronizeMemoryAllergens } from './assistantMemory';
 
 export type IntakeInput = Omit<IntakeEntry, 'createdAt' | 'updatedAt' | 'foodDataVersion' | 'nutrients'>;
 
 export function withNutritionPreferences(current: NutritionJournal, input: NutritionPreferences): NutritionJournal {
   const preferences = normalizeNutritionPreferences(input);
   if (!preferences) throw new Error('营养档案不完整，请重新确认设置。');
-  return { ...current, preferences };
+  return synchronizeMemoryAllergens({ ...current, preferences, manualAllergens: preferences.allergens });
 }
 
 /** A planned meal may be confirmed once per local date/slot; extra food is a manual entry. */
@@ -66,15 +67,4 @@ export function withCustomFood(current: NutritionJournal, input: Food): Nutritio
 
 export function withoutCustomFood(current: NutritionJournal, id: string): NutritionJournal {
   return { ...current, customFoods: current.customFoods.filter(food => food.id !== id) };
-}
-
-export function withFavoriteMeal(current: NutritionJournal, input: IntakeEntry): NutritionJournal {
-  const meal = normalizeIntakeEntry(input);
-  if (!meal) throw new Error('这条记录无法保存为常用餐，请先核对记录。');
-  if (current.savedMeals.length >= 100 && !current.savedMeals.some(item => item.id === meal.id)) throw new Error('常用餐最多保存 100 项，请先移除不再使用的餐食。');
-  return { ...current, savedMeals: [meal, ...current.savedMeals.filter(item => item.id !== meal.id)] };
-}
-
-export function withoutFavoriteMeal(current: NutritionJournal, id: string): NutritionJournal {
-  return { ...current, savedMeals: current.savedMeals.filter(meal => meal.id !== id) };
 }

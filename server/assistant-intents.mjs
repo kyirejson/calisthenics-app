@@ -1,5 +1,9 @@
+export function hasAllergyNegation(question) {
+  return /不过敏|不(?:是|对).{0,50}过敏|没有.{0,50}过敏|并非.{0,50}过敏|无.{0,30}过敏|(?:not|no).{0,30}allerg/iu.test(question);
+}
 export function explicitMemoryIntent(question) {
   const text = question.trim().replace(/[。！!]+$/u, '');
+  if (hasAllergyNegation(text)) return null;
   const patterns = [
     ['allergy', /^(?:请)?(?:记住[，,:：]?\s*)?我(?:对|有)?(.{1,50}?)(?:过敏)$/u],
     ['avoid', /^(?:请)?(?:记住[，,:：]?\s*)?我(?:不吃|忌口|不喜欢吃)(.{1,50})$/u],
@@ -11,7 +15,12 @@ export function explicitMemoryIntent(question) {
 }
 export function validateAssistantIntent(value, input) {
   if (input.assistantMode !== true || !value || typeof value !== 'object' || Array.isArray(value)) return null;
+  if (value.type === 'set_preferences') {
+    const grounded = explicitPreferenceIntent(input.question);
+    return grounded && JSON.stringify(value) === JSON.stringify(grounded) ? grounded : null;
+  }
   if (value.type === 'remember') {
+    if (value.kind === 'allergy' && (hasAllergyNegation(input.question) || /没有|不是|并非|不过敏|不$/u.test(value.text))) return null;
     if (Object.keys(value).some(k => !['type', 'kind', 'text'].includes(k)) || !['like', 'avoid', 'need', 'allergy'].includes(value.kind) || typeof value.text !== 'string' || !value.text.trim() || value.text.length > 80 || !input.question.includes(value.text.trim())) return null;
     return { type: 'remember', kind: value.kind, text: value.text.trim() };
   }
@@ -23,3 +32,4 @@ export function validateAssistantIntent(value, input) {
   }
   return { type: 'log_intake', slot: value.slot, items };
 }
+import { explicitPreferenceIntent } from '../src/nutrition/preferenceIntent.mjs';

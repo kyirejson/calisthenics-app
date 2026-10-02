@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { createPortal } from 'react-dom';
 import { registerConfirmEmitter, type ConfirmRequest } from '../utils/confirm';

@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 import { KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import type { IntakeEntry, MealSlot, NutritionPhoto } from '../../nutrition/types';
 import { applyPhotoCorrection, normalizePhotoEstimate, photoUsesOnlyLabels, summarizePhotoEstimate, type PhotoEstimate } from '../../nutrition/vision';

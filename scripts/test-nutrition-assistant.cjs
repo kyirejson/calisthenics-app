@@ -28,13 +28,13 @@ test('memory and recent context survive journal normalization; legacy journal re
   delete journal.assistant;
   assert.deepEqual(engine.normalizeNutritionJournal(journal).assistant, state.emptyAssistantState());
 });
-test('invalid and duplicated memories/history are excluded and bounded', () => {
+test('invalid and duplicated memories/history are excluded without dropping valid archive data', () => {
   const normalized = state.normalizeAssistantState({ version: 1, consentAt: 'bad', facts: [fact(), fact(), fact({ id: 'bad', text: 'x\u0000' })], conversations: [turn(), turn(), turn({ id: 'bad', question: 'x\u0000' })] });
   assert.equal(normalized.consentAt, null); assert.equal(normalized.facts.length, 1); assert.equal(normalized.conversations.length, 1);
   const full = state.normalizeAssistantState({ version: 1, facts: Array.from({ length: 50 }, (_, i) => fact({ id: String(i), text: String(i) })), conversations: Array.from({ length: 40 }, (_, i) => turn({ id: String(i) })) });
-  assert.equal(full.facts.length, 40); assert.equal(full.conversations.length, 30);
-  assert.throws(() => state.withAssistantFact(full, fact({ id: 'new', text: 'new' })), /记忆已满/);
-  assert.equal(state.withAssistantFact(full, fact({ id: '39', text: '39' })).facts.length, 40);
+  assert.equal(full.facts.length, 50); assert.equal(full.conversations.length, 40);
+  assert.equal(state.withAssistantFact(full, fact({ id: 'new', text: 'new' })).facts.length, 51);
+  assert.equal(state.withAssistantFact(full, fact({ id: '39', text: '39' })).facts.length, 50);
 });
 test('intent schema cannot write database IDs, nutrients, invalid quantities or unknown tools', () => {
   assert.deepEqual(state.normalizeAssistantIntent(intake()), intake());
@@ -84,6 +84,9 @@ async function run() {
     assert.equal(validateAssistantIntent(intake({ calories: 100 }), input('记录鸡蛋')), null);
   });
   test('book excerpts retrieve by original chapter and lines; missing index fails closed', t => {
+    assert.equal(explicitMemoryIntent('我对牛奶不过敏'), null);
+    assert.equal(explicitMemoryIntent('我没有牛奶过敏'), null);
+    assert.equal(validateAssistantIntent({ type: 'remember', kind: 'allergy', text: '牛奶' }, input('我对牛奶不过敏')), null);
     const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'uncover-kb-test-'));
     const index = path.join(directory, 'index.json');
     fs.writeFileSync(index, JSON.stringify({ version: 1, chunks: [{ id: 'cc-' + 'a'.repeat(24), title: '囚徒健身一 · 训练计划', path: 'fixture.md', lineStart: 10, lineEnd: 12, text: '六艺训练计划采用六练，并注意训练与休息。' }] }));
@@ -114,6 +117,13 @@ async function run() {
     assert.ok(Array.from(result.body.answer).length <= 50); assert.match(result.body.answer, /确认/);
   });
   test('assistant food tool route sends confirmed memory/context and returns intent, never nutrients', async t => {
+    const negative = await fixture(t, () => { throw Error('negation must not call model'); });
+    for (const question of ['我对牛奶不过敏', '我没有牛奶过敏', '我对牛奶并非过敏']) {
+      const response = await negative.post({ question, context: ready, assistantMode: true });
+      assert.equal(response.status, 200); assert.equal(response.body.intent, undefined);
+      assert.ok(Array.from(response.body.answer).length <= 50);
+    }
+    assert.equal(negative.calls.length, 0);
     const f = await fixture(t, () => upstream({ answer: '已整理早餐，请核对并确认记餐。', sourceIds: ['measurement'], intent: intake() }));
     const result = await f.post({ question: '早餐吃了两个水煮鸡蛋，帮我记录', context: ready, assistantMode: true, memory: [{ kind: 'avoid', text: '香菜' }] });
     assert.equal(result.status, 200); assert.deepEqual(result.body.intent, intake()); assert.equal(result.body.nutrients, undefined);

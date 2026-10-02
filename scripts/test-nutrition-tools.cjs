@@ -56,7 +56,7 @@ test('favorites retain an independent snapshot and copying adds a new meal', () 
   const food = engine.createCustomFoodFromLabel(label());
   let state = journal.withCustomFood(engine.emptyNutritionJournal(), food);
   state = journal.withIntakeEntry(state, entryInput(), now);
-  state = journal.withFavoriteMeal(state, state.entries[0]);
+  state = { ...state, savedMeals: [structuredClone(state.entries[0])] };
   const favorite = state.savedMeals[0];
   state.entries[0].name = 'changed after saving';
   assert.equal(favorite.name, '我的午餐');
@@ -66,7 +66,7 @@ test('favorites retain an independent snapshot and copying adds a new meal', () 
   assert.equal(state.entries[0].nutrients.calories, 270);
   assert.equal(state.savedMeals[0].id, 'entry-a');
   assert.deepEqual(engine.normalizeNutritionJournal(JSON.parse(JSON.stringify(state))), state);
-  assert.equal(journal.withoutFavoriteMeal(state, favorite.id).entries.length, 1);
+  assert.equal(state.entries.length, 1);
 });
 
 test('legacy journals migrate without losing entries; unknown custom IDs cannot be recorded', () => {

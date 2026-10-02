@@ -36,12 +36,6 @@ jobs:
           test -n "$EXPO_PROJECT_ID" || { echo 'Set the EXPO_PROJECT_ID variable first'; exit 1; }
       - run: npm ci
       - run: npm run typecheck
-      - run: npm run test:domain
-      - run: npm run test:updates
-      - run: npm run test:history
-      - run: npm run test:run
-      - run: npm run test:weight
-      - run: npm run test:nutrition
-      - run: npm run test:nutrition-service
+      - run: npm test
       - name: Publish compatible JavaScript and assets
         run: npx eas-cli@latest update --channel "$EXPO_UPDATE_CHANNEL" --environment "$EXPO_UPDATE_CHANNEL" --message "$UPDATE_MESSAGE" --non-interactive

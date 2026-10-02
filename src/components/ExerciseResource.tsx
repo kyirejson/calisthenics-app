@@ -81,8 +81,8 @@ export function ExerciseMedia({ exercise, width = '100%', minHeight = 52, maxHei
   </View>;
 }
 
-export function ExerciseDetailedGuide({ exercise }: { exercise: Exercise }) {
-  const [tab, setTab] = useState<'summary' | 'original'>('summary');
+export function ExerciseDetailedGuide({ exercise, initialTab = 'summary' }: { exercise: Exercise; initialTab?: 'summary' | 'original' }) {
+  const [tab, setTab] = useState<'summary' | 'original'>(initialTab);
   const resource = getOriginalResource(exercise.id);
   const supplementalDemo = exercise.id === 'aux_singleLegCalf' || exercise.id === 'neck_handResistance' ? getExerciseArtwork(exercise).cover : undefined;
   const points = (exercise.keyPoints || []).filter(Boolean);

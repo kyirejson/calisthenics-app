@@ -6,7 +6,7 @@ require.extensions['.ts'] = (module, file) => module._compile(ts.transpileModule
   compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 },
 }).outputText, file);
 const { recordWeight, summarizeWeightTrend, weightTrendWindow } = require('../src/data/weightTrend.ts');
-const { buildWeightChart, nearestWeightPoint, shortWeightDate } = require('../src/data/weightChart.ts');
+const { buildWeightChart, shortWeightDate } = require('../src/data/weightChart.ts');
 const today = new Date(2026, 8, 28, 12);
 const record = (date, kg) => ({ date, kg });
 
@@ -38,7 +38,7 @@ test('7/30/90 day filters and averages reflect their own data and exclude future
 test('empty state has no points, curve, fill, or invented average', () => {
   const window = weightTrendWindow(undefined, 30, today), chart = buildWeightChart(window, 256);
   assert.equal(window.average, undefined); assert.deepEqual(chart.points, []); assert.equal(chart.line, ''); assert.equal(chart.area, '');
-  assert.deepEqual(chart.ticks, []); assert.equal(nearestWeightPoint(chart.points, 10), undefined);
+  assert.deepEqual(chart.ticks, []);
 });
 
 test('a single measurement renders one point without pretending a trend', () => {
@@ -67,11 +67,7 @@ test('constant weights and wide ranges retain finite, bounded chart coordinates 
   }
 });
 
-test('selection picks real measurements and handles non-positional accessibility presses', () => {
-  const chart = buildWeightChart(weightTrendWindow([record('2026-09-22', 75), record('2026-09-28', 74)], 7, today), 256);
-  assert.equal(nearestWeightPoint(chart.points, -100).date, '2026-09-22');
-  assert.equal(nearestWeightPoint(chart.points, 1000).date, '2026-09-28');
-  assert.equal(nearestWeightPoint(chart.points, NaN).date, '2026-09-28');
+test('chart date labels remain compact without leading zeroes', () => {
   assert.equal(shortWeightDate('2026-09-28'), '9/28');
 });
 

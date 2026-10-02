@@ -1,4 +1,5 @@
 import type { Exercise } from '../types';
+import { equipmentExecution } from './equipmentExecution';
 
 export type WarmupAction = { id: string; title: string; dose: string; seconds: number; detail: string; exercise?: Exercise };
 const bookExercises = require('./legacy/exercises.js') as Exercise[];
@@ -9,6 +10,16 @@ export function getWarmupActions(items: Exercise[]): WarmupAction[] {
     { id: 'mobilize', title: '肩腕与髋踝活动', dose: '60 秒', seconds: 60, detail: '手腕小幅转动、肩部绕环、髋与踝关节活动，各约 15 秒，只在舒适范围内进行。' },
   ];
   const seen = new Set<string>();
+  if (items.some(item => item.id.startsWith('equipment_'))) {
+    for (const item of items) {
+      if (!item.id.startsWith('equipment_')) continue;
+      const execution = equipmentExecution(item.id);
+      actions.push({ id: item.id + '-warmup', title: item.name + (execution.compound ? ' · 递增热身' : ' · 轻量试做'), exercise: item,
+        dose: execution.compound ? `轻量递增 1–2 组 · 约 ${execution.rampSeconds / 60} 分钟` : '轻量试做与设置 · 约 45 秒', seconds: execution.rampSeconds,
+        detail: '在该动作开始前完成；先轻负荷检查设置与活动范围，不接近力竭。需要更多准备时可以增加热身、延长用时，不为赶时间省略；热身不计入工作组。' });
+    }
+    return actions;
+  }
   for (const item of items) {
     if (seen.has(item.category) || !['push', 'pull', 'squat', 'legRaise', 'bridge', 'hspu'].includes(item.category)) continue;
     seen.add(item.category);

@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { getFood } from '../../nutrition/catalog';
 import { slotLabels } from '../../nutrition/labels';

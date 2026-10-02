@@ -1,0 +1,1015 @@
+{
+  "date": "2026-10-01",
+  "tool": "built-in image_gen",
+  "style": "Use case: scientific-educational. Create one high-resolution COLOR photorealistic exercise demonstration for a mobile strength-training app. Landscape 4:3. Exactly ONE athletic adult man with short dark hair, charcoal sleeveless athletic shirt, dark shorts, and white flat training shoes on BOTH feet. Clean uncluttered gym with neutral gray floor and background, soft bright lighting, realistic skin/fabric/metal textures, crisp hands and joints. Frame the entire athlete and functional equipment, subject filling frame with small margins. One pose, one photo, NO collage, NO panels, NO inset, NO labels, NO logos, NO watermark. Anatomically correct limbs, natural joint positions, realistic physical support and load connections. Never depict a recognizable celebrity. Show the exact named exercise and equipment, not a similar exercise.",
+  "entries": [
+    {
+      "id": "equipment_chest_01",
+      "variant": "上斜哑铃卧推",
+      "width": 1448,
+      "height": 1086,
+      "bytes": 258887,
+      "thumbnailBytes": 35292,
+      "provenance": "AI-generated photorealistic demonstration; not a photograph of an actual athlete"
+    },
+    {
+      "id": "equipment_chest_02",
+      "variant": "上斜史密斯卧推",
+      "width": 1448,
+      "height": 1086,
+      "bytes": 241061,
+      "thumbnailBytes": 32567,
+      "provenance": "AI-generated photorealistic demonstration; not a photograph of an actual athlete"
+    },
+    {
+      "id": "equipment_chest_03",
+      "variant": "坐姿水平对敛推胸机",
+      "width": 1448,
+      "height": 1086,
+      "bytes": 206455,
+      "thumbnailBytes": 30160,
+      "provenance": "AI-generated photorealistic demonstration; not a photograph of an actual athlete"
+    },
+    {
+      "id": "equipment_chest_04",
+      "variant": "手柄式蝴蝶机夹胸",
+      "width": 1448,
+      "height": 1086,
+      "bytes": 181287,
+      "thumbnailBytes": 25200,
+      "provenance": "AI-generated photorealistic demonstration; not a photograph of an actual athlete"
+    },
+    {
+      "id": "equipment_chest_05",
+      "variant": "平板哑铃卧推",
+      "width": 1448,
+      "height": 1086,
+      "bytes": 191217,
+      "thumbnailBytes": 26498,
+      "provenance": "AI-generated photorealistic demonstration; not a photograph of an actual athlete"
+    },
+    {
+      "id": "equipment_chest_06",
+      "variant": "前倾双杠臂屈伸",
+      "width": 1448,
+      "height": 1086,
+      "bytes": 171953,
+      "thumbnailBytes": 22542,
+      "provenance": "AI-generated photorealistic demonstration; not a photograph of an actual athlete"
+    },
+    {
+      "id": "equipment_chest_07",
+      "variant": "高位向下绳索夹胸",
+      "width": 1448,
+      "height": 1086,
+      "bytes": 194827,
+      "thumbnailBytes": 27107,
+      "provenance": "AI-generated photorealistic demonstration; not a photograph of an actual athlete"
+    },
+    {
+      "id": "equipment_chest_08",
+      "variant": "平板杠铃卧推",
+      "width": 1448,
+      "height": 1086,
+      "bytes": 228290,
+      "thumbnailBytes": 30783,
+      "provenance": "AI-generated photorealistic demonstration; not a photograph of an actual athlete"
+    },
+    {
+      "id": "equipment_chest_09",
+      "variant": "平板史密斯卧推",
+      "width": 1448,
+      "height": 1086,
+      "bytes": 247134,
+      "thumbnailBytes": 32273,
+      "provenance": "AI-generated photorealistic demonstration; not a photograph of an actual athlete"
+    },
+    {
+      "id": "equipment_chest_10",
+      "variant": "低位向上绳索夹胸",
+      "width": 1448,
+      "height": 1086,
+      "bytes": 179724,
+      "thumbnailBytes": 25910,
+      "provenance": "AI-generated photorealistic demonstration; not a photograph of an actual athlete"
+    },
+    {
+      "id": "equipment_chest_11",
+      "variant": "中位水平绳索夹胸",
+      "width": 1448,
+      "height": 1086,
+      "bytes": 186120,
+      "thumbnailBytes": 25501,
+      "provenance": "AI-generated photorealistic demonstration; not a photograph of an actual athlete"
+    },
+    {
+      "id": "equipment_chest_12",
+      "variant": "下斜哑铃卧推",
+      "width": 1448,
+      "height": 1086,
+      "bytes": 203901,
+      "thumbnailBytes": 25702,
+      "provenance": "AI-generated photorealistic demonstration; not a photograph of an actual athlete"
+    },
+    {
+      "id": "equipment_chest_13",
+      "variant": "坐姿器械双杠下压",
+      "width": 1448,
+      "height": 1086,
+      "bytes": 196755,
+      "thumbnailBytes": 27696,
+      "provenance": "AI-generated photorealistic demonstration; not a photograph of an actual athlete"
+    },
+    {
+      "id": "equipment_chest_14",
+      "variant": "上斜杠铃卧推",
+      "width": 1448,
+      "height": 1086,
+      "bytes": 246856,
+      "thumbnailBytes": 35489,
+      "provenance": "AI-generated photorealistic demonstration; not a photograph of an actual athlete"
+    },
+    {
+      "id": "equipment_chest_15",
+      "variant": "手柄加深俯卧撑",
+      "width": 1448,
+      "height": 1086,
+      "bytes": 159926,
+      "thumbnailBytes": 22348,
+      "provenance": "AI-generated photorealistic demonstration; not a photograph of an actual athlete"
+    },
+    {
+      "id": "equipment_chest_16",
+      "variant": "平板哑铃飞鸟",
+      "width": 1448,
+      "height": 1086,
+      "bytes": 242836,
+      "thumbnailBytes": 27419,
+      "provenance": "AI-generated photorealistic demonstration; not a photograph of an actual athlete"
+    },
+    {
+      "id": "equipment_chest_17",
+      "variant": "下斜杠铃卧推",
+      "width": 1448,
+      "height": 1086,
+      "bytes": 223594,
+      "thumbnailBytes": 30548,
+      "provenance": "AI-generated photorealistic demonstration; not a photograph of an actual athlete"
+    },
+    {
+      "id": "equipment_chest_18",
+      "variant": "地板哑铃卧推",
+      "width": 1448,
+      "height": 1086,
+      "bytes": 199918,
+      "thumbnailBytes": 26249,
+      "provenance": "AI-generated photorealistic demonstration; not a photograph of an actual athlete"
+    },
+    {
+      "id": "equipment_shoulders_01",
+      "variant": "单臂肩胛面绳索侧平举",
+      "width": 1448,
+      "height": 1086,
+      "bytes": 180127,
+      "thumbnailBytes": 24385,
+      "provenance": "AI-generated photorealistic demonstration; not a photograph of an actual athlete"
+    },
+    {
+      "id": "equipment_shoulders_02",
+      "variant": "哑铃肩胛面侧平举",
+      "width": 1448,
+      "height": 1086,
+      "bytes": 163559,
+      "thumbnailBytes": 23997,
+      "provenance": "AI-generated photorealistic demonstration; not a photograph of an actual athlete"
+    },
+    {
+      "id": "equipment_shoulders_03",
+      "variant": "蝴蝶机反向飞鸟",
+      "width": 1448,
+      "height": 1086,
+      "bytes": 202780,
+      "thumbnailBytes": 26583,
+      "provenance": "AI-generated photorealistic demonstration; not a photograph of an actual athlete"
+    },
+    {
+      "id": "equipment_shoulders_04",
+      "variant": "坐姿对敛式推肩机",
+      "width": 1448,
+      "height": 1086,
+      "bytes": 213693,
+      "thumbnailBytes": 30347,
+      "provenance": "AI-generated photorealistic demonstration; not a photograph of an actual athlete"
+    },
+    {
+      "id": "equipment_shoulders_05",
+      "variant": "绳索面拉附外旋",
+      "width": 1448,
+      "height": 1086,
+      "bytes": 172473,
+      "thumbnailBytes": 25534,
+      "provenance": "AI-generated photorealistic demonstration; not a photograph of an actual athlete"
+    },
+    {
+      "id": "equipment_shoulders_06",
+      "variant": "坐姿哑铃推举",
+      "width": 1448,
+      "height": 1086,
+      "bytes": 177277,
+      "thumbnailBytes": 25756,
+      "provenance": "AI-generated photorealistic demonstration; not a photograph of an actual athlete"
+    },
+    {
+      "id": "equipment_shoulders_07",
+      "variant": "双滑轮跨体后束飞鸟",
+      "width": 1448,
+      "height": 1086,
+      "bytes": 219017,
+      "thumbnailBytes": 27411,
+      "provenance": "AI-generated photorealistic demonstration; not a photograph of an actual athlete"
+    },
+    {
+      "id": "equipment_shoulders_08",
+      "variant": "俯身哑铃反向飞鸟",
+      "width": 1448,
+      "height": 1086,
+      "bytes": 166192,
+      "thumbnailBytes": 22421,
+      "provenance": "AI-generated photorealistic demonstration; not a photograph of an actual athlete"
+    },
+    {
+      "id": "equipment_shoulders_09",
+      "variant": "侧卧上斜凳单臂侧平举",
+      "width": 1448,
+      "height": 1086,
+      "bytes": 198417,
+      "thumbnailBytes": 26810,
+      "provenance": "AI-generated photorealistic demonstration; not a photograph of an actual athlete"
+    },
+    {
+      "id": "equipment_shoulders_10",
+      "variant": "站姿杠铃过顶推举",
+      "width": 1448,
+      "height": 1086,
+      "bytes": 159398,
+      "thumbnailBytes": 21791,
+      "provenance": "AI-generated photorealistic demonstration; not a photograph of an actual athlete"
+    },
+    {
+      "id": "equipment_shoulders_11",
+      "variant": "阿诺推举起始位",
+      "width": 1448,
+      "height": 1086,
+      "bytes": 203990,
+      "thumbnailBytes": 27006,
+      "provenance": "AI-generated photorealistic demonstration; not a photograph of an actual athlete"
+    },
+    {
+      "id": "equipment_shoulders_12",
+      "variant": "绳索宽握直立划船",
+      "width": 1448,
+      "height": 1086,
+      "bytes": 217402,
+      "thumbnailBytes": 31496,
+      "provenance": "AI-generated photorealistic demonstration; not a photograph of an actual athlete"
+    },
+    {
+      "id": "equipment_shoulders_13",
+      "variant": "史密斯坐姿推肩",
+      "width": 1448,
+      "height": 1086,
+      "bytes": 222328,
+      "thumbnailBytes": 30861,
+      "provenance": "AI-generated photorealistic demonstration; not a photograph of an actual athlete"
+    },
+    {
+      "id": "equipment_back_01",
+      "variant": "正手高位下拉",
+      "width": 1448,
+      "height": 1086,
+      "bytes": 177708,
+      "thumbnailBytes": 24872,
+      "provenance": "AI-generated photorealistic demonstration; not a photograph of an actual athlete"
+    },
+    {
+      "id": "equipment_back_02",
+      "variant": "胸垫支撑T杠划船",
+      "width": 1448,
+      "height": 1086,
+      "bytes": 222580,
+      "thumbnailBytes": 32468,
+      "provenance": "AI-generated photorealistic demonstration; not a photograph of an actual athlete"
+    },
+    {
+      "id": "equipment_back_03",
+      "variant": "单臂绳索髋侧划船",
+      "width": 1448,
+      "height": 1086,
+      "bytes": 193955,
+      "thumbnailBytes": 24401,
+      "provenance": "AI-generated photorealistic demonstration; not a photograph of an actual athlete"
+    },
+    {
+      "id": "equipment_back_04",
+      "variant": "加重对握引体向上",
+      "width": 1448,
+      "height": 1086,
+      "bytes": 166751,
+      "thumbnailBytes": 26903,
+      "provenance": "AI-generated photorealistic demonstration; not a photograph of an actual athlete"
+    },
+    {
+      "id": "equipment_back_05",
+      "variant": "45度俯身杠铃划船",
+      "width": 1448,
+      "height": 1086,
+      "bytes": 177045,
+      "thumbnailBytes": 26858,
+      "provenance": "AI-generated photorealistic demonstration; not a photograph of an actual athlete"
+    },
+    {
+      "id": "equipment_back_06",
+      "variant": "中立握坐姿绳索划船",
+      "width": 1448,
+      "height": 1086,
+      "bytes": 185204,
+      "thumbnailBytes": 25501,
+      "provenance": "AI-generated photorealistic demonstration; not a photograph of an actual athlete"
+    },
+    {
+      "id": "equipment_back_07",
+      "variant": "直臂绳索下压",
+      "width": 1448,
+      "height": 1086,
+      "bytes": 198740,
+      "thumbnailBytes": 27337,
+      "provenance": "AI-generated photorealistic demonstration; not a photograph of an actual athlete"
+    },
+    {
+      "id": "equipment_back_08",
+      "variant": "宽握胸垫支撑划船",
+      "width": 1448,
+      "height": 1086,
+      "bytes": 189769,
+      "thumbnailBytes": 26858,
+      "provenance": "AI-generated photorealistic demonstration; not a photograph of an actual athlete"
+    },
+    {
+      "id": "equipment_back_09",
+      "variant": "史密斯俯身划船",
+      "width": 1448,
+      "height": 1086,
+      "bytes": 204793,
+      "thumbnailBytes": 29236,
+      "provenance": "AI-generated photorealistic demonstration; not a photograph of an actual athlete"
+    },
+    {
+      "id": "equipment_back_10",
+      "variant": "45度罗马椅髋铰链挺身",
+      "width": 1448,
+      "height": 1086,
+      "bytes": 161654,
+      "thumbnailBytes": 21140,
+      "provenance": "AI-generated photorealistic demonstration; not a photograph of an actual athlete"
+    },
+    {
+      "id": "equipment_back_11",
+      "variant": "单臂哑铃划船",
+      "width": 1448,
+      "height": 1086,
+      "bytes": 172662,
+      "thumbnailBytes": 23027,
+      "provenance": "AI-generated photorealistic demonstration; not a photograph of an actual athlete"
+    },
+    {
+      "id": "equipment_back_12",
+      "variant": "传统杠铃硬拉",
+      "width": 1448,
+      "height": 1086,
+      "bytes": 165972,
+      "thumbnailBytes": 21487,
+      "provenance": "AI-generated photorealistic demonstration; not a photograph of an actual athlete"
+    },
+    {
+      "id": "equipment_back_13",
+      "variant": "仰卧绳索套头拉",
+      "width": 1448,
+      "height": 1086,
+      "bytes": 169766,
+      "thumbnailBytes": 22947,
+      "provenance": "AI-generated photorealistic demonstration; not a photograph of an actual athlete"
+    },
+    {
+      "id": "equipment_legs_01",
+      "variant": "坐姿器械腿弯举",
+      "width": 1448,
+      "height": 1086,
+      "bytes": 205144,
+      "thumbnailBytes": 28675,
+      "provenance": "AI-generated photorealistic demonstration; not a photograph of an actual athlete"
+    },
+    {
+      "id": "equipment_legs_02",
+      "variant": "45度倒蹬机",
+      "width": 1448,
+      "height": 1086,
+      "bytes": 257517,
+      "thumbnailBytes": 37616,
+      "provenance": "AI-generated photorealistic demonstration; not a photograph of an actual athlete"
+    },
+    {
+      "id": "equipment_legs_03",
+      "variant": "坐姿器械腿屈伸",
+      "width": 1448,
+      "height": 1086,
+      "bytes": 220781,
+      "thumbnailBytes": 28764,
+      "provenance": "AI-generated photorealistic demonstration; not a photograph of an actual athlete"
+    },
+    {
+      "id": "equipment_legs_04",
+      "variant": "杠铃罗马尼亚硬拉",
+      "width": 1448,
+      "height": 1086,
+      "bytes": 194017,
+      "thumbnailBytes": 26129,
+      "provenance": "AI-generated photorealistic demonstration; not a photograph of an actual athlete"
+    },
+    {
+      "id": "equipment_legs_05",
+      "variant": "器械臀推",
+      "width": 1448,
+      "height": 1086,
+      "bytes": 194498,
+      "thumbnailBytes": 27540,
+      "provenance": "AI-generated photorealistic demonstration; not a photograph of an actual athlete"
+    },
+    {
+      "id": "equipment_legs_06",
+      "variant": "站姿器械提踵",
+      "width": 1448,
+      "height": 1086,
+      "bytes": 165969,
+      "thumbnailBytes": 21115,
+      "provenance": "AI-generated photorealistic demonstration; not a photograph of an actual athlete"
+    },
+    {
+      "id": "equipment_legs_07",
+      "variant": "高杠杠铃深蹲",
+      "width": 1448,
+      "height": 1086,
+      "bytes": 227376,
+      "thumbnailBytes": 33676,
+      "provenance": "AI-generated photorealistic demonstration; not a photograph of an actual athlete"
+    },
+    {
+      "id": "equipment_legs_08",
+      "variant": "保加利亚分腿蹲",
+      "width": 1448,
+      "height": 1086,
+      "bytes": 181572,
+      "thumbnailBytes": 25136,
+      "provenance": "AI-generated photorealistic demonstration; not a photograph of an actual athlete"
+    },
+    {
+      "id": "equipment_legs_09",
+      "variant": "坐姿腿内收机",
+      "width": 1448,
+      "height": 1086,
+      "bytes": 207224,
+      "thumbnailBytes": 28073,
+      "provenance": "AI-generated photorealistic demonstration; not a photograph of an actual athlete"
+    },
+    {
+      "id": "equipment_legs_10",
+      "variant": "俯卧器械腿弯举",
+      "width": 1448,
+      "height": 1086,
+      "bytes": 211548,
+      "thumbnailBytes": 28279,
+      "provenance": "AI-generated photorealistic demonstration; not a photograph of an actual athlete"
+    },
+    {
+      "id": "equipment_legs_11",
+      "variant": "坐姿器械提踵",
+      "width": 1448,
+      "height": 1086,
+      "bytes": 178987,
+      "thumbnailBytes": 26360,
+      "provenance": "AI-generated photorealistic demonstration; not a photograph of an actual athlete"
+    },
+    {
+      "id": "equipment_legs_12",
+      "variant": "低杠杠铃深蹲",
+      "width": 1448,
+      "height": 1086,
+      "bytes": 226629,
+      "thumbnailBytes": 30699,
+      "provenance": "AI-generated photorealistic demonstration; not a photograph of an actual athlete"
+    },
+    {
+      "id": "equipment_legs_13",
+      "variant": "哑铃行进箭步蹲",
+      "width": 1448,
+      "height": 1086,
+      "bytes": 160548,
+      "thumbnailBytes": 23536,
+      "provenance": "AI-generated photorealistic demonstration; not a photograph of an actual athlete"
+    },
+    {
+      "id": "equipment_legs_14",
+      "variant": "站姿器械后踢",
+      "width": 1448,
+      "height": 1086,
+      "bytes": 189951,
+      "thumbnailBytes": 25925,
+      "provenance": "AI-generated photorealistic demonstration; not a photograph of an actual athlete"
+    },
+    {
+      "id": "equipment_core_01",
+      "variant": "跪姿绳索卷腹",
+      "width": 1448,
+      "height": 1086,
+      "bytes": 193841,
+      "thumbnailBytes": 26637,
+      "provenance": "AI-generated photorealistic demonstration; not a photograph of an actual athlete"
+    },
+    {
+      "id": "equipment_core_02",
+      "variant": "悬垂提膝",
+      "width": 1448,
+      "height": 1086,
+      "bytes": 175337,
+      "thumbnailBytes": 27845,
+      "provenance": "AI-generated photorealistic demonstration; not a photograph of an actual athlete"
+    },
+    {
+      "id": "equipment_core_03",
+      "variant": "坐姿器械卷腹",
+      "width": 1448,
+      "height": 1086,
+      "bytes": 218984,
+      "thumbnailBytes": 31177,
+      "provenance": "AI-generated photorealistic demonstration; not a photograph of an actual athlete"
+    },
+    {
+      "id": "equipment_core_04",
+      "variant": "跪姿健腹轮",
+      "width": 1448,
+      "height": 1086,
+      "bytes": 148897,
+      "thumbnailBytes": 20353,
+      "provenance": "AI-generated photorealistic demonstration; not a photograph of an actual athlete"
+    },
+    {
+      "id": "equipment_core_05",
+      "variant": "下斜负重卷腹",
+      "width": 1448,
+      "height": 1086,
+      "bytes": 205177,
+      "thumbnailBytes": 29548,
+      "provenance": "AI-generated photorealistic demonstration; not a photograph of an actual athlete"
+    },
+    {
+      "id": "equipment_core_06",
+      "variant": "高位向下绳索伐木",
+      "width": 1448,
+      "height": 1086,
+      "bytes": 192707,
+      "thumbnailBytes": 25158,
+      "provenance": "AI-generated photorealistic demonstration; not a photograph of an actual athlete"
+    },
+    {
+      "id": "equipment_core_07",
+      "variant": "站姿帕洛夫推举",
+      "width": 1448,
+      "height": 1086,
+      "bytes": 164884,
+      "thumbnailBytes": 21931,
+      "provenance": "AI-generated photorealistic demonstration; not a photograph of an actual athlete"
+    },
+    {
+      "id": "equipment_core_08",
+      "variant": "45度罗马椅侧屈体",
+      "width": 1448,
+      "height": 1086,
+      "bytes": 159062,
+      "thumbnailBytes": 20415,
+      "provenance": "AI-generated photorealistic demonstration; not a photograph of an actual athlete"
+    },
+    {
+      "id": "equipment_core_09",
+      "variant": "负重背心平板支撑",
+      "width": 1448,
+      "height": 1086,
+      "bytes": 154983,
+      "thumbnailBytes": 23482,
+      "provenance": "AI-generated photorealistic demonstration; not a photograph of an actual athlete"
+    },
+    {
+      "id": "equipment_core_10",
+      "variant": "负重俄罗斯转体",
+      "width": 1448,
+      "height": 1086,
+      "bytes": 182484,
+      "thumbnailBytes": 27479,
+      "provenance": "AI-generated photorealistic demonstration; not a photograph of an actual athlete"
+    },
+    {
+      "id": "equipment_arms_01",
+      "variant": "过顶绳索臂屈伸",
+      "width": 1448,
+      "height": 1086,
+      "bytes": 164844,
+      "thumbnailBytes": 23205,
+      "provenance": "AI-generated photorealistic demonstration; not a photograph of an actual athlete"
+    },
+    {
+      "id": "equipment_arms_02",
+      "variant": "绳索三头下压",
+      "width": 1448,
+      "height": 1086,
+      "bytes": 159095,
+      "thumbnailBytes": 23215,
+      "provenance": "AI-generated photorealistic demonstration; not a photograph of an actual athlete"
+    },
+    {
+      "id": "equipment_arms_03",
+      "variant": "直立双杠臂屈伸",
+      "width": 1448,
+      "height": 1086,
+      "bytes": 139990,
+      "thumbnailBytes": 19755,
+      "provenance": "AI-generated photorealistic demonstration; not a photograph of an actual athlete"
+    },
+    {
+      "id": "equipment_arms_04",
+      "variant": "仰卧EZ杠臂屈伸",
+      "width": 1448,
+      "height": 1086,
+      "bytes": 185558,
+      "thumbnailBytes": 23810,
+      "provenance": "AI-generated photorealistic demonstration; not a photograph of an actual athlete"
+    },
+    {
+      "id": "equipment_arms_05",
+      "variant": "单臂反手绳索下压",
+      "width": 1448,
+      "height": 1086,
+      "bytes": 195775,
+      "thumbnailBytes": 25894,
+      "provenance": "AI-generated photorealistic demonstration; not a photograph of an actual athlete"
+    },
+    {
+      "id": "equipment_arms_06",
+      "variant": "哑铃俯身后踢",
+      "width": 1448,
+      "height": 1086,
+      "bytes": 195350,
+      "thumbnailBytes": 25808,
+      "provenance": "AI-generated photorealistic demonstration; not a photograph of an actual athlete"
+    },
+    {
+      "id": "equipment_arms_07",
+      "variant": "上斜哑铃弯举",
+      "width": 1448,
+      "height": 1086,
+      "bytes": 194219,
+      "thumbnailBytes": 29317,
+      "provenance": "AI-generated photorealistic demonstration; not a photograph of an actual athlete"
+    },
+    {
+      "id": "equipment_arms_08",
+      "variant": "EZ杠牧师凳弯举",
+      "width": 1448,
+      "height": 1086,
+      "bytes": 209756,
+      "thumbnailBytes": 30081,
+      "provenance": "AI-generated photorealistic demonstration; not a photograph of an actual athlete"
+    },
+    {
+      "id": "equipment_arms_09",
+      "variant": "哑铃锤式弯举",
+      "width": 1448,
+      "height": 1086,
+      "bytes": 163044,
+      "thumbnailBytes": 25076,
+      "provenance": "AI-generated photorealistic demonstration; not a photograph of an actual athlete"
+    },
+    {
+      "id": "equipment_arms_10",
+      "variant": "站姿EZ杠弯举",
+      "width": 1448,
+      "height": 1086,
+      "bytes": 185757,
+      "thumbnailBytes": 24497,
+      "provenance": "AI-generated photorealistic demonstration; not a photograph of an actual athlete"
+    },
+    {
+      "id": "equipment_arms_11",
+      "variant": "胸贴斜凳蜘蛛弯举",
+      "width": 1448,
+      "height": 1086,
+      "bytes": 206938,
+      "thumbnailBytes": 28051,
+      "provenance": "AI-generated photorealistic demonstration; not a photograph of an actual athlete"
+    },
+    {
+      "id": "equipment_arms_12",
+      "variant": "坐姿哑铃腕屈",
+      "width": 1448,
+      "height": 1086,
+      "bytes": 174497,
+      "thumbnailBytes": 26321,
+      "provenance": "AI-generated photorealistic demonstration; not a photograph of an actual athlete"
+    },
+    {
+      "id": "equipment_arms_13",
+      "variant": "坐姿集中弯举",
+      "width": 1448,
+      "height": 1086,
+      "bytes": 192253,
+      "thumbnailBytes": 27606,
+      "provenance": "AI-generated photorealistic demonstration; not a photograph of an actual athlete"
+    },
+    {
+      "id": "equipment_arms_14",
+      "variant": "反握窄距引体向上",
+      "width": 1448,
+      "height": 1086,
+      "bytes": 153714,
+      "thumbnailBytes": 25884,
+      "provenance": "AI-generated photorealistic demonstration; not a photograph of an actual athlete"
+    },
+    {
+      "id": "equipment_chest_19",
+      "variant": "上斜推胸机",
+      "width": 1448,
+      "height": 1086,
+      "bytes": 236140,
+      "thumbnailBytes": 34445,
+      "provenance": "AI-generated photorealistic demonstration; not a photograph of an actual athlete"
+    },
+    {
+      "id": "equipment_chest_20",
+      "variant": "单臂哑铃卧推",
+      "width": 1448,
+      "height": 1086,
+      "bytes": 164588,
+      "thumbnailBytes": 21613,
+      "provenance": "AI-generated photorealistic demonstration; not a photograph of an actual athlete"
+    },
+    {
+      "id": "equipment_shoulders_14",
+      "variant": "器械侧平举",
+      "width": 1448,
+      "height": 1086,
+      "bytes": 193076,
+      "thumbnailBytes": 27895,
+      "provenance": "AI-generated photorealistic demonstration; not a photograph of an actual athlete"
+    },
+    {
+      "id": "equipment_shoulders_15",
+      "variant": "肘靠体侧绳索外旋",
+      "width": 1448,
+      "height": 1086,
+      "bytes": 173730,
+      "thumbnailBytes": 22715,
+      "provenance": "AI-generated photorealistic demonstration; not a photograph of an actual athlete"
+    },
+    {
+      "id": "equipment_shoulders_16",
+      "variant": "肘靠体侧绳索内旋",
+      "width": 1448,
+      "height": 1086,
+      "bytes": 162560,
+      "thumbnailBytes": 21846,
+      "provenance": "AI-generated photorealistic demonstration; not a photograph of an actual athlete"
+    },
+    {
+      "id": "equipment_shoulders_17",
+      "variant": "肩胛俯卧撑",
+      "width": 1448,
+      "height": 1086,
+      "bytes": 166291,
+      "thumbnailBytes": 24301,
+      "provenance": "AI-generated photorealistic demonstration; not a photograph of an actual athlete"
+    },
+    {
+      "id": "equipment_back_14",
+      "variant": "上斜凳胸支撑哑铃划船",
+      "width": 1448,
+      "height": 1086,
+      "bytes": 205254,
+      "thumbnailBytes": 28513,
+      "provenance": "AI-generated photorealistic demonstration; not a photograph of an actual athlete"
+    },
+    {
+      "id": "equipment_back_15",
+      "variant": "坐姿胸支撑器械划船（中立握）",
+      "width": 1448,
+      "height": 1086,
+      "bytes": 212620,
+      "thumbnailBytes": 31500,
+      "provenance": "AI-generated photorealistic demonstration; not a photograph of an actual athlete"
+    },
+    {
+      "id": "equipment_back_16",
+      "variant": "哑铃耸肩",
+      "width": 1448,
+      "height": 1086,
+      "bytes": 178428,
+      "thumbnailBytes": 28101,
+      "provenance": "AI-generated photorealistic demonstration; not a photograph of an actual athlete"
+    },
+    {
+      "id": "equipment_back_17",
+      "variant": "辅助引体向上（器械）",
+      "width": 1448,
+      "height": 1086,
+      "bytes": 183529,
+      "thumbnailBytes": 22689,
+      "provenance": "AI-generated photorealistic demonstration; not a photograph of an actual athlete"
+    },
+    {
+      "id": "equipment_legs_15",
+      "variant": "哈克深蹲机",
+      "width": 1448,
+      "height": 1086,
+      "bytes": 232419,
+      "thumbnailBytes": 32640,
+      "provenance": "AI-generated photorealistic demonstration; not a photograph of an actual athlete"
+    },
+    {
+      "id": "equipment_legs_16",
+      "variant": "高脚杯深蹲",
+      "width": 1448,
+      "height": 1086,
+      "bytes": 196565,
+      "thumbnailBytes": 28145,
+      "provenance": "AI-generated photorealistic demonstration; not a photograph of an actual athlete"
+    },
+    {
+      "id": "equipment_legs_17",
+      "variant": "史密斯深蹲",
+      "width": 1448,
+      "height": 1086,
+      "bytes": 217529,
+      "thumbnailBytes": 30433,
+      "provenance": "AI-generated photorealistic demonstration; not a photograph of an actual athlete"
+    },
+    {
+      "id": "equipment_legs_18",
+      "variant": "史密斯分腿蹲（后脚落地）",
+      "width": 1448,
+      "height": 1086,
+      "bytes": 253115,
+      "thumbnailBytes": 32976,
+      "provenance": "AI-generated photorealistic demonstration; not a photograph of an actual athlete"
+    },
+    {
+      "id": "equipment_legs_19",
+      "variant": "哑铃反向箭步蹲",
+      "width": 1448,
+      "height": 1086,
+      "bytes": 191411,
+      "thumbnailBytes": 26085,
+      "provenance": "AI-generated photorealistic demonstration; not a photograph of an actual athlete"
+    },
+    {
+      "id": "equipment_legs_20",
+      "variant": "坐姿器械髋外展",
+      "width": 1448,
+      "height": 1086,
+      "bytes": 207588,
+      "thumbnailBytes": 28611,
+      "provenance": "AI-generated photorealistic demonstration; not a photograph of an actual athlete"
+    },
+    {
+      "id": "equipment_legs_21",
+      "variant": "单腿哑铃罗马尼亚硬拉",
+      "width": 1448,
+      "height": 1086,
+      "bytes": 187543,
+      "thumbnailBytes": 26864,
+      "provenance": "AI-generated photorealistic demonstration; not a photograph of an actual athlete"
+    },
+    {
+      "id": "equipment_legs_22",
+      "variant": "器械踝背屈提脚",
+      "width": 1448,
+      "height": 1086,
+      "bytes": 178753,
+      "thumbnailBytes": 23614,
+      "provenance": "AI-generated photorealistic demonstration; not a photograph of an actual athlete"
+    },
+    {
+      "id": "equipment_core_11",
+      "variant": "悬垂直腿举腿",
+      "width": 1448,
+      "height": 1086,
+      "bytes": 155061,
+      "thumbnailBytes": 21320,
+      "provenance": "AI-generated photorealistic demonstration; not a photograph of an actual athlete"
+    },
+    {
+      "id": "equipment_core_12",
+      "variant": "反向卷腹",
+      "width": 1448,
+      "height": 1086,
+      "bytes": 202051,
+      "thumbnailBytes": 27766,
+      "provenance": "AI-generated photorealistic demonstration; not a photograph of an actual athlete"
+    },
+    {
+      "id": "equipment_core_13",
+      "variant": "死虫式（起始位）",
+      "width": 1448,
+      "height": 1086,
+      "bytes": 141363,
+      "thumbnailBytes": 18868,
+      "provenance": "AI-generated photorealistic demonstration; not a photograph of an actual athlete"
+    },
+    {
+      "id": "equipment_core_14",
+      "variant": "单侧手提行走",
+      "width": 1448,
+      "height": 1086,
+      "bytes": 183948,
+      "thumbnailBytes": 26212,
+      "provenance": "AI-generated photorealistic demonstration; not a photograph of an actual athlete"
+    },
+    {
+      "id": "equipment_arms_15",
+      "variant": "仰卧哑铃臂屈伸",
+      "width": 1448,
+      "height": 1086,
+      "bytes": 202295,
+      "thumbnailBytes": 26291,
+      "provenance": "AI-generated photorealistic demonstration; not a photograph of an actual athlete"
+    },
+    {
+      "id": "equipment_arms_16",
+      "variant": "牧师凳哑铃弯举",
+      "width": 1448,
+      "height": 1086,
+      "bytes": 219495,
+      "thumbnailBytes": 28525,
+      "provenance": "AI-generated photorealistic demonstration; not a photograph of an actual athlete"
+    },
+    {
+      "id": "equipment_arms_17",
+      "variant": "绳索锤式弯举",
+      "width": 1448,
+      "height": 1086,
+      "bytes": 233253,
+      "thumbnailBytes": 32220,
+      "provenance": "AI-generated photorealistic demonstration; not a photograph of an actual athlete"
+    },
+    {
+      "id": "equipment_arms_18",
+      "variant": "身后绳索弯举",
+      "width": 1448,
+      "height": 1086,
+      "bytes": 157424,
+      "thumbnailBytes": 22324,
+      "provenance": "AI-generated photorealistic demonstration; not a photograph of an actual athlete"
+    },
+    {
+      "id": "equipment_arms_19",
+      "variant": "器械牧师弯举",
+      "width": 1448,
+      "height": 1086,
+      "bytes": 194181,
+      "thumbnailBytes": 29512,
+      "provenance": "AI-generated photorealistic demonstration; not a photograph of an actual athlete"
+    },
+    {
+      "id": "equipment_arms_20",
+      "variant": "窄距杠铃卧推",
+      "width": 1448,
+      "height": 1086,
+      "bytes": 232255,
+      "thumbnailBytes": 32094,
+      "provenance": "AI-generated photorealistic demonstration; not a photograph of an actual athlete"
+    },
+    {
+      "id": "equipment_arms_21",
+      "variant": "EZ杠反握弯举",
+      "width": 1448,
+      "height": 1086,
+      "bytes": 166119,
+      "thumbnailBytes": 21561,
+      "provenance": "AI-generated photorealistic demonstration; not a photograph of an actual athlete"
+    },
+    {
+      "id": "equipment_arms_22",
+      "variant": "坐姿哑铃腕伸",
+      "width": 1448,
+      "height": 1086,
+      "bytes": 166677,
+      "thumbnailBytes": 22236,
+      "provenance": "AI-generated photorealistic demonstration; not a photograph of an actual athlete"
+    }
+  ]
+}

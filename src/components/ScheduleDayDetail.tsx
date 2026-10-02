@@ -1,4 +1,3 @@
-import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { getWorkout, getWorkoutExercises, workoutDisplayTitle } from '../data/catalog';
 import type { ScheduledDay } from '../data/planProgress';
@@ -7,6 +6,7 @@ import { estimateStrengthSession, preferredSessionMinutes } from '../data/traini
 import { appPalette, fitnessColors as colors, radius } from '../theme';
 import type { Profile, TrainingSession } from '../types';
 import { ExerciseMedia } from './ExerciseResource';
+import { EquipmentPhoto } from './EquipmentPhoto';
 import { RecoveryDayContent } from './RecoveryGuide';
 import { dailyWorkoutKey, trainingDateKey } from '../data/sessionRecords';
 import { useAppStore } from '../store/AppStore';
@@ -36,8 +36,8 @@ export function ScheduleDayDetail({ profile, day, sessions, onOpenExercise }: {
       <View style={styles.exerciseMain}><Text style={styles.exerciseOrder}>轻松活动</Text><Text style={styles.exerciseName}>{profile.goal === 'weight_loss' || profile.goal === 'street_mastery' ? '快走或舒适骑行' : '快走或轻松跑'}</Text><Text style={styles.exerciseMeta}>活动 {day.targetMinutes || plannedCardioMinutes(profile)} 分钟 · 另留 8 分钟热身与整理</Text></View>
     </View> : null}
     {exercises.map((exercise, index) => <Pressable accessibilityRole="button" accessibilityLabel={`查看${exercise.name}动作指导`} onPress={() => onOpenExercise(exercise.id)} key={`${exercise.id}-${index}`} style={styles.exercise}>
-      <ExerciseMedia exercise={exercise} width={82} minHeight={56} maxHeight={96} />
-      <View style={styles.exerciseMain}><Text style={styles.exerciseOrder}>动作 {String(index + 1).padStart(2, '0')}</Text><Text style={styles.exerciseName}>{exercise.name}</Text><Text style={styles.exerciseMeta}>{exercise.targetSets} 组 × {exercise.targetValue} {exercise.targetUnit === 'seconds' ? '秒' : exercise.targetUnit === 'meters' ? '米' : exercise.targetUnit === 'steps' ? '步' : '次'}{exercise.id === 'aux_singleLegCalf' ? '（左右合计）' : ''} · 休息 {exercise.restSeconds} 秒</Text></View><Text style={styles.exerciseArrow}>›</Text>
+      {exercise.id.startsWith('equipment_') ? <EquipmentPhoto exerciseId={exercise.id} name={exercise.name} compact thumbnailWidth={82} /> : <ExerciseMedia exercise={exercise} width={82} minHeight={56} maxHeight={96} />}
+      <View style={styles.exerciseMain}><Text style={styles.exerciseOrder}>动作 {String(index + 1).padStart(2, '0')}</Text><Text style={styles.exerciseName}>{exercise.name}</Text><Text style={styles.exerciseMeta}>{exercise.targetSets} 组 × {exercise.repRange?.join('–') || exercise.targetValue} {exercise.targetUnit === 'seconds' ? '秒' : exercise.targetUnit === 'meters' ? '米' : exercise.targetUnit === 'steps' ? '步' : '次'}{exercise.perSide ? ' / 侧' : exercise.id === 'aux_singleLegCalf' ? '（左右合计）' : ''} · 休息 {exercise.restSeconds} 秒</Text></View><Text style={styles.exerciseArrow}>›</Text>
     </Pressable>)}
   </View>;
 }

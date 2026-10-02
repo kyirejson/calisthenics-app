@@ -5,17 +5,18 @@ import { Button, Card, Page } from '../components/ui';
 import { AppGlyph, type GlyphName } from '../components/AppGlyph';
 import { YearSchedule } from '../components/YearSchedule';
 import { objectiveLabels, patternLabels } from '../nutrition/labels';
-import { getPlanDay, recommendPlanId, RETIRED_PLAN_ID } from '../data/trainingPlans';
+import { getPlanDay, RETIRED_PLAN_ID } from '../data/trainingPlans';
 import { trainingGoals } from '../data/trainingGoals';
+import { TrainingGoalPicker } from '../components/TrainingGoalPicker';
 import { groupHistoryByDay, validHistorySessions } from '../data/trainingHistory';
 import { useAppStore } from '../store/AppStore';
 import { appPalette as palette, progressPageLayout } from '../theme';
 import { confirmAction, showMessage } from '../utils/confirm';
-import { useAppUpdates } from '../components/AppUpdates';
+import { useAppUpdates, useUpdateBlock } from '../components/AppUpdates';
 import type { Goal, Profile } from '../types';
 
 export function ProfileScreen({ onNutrition, onOpenExercise }: { onNutrition: () => void; onOpenExercise: (exerciseId: string) => void }) {
-  const { profile, sessions, settings, updateSettings, saveProfile, exportData, clearData, nutritionJournal } = useAppStore();
+  const { profile, sessions, settings, updateSettings, switchTrainingGoal, exportData, clearData, nutritionJournal } = useAppStore();
   const appUpdates = useAppUpdates();
   const [showGoalPicker, setShowGoalPicker] = useState(false);
   const [savingGoal, setSavingGoal] = useState(false);
@@ -25,6 +26,7 @@ export function ProfileScreen({ onNutrition, onOpenExercise }: { onNutrition: ()
   const [settingsSaving, setSettingsSaving] = useState(false);
   const [settingsError, setSettingsError] = useState('');
   const settingsPending = useRef(false);
+  useUpdateBlock(showGoalPicker || showProfileEdit || savingGoal || settingsSaving);
   const now = useMemo(() => new Date(), [sessions]);
   const valid = useMemo(() => validHistorySessions(sessions, now), [sessions, now]);
   const days = useMemo(() => groupHistoryByDay(valid, now).length, [valid, now]);
@@ -38,16 +40,7 @@ export function ProfileScreen({ onNutrition, onOpenExercise }: { onNutrition: ()
     setSavingGoal(true);
     setGoalError('');
     try {
-      await saveProfile({
-        ...profile,
-        goal,
-        frequency: goal === 'street_mastery' && ![2, 3, 6].includes(profile.frequency) ? 3 : profile.frequency,
-        planId: recommendPlanId({ goal }),
-        nutritionGoal: goal === 'street_mastery' ? 'performance' : 'rapid_loss',
-        dietPattern: goal === 'street_mastery' ? 'balanced_cn' : profile.dietPattern,
-        trainingRestSeconds: goal === 'street_mastery' ? 180 : profile.trainingRestSeconds,
-        planStartedAt: new Date().toISOString(),
-      });
+      await switchTrainingGoal(goal);
       setShowGoalPicker(false);
     } catch {
       setGoalError('切换失败，请重试。');
@@ -62,7 +55,7 @@ export function ProfileScreen({ onNutrition, onOpenExercise }: { onNutrition: ()
     catch { setSettingsError('偏好未能保存，请重试。'); }
     finally { settingsPending.current = false; setSettingsSaving(false); }
   };
-  const shareBackup = () => void Share.share({ title: 'Uncover 数据备份', message: exportData() })
+  const shareBackup = () => void exportData().then(message => Share.share({ title: 'Uncover 数据备份', message }))
     .catch(() => showMessage('备份未导出', '请稍后重试系统分享。'));
   const confirmClear = () => confirmAction(
     '清除全部数据？',
@@ -84,17 +77,7 @@ export function ProfileScreen({ onNutrition, onOpenExercise }: { onNutrition: ()
     <ProfileSection title="数据与隐私"><MenuRow icon="download" title="导出数据备份" sub="分享 JSON，不含照片文件" onPress={shareBackup} /><MenuRow icon="trash" title="清除本机数据" sub="清除前请先备份" danger onPress={confirmClear} last /></ProfileSection>
     <Text style={styles.version}>Uncover · v{appConfig.expo.version}</Text><Text style={styles.privacy}>记录保存在本机 · 联网处理须先确认</Text>
 
-    <Modal transparent visible={showGoalPicker} animationType="fade" onRequestClose={() => { if (!savingGoal) setShowGoalPicker(false); }}>
-      <View style={styles.modalBackdrop}>
-        <Pressable style={StyleSheet.absoluteFill} onPress={() => { if (!savingGoal) setShowGoalPicker(false); }} />
-        <View testID="profile-goal-sheet" style={styles.modalCard}>
-          <View style={styles.modalHead}><Text style={styles.modalTitle}>选择训练专题</Text><Pressable accessibilityRole="button" accessibilityLabel="关闭训练专题选择" disabled={savingGoal} onPress={() => setShowGoalPicker(false)} style={styles.closeIcon}><AppGlyph name="plus" color={palette.muted} /></Pressable></View>
-          <Text style={styles.modalInfo}>从今天重新安排日程，保留历史记录与动作进阶。</Text>
-          {trainingGoals.map((item) => <Pressable key={item.key} accessibilityRole="button" accessibilityLabel={'选择' + item.label} accessibilityState={{ selected: profile.goal === item.key, disabled: savingGoal }} disabled={savingGoal} onPress={() => void selectGoal(item.key)} style={[styles.goalChoice, profile.goal === item.key && styles.goalChoiceActive]}><View style={styles.choiceHeading}><Text style={styles.goalChoiceTitle}>{item.label}</Text>{profile.goal === item.key ? <AppGlyph name="check" size={18} color={palette.lime} /> : null}</View><Text style={styles.goalChoiceDesc}>{item.description}</Text></Pressable>)}
-          {goalError ? <Text accessibilityRole="alert" style={styles.modalError}>{goalError}</Text> : null}
-        </View>
-      </View>
-    </Modal>
+    <TrainingGoalPicker testID="profile-goal-sheet" visible={showGoalPicker} goal={profile.goal} saving={savingGoal} error={goalError} onClose={() => setShowGoalPicker(false)} onSelect={selectGoal} />
     {showSchedule ? <YearSchedule profile={profile} sessions={sessions} anchor={new Date()} onSelect={() => {}} onOpenExercise={onOpenExercise} onClose={() => setShowSchedule(false)} /> : null}
     {showProfileEdit ? <EditProfileModal profile={profile} onClose={() => setShowProfileEdit(false)} /> : null}
   </Page>;
@@ -114,7 +97,7 @@ function ToggleRow({ value, disabled, onValueChange }: { value: boolean; disable
 }
 
 function EditProfileModal({ profile, onClose }: { profile: Profile; onClose: () => void }) {
-  const { saveProfile } = useAppStore();
+  const { patchProfile } = useAppStore();
   const [name, setName] = useState(profile.name);
   const [sex, setSex] = useState(profile.sex);
   const [age, setAge] = useState(String(profile.age));
@@ -129,7 +112,7 @@ function EditProfileModal({ profile, onClose }: { profile: Profile; onClose: () 
     const nextWeight = Math.round(Number(weight) * 10) / 10;
     const apply = () => {
       setSaving(true);
-      void saveProfile({ ...profile, name: name.trim(), sex, age: Number(age), height: Number(height), weight: nextWeight })
+      void patchProfile({ name: name.trim(), sex, age: Number(age), height: Number(height), weight: nextWeight })
         .then(onClose)
         .catch(() => setError('保存失败，请重试。'))
         .finally(() => setSaving(false));
@@ -166,7 +149,7 @@ const styles = StyleSheet.create({
   section: { marginTop: 20 }, sectionTitle: { ...progressPageLayout.sectionTitle, color: palette.text, marginBottom: 10 }, list: { paddingHorizontal: 14, paddingVertical: 2 }, menuRow: { minHeight: 68, flexDirection: 'row', alignItems: 'center', gap: 11, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: palette.border, paddingVertical: 12 }, lastRow: { borderBottomWidth: 0 }, menuIcon: { width: 34, height: 34, borderRadius: 11, backgroundColor: palette.olive, alignItems: 'center', justifyContent: 'center' }, dangerIcon: { backgroundColor: '#332421' }, menuTitle: { color: palette.text, fontSize: 14, fontWeight: '800', lineHeight: 20 }, menuSub: { color: palette.muted, fontSize: 11, lineHeight: 17, marginTop: 3 },
   version: { textAlign: 'center', color: palette.muted, fontSize: 11, marginTop: 24 }, privacy: { textAlign: 'center', color: palette.faint, fontSize: 10, lineHeight: 18, marginTop: 6 },
   toggleHit: { width: 52, minHeight: 44, justifyContent: 'center' }, toggleTrack: { width: 44, height: 26, borderRadius: 13, backgroundColor: palette.border, padding: 3 }, toggleTrackOn: { backgroundColor: palette.lime }, toggleThumb: { width: 20, height: 20, borderRadius: 10, backgroundColor: palette.muted }, toggleThumbOn: { alignSelf: 'flex-end', backgroundColor: palette.onLime },
-  modalBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,.72)', justifyContent: 'center', alignItems: 'center', padding: 16 }, modalCard: { width: '100%', maxWidth: progressPageLayout.content.maxWidth, backgroundColor: palette.card, borderWidth: 1, borderColor: palette.border, borderRadius: progressPageLayout.cardRadius, padding: 16 }, modalHead: { flexDirection: 'row', alignItems: 'center', gap: 10 }, modalTitle: { ...progressPageLayout.title, color: palette.text, flex: 1 }, modalInfo: { color: palette.muted, fontSize: 12, lineHeight: 19, marginTop: 6, marginBottom: 10 }, closeIcon: { width: 44, height: 44, borderRadius: 22, backgroundColor: palette.raised, alignItems: 'center', justifyContent: 'center', transform: [{ rotate: '45deg' }] },
-  goalChoice: { padding: 14, marginTop: 10, borderWidth: 1, borderColor: palette.border, borderRadius: 14, backgroundColor: palette.raised }, goalChoiceActive: { borderColor: palette.oliveBorder, backgroundColor: palette.olive }, choiceHeading: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 8 }, goalChoiceTitle: { color: palette.text, fontSize: 14, fontWeight: '800' }, goalChoiceDesc: { color: palette.muted, fontSize: 12, lineHeight: 18, marginTop: 5 }, modalError: { color: palette.danger, fontSize: 12, lineHeight: 19, marginTop: 10 },
+  modalBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,.72)', justifyContent: 'center', alignItems: 'center', padding: 16 }, modalHead: { flexDirection: 'row', alignItems: 'center', gap: 10 }, modalTitle: { ...progressPageLayout.title, color: palette.text, flex: 1 }, modalInfo: { color: palette.muted, fontSize: 12, lineHeight: 19, marginTop: 6, marginBottom: 10 }, closeIcon: { width: 44, height: 44, borderRadius: 22, backgroundColor: palette.raised, alignItems: 'center', justifyContent: 'center', transform: [{ rotate: '45deg' }] },
+  modalError: { color: palette.danger, fontSize: 12, lineHeight: 19, marginTop: 10 },
   editSheet: { maxHeight: '90%', width: '100%', maxWidth: progressPageLayout.content.maxWidth, backgroundColor: palette.card, borderWidth: 1, borderColor: palette.border, borderRadius: progressPageLayout.cardRadius, overflow: 'hidden', paddingTop: 12 }, editModalHead: { paddingHorizontal: 16, paddingBottom: 8 }, editContent: { paddingHorizontal: 16, paddingBottom: 16 }, editLabel: { color: palette.muted, fontSize: 12, fontWeight: '700', marginBottom: 7, marginTop: 12 }, editInput: { minHeight: 48, borderRadius: 12, borderWidth: 1, borderColor: palette.border, backgroundColor: palette.raised, paddingHorizontal: 12, fontSize: 14, color: palette.text }, editRow: { flexDirection: 'row', gap: 10 }, editSexRow: { flexDirection: 'row', gap: 8 }, sexPill: { minHeight: 44, flex: 1, borderRadius: 12, borderWidth: 1, borderColor: palette.border, backgroundColor: palette.raised, alignItems: 'center', justifyContent: 'center' }, sexPillActive: { backgroundColor: palette.olive, borderColor: palette.oliveBorder }, sexPillText: { color: palette.muted, fontSize: 13, fontWeight: '800' }, sexPillTextActive: { color: palette.lime }, editFooter: { padding: 16, borderTopWidth: 1, borderTopColor: palette.border },
 });

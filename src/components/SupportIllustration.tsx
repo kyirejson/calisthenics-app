@@ -1,4 +1,3 @@
-import React from 'react';
 import Svg, { Circle, G, Line, Path, Text as SvgText } from 'react-native-svg';
 
 const illustrated = new Set(['aux_calfBeginner', 'aux_neckNeutral']);

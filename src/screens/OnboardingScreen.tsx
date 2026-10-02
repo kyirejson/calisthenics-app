@@ -24,7 +24,7 @@ export function OnboardingScreen() {
   const [frequency, setFrequency] = useState(3);
   const [sessionMinutes, setSessionMinutes] = useState(45);
   const [experience, setExperience] = useState<ExperienceLevel>('beginner');
-  const [baseline, setBaseline] = useState({ push: false, pull: false, squat: true });
+  const baseline = { push: false, pull: false, squat: true };
   const [generating, setGenerating] = useState(false);
   const [generationStep, setGenerationStep] = useState<PlanGenerationStep | null>(null);
   const [generationError, setGenerationError] = useState('');
@@ -44,8 +44,8 @@ export function OnboardingScreen() {
     setGenerating(true);
     setGenerationError('');
     const base = {
-      name: name.trim(), sex, age: Number(age), height: Number(height), weight: Number(weight), goal, frequency: goal === 'street_mastery' ? STAGE_FREQUENCY[experience] : frequency, sessionMinutes,
-      nutritionGoal: goal === 'street_mastery' ? 'performance' as const : 'rapid_loss' as const,
+      name: name.trim(), sex, age: Number(age), height: Number(height), weight: Number(weight), goal, frequency: goal === 'street_mastery' ? STAGE_FREQUENCY[experience] : frequency, sessionMinutes: goal === 'equipment' ? undefined : sessionMinutes,
+      nutritionGoal: goal === 'equipment' ? 'maintain' as const : goal === 'street_mastery' ? 'performance' as const : 'rapid_loss' as const,
       dietPattern: 'balanced_cn' as const,
       experience,
       planStartedAt: new Date().toISOString(),
@@ -56,7 +56,8 @@ export function OnboardingScreen() {
     const planId = recommendPlanId(base);
     const profile: Profile = { ...base, planId };
     try {
-      await generatePersonalPlan(profile, saveProfile, setGenerationStep);
+      if (goal === 'equipment') await saveProfile(profile);
+      else await generatePersonalPlan(profile, saveProfile, setGenerationStep);
     } catch {
       setGenerationError('计划保存失败，请重试。');
       setGenerating(false);
@@ -85,13 +86,13 @@ export function OnboardingScreen() {
               <Text style={styles.kicker}>02 / 训练目标</Text>
               <Text style={styles.hero}>你想成为{`\n`}怎样的自己？</Text>
               <Text style={styles.subtitle}>选择一个专题开始；其他旧目标暂未开放，已有训练记录会保留。</Text>
-              {trainingGoals.map((item) => <Pressable key={item.key} onPress={() => { setGoal(item.key); if (item.key === 'street_mastery' && ![2, 3, 6].includes(frequency)) setFrequency(3); }} style={[styles.choice, goal === item.key && styles.choiceActive]}><View style={{ flex: 1 }}><Text style={styles.choiceTitle}>{item.label}</Text><Text style={styles.choiceDesc}>{item.description}</Text></View>{goal === item.key ? <Text style={styles.activeGoalBadge}>已选择</Text> : null}</Pressable>)}
+              {trainingGoals.map((item) => <Pressable key={item.key} onPress={() => { setGoal(item.key); if (item.key === 'street_mastery' && ![2, 3, 6].includes(frequency)) setFrequency(3); }} style={[styles.choice, goal === item.key && styles.choiceActive]}><View style={{ flex: 1 }}><Text style={styles.choiceTitle}>{item.label}</Text></View>{goal === item.key ? <Text style={styles.activeGoalBadge}>已选择</Text> : null}</Pressable>)}
               {goal === 'street_mastery' ? <Text style={styles.assessmentNote}>按原书提供每周 2、3、6 练。365 天日历用于查看安排，不保证按期解锁六个最终式；每一式仍需逐项验收。</Text> : null}
             </View>
           ) : (
             <View>
               <Text style={styles.kicker}>03 / 安排节奏</Text>
-              <Text style={styles.hero}>{goal === 'street_mastery' ? `选择你的${'\n'}囚徒进阶阶段` : `每周练几次，${'\n'}最容易坚持？`}</Text>
+              <Text style={styles.hero}>{goal === 'street_mastery' ? `选择你的${'\n'}街头健身阶段` : `每周练几次，${'\n'}最容易坚持？`}</Text>
               <Text style={styles.subtitle}>{goal === 'street_mastery' ? '原著《囚徒健身》官方五大进阶日程，选择对应你体能与恢复能力的阶段：' : '按你的训练经历、每周天数与单次可用时间生成课程。'}</Text>
               {goal === 'street_mastery' ? (
                 <View style={{ gap: 10 }}>
@@ -127,8 +128,8 @@ export function OnboardingScreen() {
               ) : (
                 <>
                   <View style={styles.frequencyGrid}>{[2, 3, 4, 5, 6].map((item) => <Pressable key={item} onPress={() => setFrequency(item)} style={[styles.frequency, frequency === item && styles.frequencyActive]}><Text style={[styles.frequencyNum, frequency === item && styles.frequencyNumActive]}>{item}</Text><Text style={[styles.frequencyLabel, frequency === item && styles.frequencyNumActive]}>天 / 周</Text></Pressable>)}</View>
-                  <Text style={[styles.fieldLabel, { marginTop: 18 }]}>希望每次训练多久（含热身、组间休息）</Text>
-                  <View style={styles.pills}>{[20, 30, 45, 60, 75].map((minutes) => <OptionPill key={minutes} label={`${minutes}分钟`} active={sessionMinutes === minutes} onPress={() => setSessionMinutes(minutes)} />)}</View>
+                  {goal !== 'equipment' ? <><Text style={[styles.fieldLabel, { marginTop: 18 }]}>希望每次训练多久（含热身、组间休息）</Text>
+                  <View style={styles.pills}>{[20, 30, 45, 60, 75].map((minutes) => <OptionPill key={minutes} label={`${minutes}分钟`} active={sessionMinutes === minutes} onPress={() => setSessionMinutes(minutes)} />)}</View></> : null}
                   <Text style={[styles.fieldLabel, { marginTop: 18 }]}>最近的训练基础</Text>
                   <View style={styles.pills}><OptionPill label="刚开始 · 近2个月未规律训练" active={experience === 'beginner'} onPress={() => setExperience('beginner')} /><OptionPill label="有基础 · 连续训练3个月以上" active={experience === 'intermediate'} onPress={() => setExperience('intermediate')} /><OptionPill label="高阶 · 稳定训练1年以上" active={experience === 'advanced'} onPress={() => setExperience('advanced')} /></View>
                   <View style={styles.tip}><Text style={styles.tipTitle}>{frequency <= 2 ? '稳妥入门' : frequency <= 4 ? '循序进阶' : '高频分日'}</Text><Text style={styles.tipBody}>{frequency <= 2 ? '适合零基础或时间有限，从关节适应开始。' : frequency <= 4 ? '按身体反馈逐步增加训练，不强行晋级。' : '保持规律作息与充足睡眠，确保超量恢复。'}</Text></View>
@@ -139,7 +140,7 @@ export function OnboardingScreen() {
           <View style={{ flex: 1, minHeight: 24 }} />
           {generating && generationStep ? <View style={styles.generation}><Text style={styles.generationTitle}>{generationStep.label}</Text><ProgressBar value={generationStep.progress} color={colors.lime} /><Text style={styles.generationPercent}>{generationStep.progress}%</Text></View> : null}
           {generationError ? <Text style={styles.generationError}>{generationError}</Text> : null}
-          <Button label={generating ? '正在生成计划…' : step === 2 ? '生成我的计划' : '继续'} variant="lime" disabled={generating || (step === 0 && !canContinue)} onPress={() => step === 2 ? void finish() : setStep(step + 1)} />
+          <Button label={generating ? '正在保存…' : step === 1 && goal === 'equipment' ? '开始器械训练' : step === 2 ? '生成我的计划' : '继续'} variant="lime" disabled={generating || (step === 0 && !canContinue)} onPress={() => step === 2 || (step === 1 && goal === 'equipment') ? void finish() : setStep(step + 1)} />
           {step > 0 ? <Pressable onPress={() => setStep(step - 1)}><Text style={styles.back}>返回上一步</Text></Pressable> : null}
         </ScrollView>
       </KeyboardAvoidingView>

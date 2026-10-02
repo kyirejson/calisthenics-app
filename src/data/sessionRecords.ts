@@ -24,8 +24,8 @@ export function cleanSession(session: TrainingSession): TrainingSession {
   return {
     ...session,
     exercises,
-    totalReps: exercises.flatMap((exercise) => exercise.sets)
-      .filter((set) => !set.unit || set.unit === 'reps').reduce((sum, set) => sum + set.reps, 0),
+    totalReps: exercises.reduce((sum, exercise) => sum + exercise.sets
+      .filter((set) => !set.unit || set.unit === 'reps').reduce((count, set) => count + set.reps * (exercise.targetSnapshot?.perSide ? 2 : 1), 0), 0),
   };
 }
 

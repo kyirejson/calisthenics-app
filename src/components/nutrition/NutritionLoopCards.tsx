@@ -1,4 +1,3 @@
-import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { MEAL_SLOTS } from '../../nutrition/state';
 import { slotLabels } from '../../nutrition/labels';

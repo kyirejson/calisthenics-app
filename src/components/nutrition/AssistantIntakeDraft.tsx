@@ -1,4 +1,4 @@
-import React, { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { assistantFoodChoices, assistantFoodTotals, assistantFoodWarnings, assistantPortion, createAssistantFoodRows, getFoodServings, type AssistantFoodRow } from '../../nutrition/assistantFood';
 import type { AssistantIntent } from '../../nutrition/assistantState';
@@ -7,23 +7,31 @@ import { useAppStore } from '../../store/AppStore';
 import { FoodArtwork } from './FoodArtwork';
 import { appPalette as c } from '../../theme';
 
-export function AssistantIntakeDraft({ intent, date, id, onSaved }: { intent: Extract<AssistantIntent, { type: 'log_intake' }>; date: string; id: string; onSaved?: () => void }) {
-  const { nutritionJournal, saveIntakeEntry } = useAppStore();
+export function AssistantIntakeDraft({ intent, date, id, onSaved, proof }: { intent: Extract<AssistantIntent, { type: 'log_intake' }>; date: string; id: string; onSaved?: () => void; proof?: { basis: string; policyVersion: number; auto: boolean } }) {
+  const { nutritionJournal, executeAssistantOperation } = useAppStore();
   const [rows, setRows] = useState(() => createAssistantFoodRows(intent, nutritionJournal.customFoods));
   const [slot, setSlot] = useState<MealSlot | null>(intent.slot), [picker, setPicker] = useState<number | null>(null), [query, setQuery] = useState('');
   const [busy, setBusy] = useState(false), [saved, setSaved] = useState(false), [error, setError] = useState(''); const saving = useRef(false);
   const totals = useMemo(() => assistantFoodTotals(rows), [rows]);
   const warnings = assistantFoodWarnings(rows, nutritionJournal.preferences, nutritionJournal.assistant.facts);
   const change = (i: number, patch: Partial<AssistantFoodRow>) => setRows(current => current.map((r, n) => n === i ? { ...r, ...patch } : r));
-  const confirm = async () => {
+  const confirm = async (confirmed = true) => {
     if (!totals || !slot || saved || saving.current) return; saving.current = true; setBusy(true); setError('');
     try {
-      await saveIntakeEntry({ id, date, slot, name: rows.map(r => r.food!.name).join('、').slice(0, 180), portions: totals.portions, customFoods: rows.map(r => r.food!).filter(f => f.source.kind === 'user_label'), source: 'manual' }); setSaved(true); onSaved?.();
+      if (!proof) throw new Error('请重新发送记餐请求。');
+      await executeAssistantOperation({ id, ...proof, confirmed, kind: 'log_intake', input: { id, date, slot, name: rows.map(r => r.food!.name).join('、').slice(0, 180), portions: totals.portions, customFoods: rows.map(r => r.food!).filter(f => f.source.kind === 'user_label'), source: 'manual' } }); setSaved(true); onSaved?.();
     } catch (reason) { setError(reason instanceof Error ? reason.message : '未能保存，请重试。'); }
     finally { saving.current = false; setBusy(false); }
   };
+  const autoAttempted = useRef(false);
+  useEffect(() => {
+    // Only an initially complete request auto-runs. Typing a weight must not
+    // save the first digit, and changing permissions must not run an old card.
+    if (autoAttempted.current) return; autoAttempted.current = true;
+    if (proof?.auto && totals && slot) void confirm(false);
+  }, []);
   return <View style={s.card} testID="assistant-intake-draft">
-    <View style={s.between}><Text style={s.title}>{saved ? '已记录这一餐' : '待确认饮食'}</Text><Text style={s.muted}>{date.slice(5)}</Text></View>
+    <View style={s.between}><Text style={s.title}>{saved ? '已记录这一餐' : proof?.auto ? '饮食记录' : '待确认饮食'}</Text><Text style={s.muted}>{date.slice(5)}</Text></View>
     {rows.map((row, i) => <View key={i} style={s.row}>
       <FoodArtwork food={row.food} size={44} /><View style={s.flex}><Text style={s.text}>{row.food?.name ?? row.request.name}</Text><Text style={s.muted}>{row.food?.state ?? '选择对应食品与生熟状态'}</Text>
         {!saved ? <Pressable accessibilityRole="button" accessibilityLabel={'选择记餐食品' + (i + 1)} disabled={busy} onPress={() => { setPicker(picker === i ? null : i); setQuery(row.request.name); }} style={s.link}><Text style={s.lime}>选择／更换食品</Text></Pressable> : null}
@@ -39,7 +47,7 @@ export function AssistantIntakeDraft({ intent, date, id, onSaved }: { intent: Ex
     {totals ? <View style={s.totals}><Text style={s.energy}>{Math.round(totals.nutrients.calories)}<Text style={s.muted}> kcal</Text></Text><Text style={s.muted}>蛋白质 {totals.nutrients.protein}g · 碳水 {totals.nutrients.carbs}g · 脂肪 {totals.nutrients.fat}g</Text></View> : <Text style={s.muted}>补齐食品、状态和份量后计算，不使用模型猜测营养。</Text>}
     {rows.some(r => r.estimated) ? <Text style={s.muted}>家用份量为参考估量，保存前请核对可食克重。</Text> : null}
     {warnings.map(w => <Text style={s.warning} key={w}>{w}</Text>)}
-    {!saved ? <><View style={s.slots}>{([{ value: 'breakfast', label: '早餐' }, { value: 'lunch', label: '午餐' }, { value: 'snack', label: '加餐' }, { value: 'dinner', label: '晚餐' }] as const).map(item => <Pressable key={item.value} accessibilityRole="radio" accessibilityLabel={'记餐到' + item.label} accessibilityState={{ checked: slot === item.value }} disabled={busy} onPress={() => setSlot(item.value)} style={[s.slot, slot === item.value && s.selected]}><Text style={slot === item.value ? s.dark : s.muted}>{item.label}</Text></Pressable>)}</View><Pressable accessibilityRole="button" accessibilityLabel="确认助手记餐" disabled={!totals || !slot || busy} onPress={() => void confirm()} style={[s.confirm, (!totals || !slot || busy) && s.disabled]}><Text style={s.dark}>{busy ? '保存中…' : '确认记入这一餐'}</Text></Pressable></> : null}
+    {!saved ? <><View style={s.slots}>{([{ value: 'breakfast', label: '早餐' }, { value: 'lunch', label: '午餐' }, { value: 'snack', label: '加餐' }, { value: 'dinner', label: '晚餐' }] as const).map(item => <Pressable key={item.value} accessibilityRole="radio" accessibilityLabel={'记餐到' + item.label} accessibilityState={{ checked: slot === item.value }} disabled={busy} onPress={() => setSlot(item.value)} style={[s.slot, slot === item.value && s.selected]}><Text style={slot === item.value ? s.dark : s.muted}>{item.label}</Text></Pressable>)}</View><Pressable accessibilityRole="button" accessibilityLabel={proof?.auto ? '保存助手记餐' : '确认助手记餐'} disabled={!totals || !slot || busy} onPress={() => void confirm()} style={[s.confirm, (!totals || !slot || busy) && s.disabled]}><Text style={s.dark}>{busy ? '保存中…' : proof?.auto ? '记入这一餐' : '确认记入这一餐'}</Text></Pressable></> : null}
     {error ? <Text accessibilityRole="alert" style={s.warning}>{error}</Text> : null}
   </View>;
 }
