@@ -5,6 +5,7 @@ import { supportExercises } from './supportExercises';
 import { coreFinalSteps } from './progressionRoutes';
 import { RETIRED_PLAN_ID } from './trainingPlans';
 import { equipmentWorkoutItems, equipmentWorkouts } from './equipmentTraining';
+import { applyCourseOverlay } from '../agent/trainingOverlay';
 
 // The original book catalogue and app-specific preparation / recovery actions.
 // eslint-disable-next-line @typescript-eslint/no-require-imports
@@ -114,6 +115,10 @@ export function canAddExercise(exercise: Exercise, profile: Profile, sessions: r
 }
 
 export function getWorkoutExercises(id: string, profile: Profile, setMultiplier = 1, dupDay?: import('./trainingPlans').DupDay, cycleWeek = 1, context: WorkoutContext = {}) {
+  const items = baseWorkoutExercises(id, profile, setMultiplier, dupDay, cycleWeek, context);
+  return equipmentWorkouts[id] ? items : applyCourseOverlay(items, profile, id, context.date || new Date(), exerciseId => exercises.find(e => e.id === exerciseId));
+}
+function baseWorkoutExercises(id: string, profile: Profile, setMultiplier = 1, dupDay?: import('./trainingPlans').DupDay, cycleWeek = 1, context: WorkoutContext = {}) {
   if (equipmentWorkouts[id]) return profile.goal === 'equipment' ? equipmentWorkoutItems(id, profile, context.date) : [];
   if (id === 'custom_daily') return (context.addedExerciseIds || []).flatMap((exerciseId) => {
     const exercise = exercises.find((item) => item.id === exerciseId);

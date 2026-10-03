@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { AppState, Platform } from 'react-native';
 import { createVoiceSession, type VoicePhase } from '../../nutrition/voiceSession';
+import { releaseWakeMicrophone } from '../../agent/systemChannel';
 
 export function useNutritionVoice(onText: (text: string) => void, onError: (text: string) => void) {
   const [phase, setPhase] = useState<VoicePhase>('idle');
@@ -8,7 +9,7 @@ export function useNutritionVoice(onText: (text: string) => void, onError: (text
   const callbacks = useRef({ onText, onError }); callbacks.current = { onText, onError };
   const session = useRef<ReturnType<typeof createVoiceSession> | null>(null);
   if (!session.current) session.current = createVoiceSession({
-    load: async () => (await import('expo-speech-recognition')).ExpoSpeechRecognitionModule,
+    load: async () => { await releaseWakeMicrophone(); return (await import('expo-speech-recognition')).ExpoSpeechRecognitionModule; },
     platform: Platform.OS,
     foreground: () => AppState.currentState !== 'background' && AppState.currentState !== 'inactive'
       && (Platform.OS !== 'web' || !document.hidden),
@@ -23,5 +24,6 @@ export function useNutritionVoice(onText: (text: string) => void, onError: (text
     const sub = AppState.addEventListener('change', changed); if (Platform.OS === 'web') document.addEventListener('visibilitychange', changed);
     return () => { alive.current = false; session.current?.abort(); sub.remove(); if (Platform.OS === 'web') document.removeEventListener('visibilitychange', changed); };
   }, []);
-  return { phase, active: phase !== 'idle', start: session.current.start, abort: session.current.abort };
+  return { phase, active: phase !== 'idle', start: session.current.start, stop: session.current.stop,
+    cancel: session.current.cancel, abort: session.current.abort };
 }

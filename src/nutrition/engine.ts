@@ -2,10 +2,11 @@ import { emptyAssistantState, normalizeAssistantState } from './assistantState';
 import { synchronizeMemoryAllergens } from './assistantMemory';
 import type { Profile } from '../types';
 import { localWeightDate } from '../data/weightTrend';
-import { FOOD_DATA_VERSION, RECIPES, getFood } from './catalog';
+import { FOOD_DATA_VERSION, FOODS, RECIPES, getFood } from './catalog';
 import { normalizePhotoEstimate, summarizePhotoEstimate, type PhotoEstimate } from './vision';
 import { isValidDateKey, validTimestamp } from './validation';
 import { normalizeFoodImportOrigin } from './foodImport';
+import { normalizeDishFood } from './dishEstimate';
 import { normalizeNutritionPhoto, normalizeNutritionPhotos } from './photoMetadata';
 import { isFoodArtworkCategory } from './foodArtwork';
 import { normalizeMealOverride, normalizeMealOverrides, normalizeNutritionDays, TRAINING_TIMES } from './state';
@@ -375,6 +376,7 @@ export function emptyNutritionJournal(): NutritionJournal {
 
 /** User labels never impersonate the curated catalogue or a measured USDA source. */
 export function normalizeCustomFood(input: unknown): import('./types').Food | null {
+  if (isRecord(input) && isRecord(input.source) && input.source.kind === 'recipe_estimate') return normalizeDishFood(input, FOODS);
   if (!isRecord(input) || !validId(input.id) || !input.id.startsWith('custom-') || getFood(input.id)
     || !validText(input.name, 80) || !validText(input.state, 120) || !isRecord(input.per100g)
     || !Array.isArray(input.allergens) || input.allergens.length > ALLERGENS.length || !input.allergens.every(item => ALLERGENS.includes(item))
@@ -502,6 +504,10 @@ export function normalizeNutritionJournal(input: unknown): NutritionJournal {
   if (Array.isArray(input.customFoods)) for (const value of input.customFoods.slice(0, 200)) {
     const food = normalizeCustomFood(value);
     if (food && !result.customFoods.some(item => item.id === food.id)) result.customFoods.push(food);
+  }
+  for (const [date, day] of Object.entries(result.days)) {
+    const conflicts = (day.skippedSlots || []).filter(slot => result.entries.some(entry => entry.date === date && entry.slot === slot));
+    if (conflicts.length) result.days[date] = { ...day, skippedSlots: day.skippedSlots!.filter(slot => !conflicts.includes(slot)), confirmedSlots: day.confirmedSlots.filter(slot => !conflicts.includes(slot)), completedAt: null };
   }
   if (Array.isArray(input.savedMeals)) for (const value of input.savedMeals.slice(0, 100)) {
     const entry = normalizeIntakeEntry(value);

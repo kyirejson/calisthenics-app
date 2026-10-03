@@ -2,28 +2,41 @@ import { normalizePersonalProfile, type PersonalTrainingProfile } from './person
 import type { Goal } from '../types';
 import type { Allergen, NutritionPreferences } from './types';
 import { normalizePreferencePatch } from './preferenceIntent.mjs';
+import { normalizeAssistantReply } from './assistantReply.mjs';
+import { normalizeTrainingOverlay, type TrainingOverlay } from '../agent/trainingOverlay';
+import type { TrainingIntent } from '../agent/trainingActions';
+import { explicitTrainingIntent } from '../agent/trainingIntent.mjs';
+import { normalizeAgentPreferences, type AgentPreferences } from '../agent/music';
+export { normalizeAssistantReply } from './assistantReply.mjs';
 export type AssistantPreferencePatch = Partial<Pick<NutritionPreferences, 'objective' | 'pattern' | 'activity' | 'allergens' | 'riskFlags'>> & { noListedRisks?: true; removeAllergens?: Allergen[] };
-export const ASSISTANT_REPLY_LIMIT = 50;
 export type AssistantFactKind = 'like' | 'avoid' | 'need' | 'allergy';
 export type AssistantFact = { id: string; kind: AssistantFactKind; text: string; createdAt: string };
 export type AssistantConversation = { id: string; question: string; answer: string; createdAt: string; topic?: Goal };
 export type AssistantAuthorization = { mode: 'request_confirmation' | 'full_access'; policyVersion: number };
 export type AssistantState = { version: 1; consentAt: string | null; facts: AssistantFact[]; conversations: AssistantConversation[];
   consentScope?: 2;
+  trainingOverlays?: Partial<Record<Goal, TrainingOverlay>>;
+  agentPreferences?: AgentPreferences;
   authorization?: AssistantAuthorization; personalProfiles?: Partial<Record<Goal, PersonalTrainingProfile>>;
   receipts?: Record<string, { kind: string; payload: string; createdAt: string }> };
 export function assistantAuthorization(state: AssistantState): AssistantAuthorization { return state.authorization || { mode: 'request_confirmation', policyVersion: 0 }; }
-export type AssistantIntent = { type: 'set_preferences'; patch: AssistantPreferencePatch } | { type: 'remember'; kind: AssistantFactKind; text: string } | {
+export type AssistantIntent = { type: 'open_music' } | TrainingIntent | { type: 'meal_status'; slot: import('./types').MealSlot; status: 'not_eaten' | 'unrecorded' } | { type: 'set_preferences'; patch: AssistantPreferencePatch } | { type: 'remember'; kind: AssistantFactKind; text: string } | {
   type: 'log_intake'; slot: 'breakfast' | 'lunch' | 'snack' | 'dinner' | null;
   items: { name: string; state: 'raw' | 'cooked' | 'unknown'; quantity: number | null; unit: 'g' | 'ml' | 'piece' | 'bowl' | 'serving' | 'package' | null }[];
 };
 const record = (v: unknown): v is Record<string, unknown> => !!v && typeof v === 'object' && !Array.isArray(v);
 const text = (v: unknown, max: number): v is string => typeof v === 'string' && !!v.trim() && Array.from(v).length <= max && !/[\u0000-\u001f]/u.test(v);
 const timestamp = (v: unknown): v is string => typeof v === 'string' && v.length <= 30 && Number.isFinite(Date.parse(v));
-export function shortAssistantReply(value: string): string { const chars = Array.from(value.trim()); return chars.length <= ASSISTANT_REPLY_LIMIT ? chars.join('') : '这次回答过长，请重试；没有改动记录。'; }
 export function emptyAssistantState(): AssistantState { return { version: 1, consentAt: null, facts: [], conversations: [] }; }
 export function normalizeAssistantIntent(input: unknown): AssistantIntent | null {
   if (!record(input)) return null;
+  if (input.type === 'open_music' && Object.keys(input).length === 1) return { type: 'open_music' };
+  if (input.type === 'training_adjustment') {
+    const phrase = input.operation === 'sets' ? `${input.date}${input.exercise}改为${input.sets}组` : input.operation === 'replace' ? `${input.date}${input.exercise}换成${input.replacement}` : input.operation === 'reschedule' ? `${input.date}和${input.toDate}训练交换` : input.operation === 'postpone' ? `${input.date}训练移到${input.toDate}` : input.operation === 'deload' ? `${input.date}训练减载` : input.operation === 'reset' ? `撤销${input.date}训练调整` : '';
+    const intent = explicitTrainingIntent(phrase);
+    return intent && Object.keys(input).every(k => ['type', 'operation', 'date', 'exercise', 'replacement', 'sets', 'toDate'].includes(k)) && Object.entries(intent).every(([key, value]) => input[key] === value) ? intent as TrainingIntent : null;
+  }
+  if (input.type === 'meal_status' && Object.keys(input).every(k => ['type', 'slot', 'status'].includes(k)) && ['breakfast', 'lunch', 'snack', 'dinner'].includes(String(input.slot)) && ['not_eaten', 'unrecorded'].includes(String(input.status))) return { type: 'meal_status', slot: input.slot as import('./types').MealSlot, status: input.status as 'not_eaten' | 'unrecorded' };
   if (input.type === 'set_preferences' && Object.keys(input).every(k => ['type', 'patch'].includes(k))) {
     const patch = normalizePreferencePatch(input.patch);
     return patch ? { type: 'set_preferences', patch: patch as AssistantPreferencePatch } : null;
@@ -41,11 +54,16 @@ export function normalizeAssistantState(input: unknown): AssistantState {
   const result = emptyAssistantState(); if (!record(input) || input.version !== 1) return result;
   if (timestamp(input.consentAt)) result.consentAt = input.consentAt;
   if (input.consentScope === 2) result.consentScope = 2;
+  if (input.agentPreferences !== undefined) result.agentPreferences = normalizeAgentPreferences(input.agentPreferences);
+  if (record(input.trainingOverlays)) {
+    result.trainingOverlays = {};
+    for (const topic of ['weight_loss', 'street_mastery', 'equipment'] as const) { const overlay = normalizeTrainingOverlay(input.trainingOverlays[topic]); if (overlay) result.trainingOverlays[topic] = overlay; }
+  }
   if (Array.isArray(input.facts)) for (const row of input.facts) {
     if (record(row) && text(row.id, 100) && text(row.text, 80) && timestamp(row.createdAt) && ['like', 'avoid', 'need', 'allergy'].includes(row.kind as string) && !result.facts.some(f => f.id === row.id)) result.facts.push({ id: row.id, text: row.text.trim(), kind: row.kind as AssistantFactKind, createdAt: row.createdAt });
   }
   if (Array.isArray(input.conversations)) for (const row of input.conversations) {
-    if (record(row) && text(row.id, 100) && typeof row.question === 'string' && row.question.trim().length <= 1000 && row.question.trim() && !/[\u0000-\u0008\u000b\u000c\u000e-\u001f]/u.test(row.question) && typeof row.answer === 'string' && row.answer.trim() && timestamp(row.createdAt) && !result.conversations.some(t => t.id === row.id)) result.conversations.push({ id: row.id, question: row.question.trim(), answer: shortAssistantReply(row.answer), createdAt: new Date(row.createdAt).toISOString(), ...(typeof row.topic === 'string' && ['weight_loss', 'street_mastery', 'equipment', 'fat_loss', 'gain', 'strength'].includes(row.topic) ? { topic: row.topic as Goal } : {}) });
+    if (record(row) && text(row.id, 100) && typeof row.question === 'string' && row.question.trim().length <= 1000 && row.question.trim() && !/[\u0000-\u0008\u000b\u000c\u000e-\u001f]/u.test(row.question) && typeof row.answer === 'string' && row.answer.trim() && timestamp(row.createdAt) && !result.conversations.some(t => t.id === row.id)) result.conversations.push({ id: row.id, question: row.question.trim(), answer: normalizeAssistantReply(row.answer), createdAt: new Date(row.createdAt).toISOString(), ...(typeof row.topic === 'string' && ['weight_loss', 'street_mastery', 'equipment', 'fat_loss', 'gain', 'strength'].includes(row.topic) ? { topic: row.topic as Goal } : {}) });
   }
   if (record(input.authorization) && ['request_confirmation', 'full_access'].includes(String(input.authorization.mode)) && Number.isSafeInteger(input.authorization.policyVersion) && Number(input.authorization.policyVersion) >= 0) result.authorization = { mode: input.authorization.mode as AssistantAuthorization['mode'], policyVersion: Number(input.authorization.policyVersion) };
   if (record(input.personalProfiles)) {
@@ -54,7 +72,7 @@ export function normalizeAssistantState(input: unknown): AssistantState {
   }
   if (record(input.receipts)) {
     result.receipts = {};
-    for (const [id, r] of Object.entries(input.receipts)) if (text(id, 100) && record(r) && ['remember', 'log_intake', 'meal', 'set_preferences'].includes(String(r.kind)) && typeof r.payload === 'string' && timestamp(r.createdAt)) result.receipts[id] = { kind: String(r.kind), payload: r.payload, createdAt: r.createdAt };
+    for (const [id, r] of Object.entries(input.receipts)) if (text(id, 100) && record(r) && ['remember', 'log_intake', 'meal', 'set_preferences', 'meal_status', 'training_adjustment', 'open_music'].includes(String(r.kind)) && typeof r.payload === 'string' && timestamp(r.createdAt)) result.receipts[id] = { kind: String(r.kind), payload: r.payload, createdAt: r.createdAt };
   }
   return result;
 }

@@ -61,3 +61,6 @@ credentials.json
 /*.aab
 # Local book retrieval index; do not publish copyrighted source text.
 /server/private/
+# Private licensed wake models; build-time opt-in, not part of the public knowledge release.
+/modules/uncover-copilot/android/src/main/assets/*.ppn
+/modules/uncover-copilot/android/src/main/assets/*.pv

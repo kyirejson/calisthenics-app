@@ -219,10 +219,12 @@ test('a new underweight measurement pauses targets even before recalibrating the
   assert.equal(engine.calculateTargets(future, base().preferences).status, 'ready');
 });
 
-test('next-meal adaptation requires complete earlier logs rather than trusting absent records', () => {
+test('next-meal recommendations remain usable with optional logs without inventing an intake deficit', () => {
   const result = actions.prepareMealAdjustment(profile, base(), training, date, { type: 'rebalance_meal', slot: 'dinner', focus: 'balanced' }, now);
-  assert.equal(result.status, 'needs_logs');
-  assert.match(result.message, /漏记不算少吃/);
+  assert.equal(result.status, 'ready');
+  assert.equal(result.draft.projectionLabel, '推荐菜单合计');
+  assert.match(result.draft.explanation, /未记录餐次保留未知/);
+  assert.match(result.draft.notes.join(' '), /不据空白记录计算全天摄入缺口/);
 });
 
 test('preview and explicit application change only the unconsumed selected meal', () => {

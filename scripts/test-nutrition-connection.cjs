@@ -43,3 +43,15 @@ test('health check reports unconfigured credentials without making an advice req
   assert.equal((await c.getNutritionServiceStatus()).readiness, 'unconfigured');
   assert.deepEqual(paths, ['http://127.0.0.1:8787/health']);
 });
+
+test('long replies survive client parsing; bounded history preserves recent paired turns without exceeding API limits', async () => {
+  const { validateAdviceRequest } = await import('../server/validation.mjs');
+  const answer = '记录按你的需要进行，不需要强制补齐其他餐；留空不是没有摄入。'.repeat(20);
+  let sent;
+  const c = client(async (_, init) => { sent = JSON.parse(init.body); return new Response(JSON.stringify({ answer, sources: [] }), { headers: { 'content-type': 'application/json' } }); });
+  const history = Array.from({ length: 8 }, (_, i) => [{ role: 'user', content: '用户'.repeat(500) }, { role: 'assistant', content: '完整回答'.repeat(1000) }]).flat();
+  assert.equal((await c.askNutritionAgent('你好', {}, undefined, history)).answer, answer);
+  assert.ok(sent.history.length <= 12 && sent.history.length >= 2); assert.equal(sent.history.length % 2, 0);
+  assert.ok(JSON.stringify(sent.history).length <= 9000); assert.ok(sent.history.every(t => t.content.length <= (t.role === 'user' ? 1000 : 1800)));
+  assert.ok(validateAdviceRequest(sent));
+});

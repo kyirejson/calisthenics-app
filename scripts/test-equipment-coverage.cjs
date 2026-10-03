@@ -162,7 +162,9 @@ test('snapshot ownership, replacement units and recovery timeline stay coherent'
 });
 test('optional progression still requires two comparable completed sessions rather than plan presence', () => {
   const item = equipmentSessionPlan(id, profile).items.find(i => i.loadBasis === 'per_hand');
-  const make = (key, offset = 0) => ({ id: key, startedAt: new Date(Date.now() - 172800000 - offset).toISOString(), completedAt: new Date(Date.now() - 172800000 - offset).toISOString(), quality: 'solid', completion: 'complete', exercises: [{ exerciseId: item.id, targetSnapshot: { loadBasis: item.loadBasis }, sets: Array.from({ length: item.targetSets }, () => ({ completed: true, reps: item.repRange[1], loadKg: 10, rir: 2 })) }] });
+  // A fixed clock keeps the two samples exactly one day apart even under load.
+  const anchor = Date.now() - 172800000;
+  const make = (key, offset = 0) => ({ id: key, startedAt: new Date(anchor - offset).toISOString(), completedAt: new Date(anchor - offset).toISOString(), quality: 'solid', completion: 'complete', exercises: [{ exerciseId: item.id, targetSnapshot: { loadBasis: item.loadBasis }, sets: Array.from({ length: item.targetSets }, () => ({ completed: true, reps: item.repRange[1], loadKg: 10, rir: 2 })) }] });
   assert.equal(equipmentProgressionSuggestion(item, [make('one')]), '');
   assert.ok(equipmentProgressionSuggestion(item, [make('one'), make('two', 86400000)]));
   assert.equal(equipmentProgressionSuggestion(item, [make('one'), { ...make('two', 86400000), quality: 'pain' }]), '');

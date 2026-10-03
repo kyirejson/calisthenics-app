@@ -368,6 +368,10 @@ function weightLossTrainingDays(profile: Profile): PlanDay[] {
 }
 
 export function getPlanDay(profile: Profile, date = new Date()) {
+  const result = basePlanDay(profile, date), override = profile.agentTrainingOverlay?.days[`${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`];
+  return override ? { ...result, day: { ...result.day, day: date.getDay(), ...override, workoutId: override.workoutId || undefined } } : result;
+}
+function basePlanDay(profile: Profile, date = new Date()) {
   const dayOfWeek = date.getDay();
   if (profile.goal === 'equipment') {
     const frequency = equipmentFrequency(profile.frequency, profile.equipmentSplit);

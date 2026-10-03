@@ -25,7 +25,8 @@ async function main() {
   const { createNutritionServer } = await import(pathToFileURL(path.resolve(__dirname, '../server/index.mjs')).href);
   async function fixture(t, options = {}) {
     const calls = [];
-    const server = createNutritionServer({ apiKey: 'offline-test-only', model: 'deepseek-flash', corsOrigins: ['http://localhost:8081', 'http://127.0.0.1:8081'], fetchImpl: async (url, init) => { calls.push({ url, init }); return upstream(RESULT); }, ...options });
+    const server = createNutritionServer({ apiKey: 'offline-test-only', model: 'deepseek-flash', corsOrigins: ['http://localhost:8081', 'http://127.0.0.1:8081'], ...options,
+      fetchImpl: async (url, init) => { calls.push({ url, init }); return options.fetchImpl ? options.fetchImpl(url, init) : upstream(RESULT); } });
     await new Promise((resolve, reject) => { server.once('error', reject); server.listen(0, '127.0.0.1', resolve); });
     t.after(() => new Promise(resolve => { server.closeAllConnections(); server.close(resolve); }));
     const base = `http://127.0.0.1:${server.address().port}`;
@@ -295,7 +296,7 @@ async function main() {
     assert.equal(context.targets.message, undefined);
     assert.equal(context.preferences.screeningCompletedAt, undefined);
     assert.match(payload.messages[0].content, /禁止重新计算/);
-    assert.equal(payload.max_tokens, 1400);
+    assert.equal(payload.max_tokens, 4000);
   });
 
   for (const [name, value] of [
@@ -313,20 +314,21 @@ async function main() {
     const app = await fixture(t, { fetchImpl: async () => upstream(value) });
     const result = await app.post({ question: '怎么安排饮食？', context: READY }, '/v1/nutrition/advice');
     assert.equal(result.response.status, 200);
-    assert.match(result.body.answer, /^这次生成的建议未通过可靠性检查，暂不采用。/);
+    assert.match(result.body.answer, /^我们先把问题说具体/);
+    assert.equal(app.calls.length, 2, 'one bounded automatic recheck, never a retry loop');
     assert.equal(result.body.answer.includes(value.answer), false);
     assert.equal(JSON.stringify(result.body).includes('evil.example'), false);
     assert.equal(JSON.stringify(result.body).includes('fabricated'), false);
-    assert.equal(result.body.sources.length, 2);
+    assert.equal(result.body.sources.length, 1);
     assert.ok(result.body.sources.every(source => source.url.startsWith('https://www.niddk.nih.gov/')));
   });
 
-  test('missing or empty decoded advice remains a structured 502 error', async t => {
+  test('missing or empty decoded advice automatically rechecks then offers guidance', async t => {
     for (const value of [{ sourceIds: ['balanced'] }, { answer: '  ', sourceIds: ['balanced'] }]) {
       const app = await fixture(t, { fetchImpl: async () => upstream(value) });
       const result = await app.post({ question: '怎么安排饮食？', context: READY }, '/v1/nutrition/advice');
-      assert.equal(result.response.status, 502);
-      assert.equal(result.body.error.code, 'INVALID_AI_RESPONSE');
+      assert.equal(result.response.status, 200);
+      assert.equal(app.calls.length, 2); assert.match(result.body.answer, /先把问题说具体/);
     }
   });
 
@@ -395,7 +397,7 @@ async function main() {
     const app = await fixture(t, { fetchImpl: async () => upstream({ answer: '建议原味酸奶搭配水果。', sourceIds: ['balanced'], action: ACTION }) });
     const context = actionContext(); context.preferences.allergens = ['milk'];
     const result = await app.post({ question: '帮我换午餐', context }, '/v1/nutrition/advice');
-    assert.match(result.body.answer, /^这次生成的建议未通过可靠性检查/);
+    assert.match(result.body.answer, /^我们先把问题说具体/);
     assert.equal(result.body.action, undefined);
   });
 
@@ -411,14 +413,14 @@ async function main() {
     const app = await fixture(t, { fetchImpl: async () => upstream({ answer: '请先预览这餐的替换草案。', sourceIds: ['balanced'], action }) });
     const context = actionContext(); change(context);
     const result = await app.post({ question: '帮我换午餐', context }, '/v1/nutrition/advice');
-    assert.match(result.body.answer, /^这次生成的建议未通过可靠性检查/);
+    assert.match(result.body.answer, /^我们先把问题说具体/);
     assert.equal(result.body.action, undefined);
   });
 
   test('claims that an unconfirmed action was already saved are rejected', async t => {
     const app = await fixture(t, { fetchImpl: async () => upstream({ answer: '已帮你修改晚餐。', sourceIds: ['balanced'], action: ACTION }) });
     const result = await app.post({ question: '帮我换午餐', context: actionContext() }, '/v1/nutrition/advice');
-    assert.match(result.body.answer, /^这次生成的建议未通过可靠性检查/);
+    assert.match(result.body.answer, /^我们先把问题说具体/);
     assert.equal(result.body.action, undefined);
   });
 

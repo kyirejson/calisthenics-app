@@ -1,3 +1,4 @@
+import { explicitTrainingIntent } from '../src/agent/trainingIntent.mjs';
 export function hasAllergyNegation(question) {
   return /不过敏|不(?:是|对).{0,50}过敏|没有.{0,50}过敏|并非.{0,50}过敏|无.{0,30}过敏|(?:not|no).{0,30}allerg/iu.test(question);
 }
@@ -15,6 +16,14 @@ export function explicitMemoryIntent(question) {
 }
 export function validateAssistantIntent(value, input) {
   if (input.assistantMode !== true || !value || typeof value !== 'object' || Array.isArray(value)) return null;
+  if (value.type === 'training_adjustment') {
+    const grounded = explicitTrainingIntent(input.question);
+    return grounded && Object.keys(value).length === Object.keys(grounded).length && Object.entries(grounded).every(([key, v]) => value[key] === v) ? grounded : null;
+  }
+  if (value.type === 'meal_status') {
+    const grounded = explicitMealStatusIntent(input.question);
+    return grounded && Object.keys(value).every(k => ['type', 'slot', 'status'].includes(k)) && value.slot === grounded.slot && value.status === grounded.status ? grounded : null;
+  }
   if (value.type === 'set_preferences') {
     const grounded = explicitPreferenceIntent(input.question);
     return grounded && JSON.stringify(value) === JSON.stringify(grounded) ? grounded : null;
@@ -33,3 +42,4 @@ export function validateAssistantIntent(value, input) {
   return { type: 'log_intake', slot: value.slot, items };
 }
 import { explicitPreferenceIntent } from '../src/nutrition/preferenceIntent.mjs';
+import { explicitMealStatusIntent } from '../src/nutrition/mealStatusIntent.mjs';

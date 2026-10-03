@@ -41,7 +41,7 @@ export type Food = {
   packageGrams?: number;
   photo?: NutritionPhoto;
   artworkCategory?: FoodArtworkCategory;
-  source: { title: string; url: string; foodCode: string; version: string; license: string; kind?: 'user_label'; origin?: FoodImportOrigin };
+  source: { title: string; url: string; foodCode: string; version: string; license: string; kind?: 'user_label' | 'recipe_estimate'; origin?: FoodImportOrigin; recipe?: import('./dishEstimate').DishRecipe };
 };
 export type FoodImportOrigin = { provider: 'label_photo' | 'open_food_facts'; identifier: string; fetchedAt: string; url: string; license: string };
 export type FoodLabelDraft = {
@@ -102,6 +102,7 @@ export type NutritionTargetSnapshot = {
 export type NutritionDayState = {
   targetHistory: NutritionTargetSnapshot[];
   confirmedSlots: MealSlot[];
+  skippedSlots?: MealSlot[];
   completedAt: string | null;
 };
 export type NutritionMealOverride = {

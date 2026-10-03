@@ -1,6 +1,6 @@
 {
   "name": "uncover-app",
-  "version": "1.5.1",
+  "version": "1.6.0",
   "main": "index.ts",
   "dependencies": {
     "@expo/metro-runtime": "~57.0.16",
@@ -15,6 +15,7 @@
     "expo-image-picker": "~57.0.20",
     "expo-linear-gradient": "~57.0.1",
     "expo-location": "~57.0.20",
+    "expo-secure-store": "~57.0.4",
     "expo-speech-recognition": "^57.1.0",
     "expo-sqlite": "~57.0.3",
     "expo-status-bar": "~57.0.1",

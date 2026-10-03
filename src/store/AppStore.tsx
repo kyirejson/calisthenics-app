@@ -13,8 +13,15 @@ import { defaultSettings, normalizeSettings, normalizeProfile, normalizeDailyEdi
 import { loadStoredDomain } from './storage';
 import { emptyNutritionJournal, normalizeNutritionJournal } from '../nutrition/engine';
 import { withCustomFood, withIntakeEntry, withMealRevision, withNutritionPreferences, withoutCustomFood, withoutIntakeEntry, withoutMealOverride, type IntakeInput } from '../nutrition/journal';
-import { createNutritionTargetSnapshot, withDailyTargetSnapshot, withMealLoggingConfirmation } from '../nutrition/timeline';
+import { createNutritionTargetSnapshot, withDailyTargetSnapshot, withMealLoggingConfirmation, withMealStatus } from '../nutrition/timeline';
+import { mealStatusReply } from '../nutrition/mealStatusIntent.mjs';
+import { baseDailyEditDate, effectiveDailyEdits, effectiveTrainingProfile } from '../agent/trainingOverlay';
+import { prepareTrainingAdjustment } from '../agent/trainingActions';
+import { musicURLs, normalizeAgentPreferences, type AgentPreferences } from '../agent/music';
+import { Linking, Platform } from 'react-native';
 import { getNutritionTrainingContext } from '../nutrition/training';
+import { publishAgentEvent } from '../agent/events';
+import { resetAgentConnection } from '../agent/connectionRuntime.mjs';
 import { withAppliedMealDraft, type MealAdjustmentDraft } from '../nutrition/adjustments';
 import { localWeightDate } from '../data/weightTrend';
 import type { Food, MealSlot, NutritionJournal, NutritionPreferences } from '../nutrition/types';
@@ -53,6 +60,7 @@ type StoreValue = {
   clearAssistantHistory: () => Promise<void>;
   readAssistantHistory: (query?: ArchiveQuery) => Promise<AssistantConversation[]>;
   setAssistantAuthorization: (mode: AssistantAuthorization['mode']) => Promise<void>;
+  setAgentPreferences: (patch: Partial<AgentPreferences> | ((current: AgentPreferences) => Partial<AgentPreferences>)) => Promise<void>;
   savePersonalTrainingProfile: (profile: PersonalTrainingProfile) => Promise<void>;
   executeAssistantOperation: (operation: AssistantOperation) => Promise<void>;
   saveNutritionPreferences: (preferences: NutritionPreferences) => Promise<void>;
@@ -63,6 +71,7 @@ type StoreValue = {
   deleteCustomFood: (id: string) => Promise<void>;
   captureNutritionTarget: () => Promise<void>;
   confirmNutritionLogging: (date: string, slot: MealSlot | 'day', confirmed: boolean) => Promise<void>;
+  setNutritionMealStatus: (date: string, slot: MealSlot, status: 'not_eaten' | 'unrecorded') => Promise<void>;
   applyNutritionMealDraft: (draft: MealAdjustmentDraft) => Promise<void>;
   resetNutritionMeal: (date: string, slot: MealSlot) => Promise<void>;
   saveProfile: (profile: Profile) => Promise<void>;
@@ -96,6 +105,7 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
   const [storageIssues, setStorageIssues] = useState<Record<string, string>>({});
   const issuesRef = useRef<Record<string, string>>({});
   const pendingNutrition = useRef(Promise.resolve());
+  const pendingTrainingAdjustments = useRef(0);
   const pendingAccount = useRef(Promise.resolve());
   const settingsRef = useRef(defaultSettings);
   const clearing = useRef(false);
@@ -194,6 +204,7 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
   };
 
   const updateProfile = useCallback((change: (current: Profile | null) => Profile) => {
+    if (pendingTrainingAdjustments.current) return Promise.reject(new Error('正在保存训练调整，请完成后再修改档案。'));
     if (clearing.current) return Promise.reject(new Error('正在清除数据，请稍后重试。'));
     if (reloading.current) return Promise.reject(new Error('正在重新加载数据，请稍后重试。'));
     const operation = pendingAccount.current.then(async () => {
@@ -230,6 +241,7 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
 
   // Serialize journal mutations so rapid saves/deletes cannot restore stale records.
   const updateJournal = useCallback((change: (current: typeof journal.current) => typeof journal.current) => {
+    if (pendingTrainingAdjustments.current) return Promise.reject(new Error('正在保存训练调整，请完成后再修改训练记录。'));
     if (clearing.current) return Promise.reject(new Error('正在清除数据，请稍后重试。'));
     if (reloading.current) return Promise.reject(new Error('正在重新加载数据，请稍后重试。'));
     const operation = pendingJournal.current.then(async () => {
@@ -250,15 +262,17 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
     const cleaned = cleanSession(session);
     if (cleaned.kind !== 'running' && !cleaned.exercises.length) return { ...current, sessions: current.sessions.filter((item) => item.id !== cleaned.id) };
     return { ...current, sessions: [cleaned, ...current.sessions.filter((item) => item.id !== cleaned.id)] };
-  }), [updateJournal]);
+  }).then(() => publishAgentEvent({ kind: 'training_saved', id: session.id, at: Date.now() })), [updateJournal]);
 
   const deleteSession = useCallback((id: string) => updateJournal((current) => ({ ...current, sessions: current.sessions.filter((session) => session.id !== id) })), [updateJournal]);
   const addDailyExercise = useCallback((date: string, workoutId: string, exerciseId: string) => updateJournal((current) => {
     if (!exerciseIds.has(exerciseId)) throw new Error('此动作已不在动作库中。');
+    date = baseDailyEditDate(effectiveTrainingProfile(profileRef.current, nutritionRef.current.assistant), date);
     const key = dailyWorkoutKey(date, workoutId);
     return { ...current, edits: { ...current.edits, [key]: { date, workoutId, exerciseIds: [...new Set([...(current.edits[key]?.exerciseIds || []), exerciseId])] } } };
   }), [updateJournal]);
   const removeDailyExercise = useCallback((date: string, workoutId: string, exerciseId: string) => updateJournal((current) => {
+    date = baseDailyEditDate(effectiveTrainingProfile(profileRef.current, nutritionRef.current.assistant), date);
     const key = dailyWorkoutKey(date, workoutId);
     const edits = { ...current.edits };
     if (edits[key]) {
@@ -268,7 +282,10 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
     }
     return { ...current, edits };
   }), [updateJournal]);
-  const resetTrainingDay = useCallback((date: string) => updateJournal((current) => withoutTrainingDay(current.sessions, current.edits, date)), [updateJournal]);
+  const resetTrainingDay = useCallback((date: string) => updateJournal(current => {
+    const owner = baseDailyEditDate(effectiveTrainingProfile(profileRef.current, nutritionRef.current.assistant), date);
+    return { sessions: withoutTrainingDay(current.sessions, {}, date).sessions, edits: withoutTrainingDay([], current.edits, owner).edits };
+  }), [updateJournal]);
 
   const updateSettings = useCallback((patch: Partial<Settings>) => {
     if (clearing.current) return Promise.reject(new Error('正在清除数据，请稍后重试。'));
@@ -309,8 +326,10 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
       const retainedPhotos = new Set(referencedPhotoIds(next));
       const removedPhotos = referencedPhotoIds(nutritionRef.current).filter(id => !retainedPhotos.has(id));
       const changedTurns = next.assistant.conversations.filter(turn => nutritionRef.current.assistant.conversations.some(old => old.id === turn.id && old.answer !== turn.answer));
+      const addedEntries = next.entries.filter(entry => !nutritionRef.current.entries.some(old => old.id === entry.id));
       nutritionRef.current = next;
       setNutritionJournal(next);
+      for (const entry of addedEntries) publishAgentEvent({ kind: 'intake_saved', id: entry.id, at: Date.now() });
       if (archiveReady.current && changedTurns.length) {
         try { for (const turn of changedTurns) await assistantArchive.put(turn); }
         catch { console.warn('业务已保存，但对话回执归档未更新；实际业务记录仍为准。'); }
@@ -368,26 +387,61 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
     if (!personal || personal.topic !== profileRef.current?.goal) throw new Error('专题或档案已变化，请重新打开问卷。');
     return { ...current, assistant: { ...current.assistant, personalProfiles: { ...current.assistant.personalProfiles, [personal.topic]: personal } } };
   }), [updateNutrition]);
-  const executeAssistantOperation = useCallback((operation: AssistantOperation) => updateNutrition(async current => {
+  const setAgentPreferences = useCallback((patch: Partial<AgentPreferences> | ((current: AgentPreferences) => Partial<AgentPreferences>)) => updateNutrition(current => {
+    const preferences = normalizeAgentPreferences(current.assistant.agentPreferences);
+    return { ...current, assistant: { ...current.assistant, agentPreferences: normalizeAgentPreferences({ ...preferences, ...(typeof patch === 'function' ? patch(preferences) : patch) }) } };
+  }), [updateNutrition]);
+  const executeAssistantOperation = useCallback((operation: AssistantOperation) => {
+    let externalDispatched = false;
+    const adjustsTraining = operation.kind === 'training_adjustment';
+    if (adjustsTraining) pendingTrainingAdjustments.current++;
+    return updateNutrition(async current => {
     await Promise.all([pendingAccount.current, pendingJournal.current]);
-    if (authorizeAssistantOperation(current.assistant, operation, assistantDataBasis(current, profileRef.current, journal.current.sessions, journal.current.edits)) === 'replay') return current;
+    const effectiveProfile = effectiveTrainingProfile(profileRef.current, current.assistant);
+    const effectiveEdits = effectiveDailyEdits(journal.current.edits, effectiveProfile);
+    if (authorizeAssistantOperation(current.assistant, operation, assistantDataBasis(current, effectiveProfile, journal.current.sessions, effectiveEdits)) === 'replay') return current;
     let next: NutritionJournal;
-    if (operation.kind === 'remember') next = withRememberedFact(current, operation.fact);
+    if (operation.kind === 'open_music') {
+      if (operation.playlist !== current.assistant.agentPreferences?.musicPlaylist) throw Error('歌单已变化，请重新请求。');
+      const urls = musicURLs(operation.playlist);
+      const native = Platform.OS !== 'web' && await Linking.canOpenURL(urls.native).catch(() => false);
+      await Promise.all([pendingAccount.current, pendingJournal.current]);
+      const liveProfile = effectiveTrainingProfile(profileRef.current, current.assistant);
+      authorizeAssistantOperation(current.assistant, operation, assistantDataBasis(current, liveProfile, journal.current.sessions, effectiveDailyEdits(journal.current.edits, liveProfile)));
+      await Linking.openURL(native ? urls.native : urls.web);
+      externalDispatched = true;
+      next = current;
+    }
+    else if (operation.kind === 'training_adjustment') {
+      if (!effectiveProfile) throw Error('请先建立训练档案。');
+      const draft = prepareTrainingAdjustment(effectiveProfile, journal.current.sessions, effectiveEdits, operation.draft.intent);
+      if (JSON.stringify(draft) !== JSON.stringify(operation.draft)) throw Error('训练草案已变化，请重新生成。');
+      next = { ...current, assistant: { ...current.assistant, trainingOverlays: { ...current.assistant.trainingOverlays, [effectiveProfile.goal]: draft.overlay } } };
+    }
+    else if (operation.kind === 'remember') next = withRememberedFact(current, operation.fact);
     else if (operation.kind === 'set_preferences') next = withAssistantPreferences(current, profileRef.current, operation.patch);
+    else if (operation.kind === 'meal_status') {
+      if (operation.date !== localWeightDate(new Date())) throw new Error('日期已变化，请重新发送餐次状态。');
+      next = withMealStatus(current, operation.date, operation.slot, operation.status);
+    }
     else if (operation.kind === 'log_intake') {
       next = withIntakeEntry(current, operation.input);
       next = { ...next, assistant: { ...next.assistant, conversations: next.assistant.conversations.map(turn => operation.input.id === 'intake-' + turn.id ? { ...turn, answer: '已记录这一餐，可在今日饮食中查看。' } : turn) } };
     }
     else {
       if (!profileRef.current || operation.draft.date !== localWeightDate(new Date())) throw new Error('日期或资料已变化，请重新生成草案。');
-      const training = getNutritionTrainingContext(profileRef.current, journal.current.sessions, journal.current.edits, operation.draft.date);
-      next = withAppliedMealDraft(current, profileRef.current, training, operation.draft);
+      const training = getNutritionTrainingContext(effectiveProfile!, journal.current.sessions, effectiveEdits, operation.draft.date);
+      next = withAppliedMealDraft(current, effectiveProfile!, training, operation.draft);
     }
-    const answer = operation.kind === 'remember' ? '已记住，可在“记忆”中查看或删除。' : operation.kind === 'set_preferences' ? '已保存营养偏好，参考目标由本机重新计算。' : operation.kind === 'meal' ? '已更新推荐菜单；实际摄入记录未改变。' : '已记录这一餐，可在今日饮食中查看。';
+    const answer = operation.kind === 'open_music' ? '已向系统请求打开歌单；是否自动播放由音乐 App 决定。' : operation.kind === 'training_adjustment' ? '已保存训练调整：' + operation.draft.summary : operation.kind === 'remember' ? '已记住，可在“记忆”中查看或删除。' : operation.kind === 'set_preferences' ? '已保存营养偏好，参考目标由本机重新计算。' : operation.kind === 'meal_status' ? mealStatusReply(operation, true) : operation.kind === 'meal' ? '已更新推荐菜单；实际摄入记录未改变。' : '已记录这一餐，可在今日饮食中查看。';
     return { ...next, assistant: { ...next.assistant,
       conversations: next.assistant.conversations.map(turn => operation.id === (operation.kind === 'log_intake' ? 'intake-' : operation.kind + '-') + turn.id ? { ...turn, answer } : turn),
       receipts: { ...next.assistant.receipts, [operation.id]: { kind: operation.kind, payload: assistantOperationPayload(operation), createdAt: new Date().toISOString() } } } };
-  }), [updateNutrition]);
+    }).catch(error => {
+      if (externalDispatched) throw new Error('系统打开请求已发出，但回执保存失败；请先查看音乐 App，不要重复执行。');
+      throw error;
+    }).finally(() => { if (adjustsTraining) pendingTrainingAdjustments.current--; });
+  }, [updateNutrition]);
   const saveNutritionPreferences = useCallback((preferences: NutritionPreferences) => updateNutrition((current) => withNutritionPreferences(current, preferences)), [updateNutrition]);
   const saveIntakeEntry = useCallback((input: IntakeInput) => updateNutrition((current) => {
     const journal = withIntakeEntry(current, input);
@@ -402,18 +456,21 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
     if (!profileRef.current) return current;
     const now = new Date();
     const date = localWeightDate(now);
-    const training = getNutritionTrainingContext(profileRef.current, journal.current.sessions, journal.current.edits, date);
-    return withDailyTargetSnapshot(current, date, createNutritionTargetSnapshot(profileRef.current, current, training, now.toISOString()));
+    const effective = effectiveTrainingProfile(profileRef.current, current.assistant)!;
+    const training = getNutritionTrainingContext(effective, journal.current.sessions, effectiveDailyEdits(journal.current.edits, effective), date);
+    return withDailyTargetSnapshot(current, date, createNutritionTargetSnapshot(effective, current, training, now.toISOString()));
   }), [updateNutrition]);
   const confirmNutritionLogging = useCallback((date: string, slot: MealSlot | 'day', confirmed: boolean) => updateNutrition(current => withMealLoggingConfirmation(current, date, slot, confirmed)), [updateNutrition]);
+  const setNutritionMealStatus = useCallback((date: string, slot: MealSlot, status: 'not_eaten' | 'unrecorded') => updateNutrition(current => withMealStatus(current, date, slot, status)), [updateNutrition]);
   const applyNutritionMealDraft = useCallback((draft: MealAdjustmentDraft) => updateNutrition(async current => {
     // A pending profile/course save must finish before accepting an old preview.
     await Promise.all([pendingAccount.current, pendingJournal.current]);
     if (!profileRef.current) throw new Error('个人资料已变化，请重新打开饮食页。');
     const date = localWeightDate(new Date());
     if (draft.date !== date) throw new Error('日期已变化，请回到今天并重新生成草案。');
-    const training = getNutritionTrainingContext(profileRef.current, journal.current.sessions, journal.current.edits, date);
-    return withAppliedMealDraft(current, profileRef.current, training, draft);
+    const effective = effectiveTrainingProfile(profileRef.current, current.assistant)!;
+    const training = getNutritionTrainingContext(effective, journal.current.sessions, effectiveDailyEdits(journal.current.edits, effective), date);
+    return withAppliedMealDraft(current, effective, training, draft);
   }), [updateNutrition]);
   const resetNutritionMeal = useCallback((date: string, slot: MealSlot) => updateNutrition(current => withoutMealOverride(current, date, slot)), [updateNutrition]);
 
@@ -436,6 +493,7 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
     try {
       await Promise.all([pendingJournal.current, pendingNutrition.current, pendingAccount.current]);
       const photos = referencedPhotoIds(nutritionRef.current);
+      await resetAgentConnection();
       const archived = await assistantArchive.exportAll();
       await assistantArchive.clear();
       try { await AsyncStorage.multiRemove(Object.values(KEYS)); }
@@ -463,9 +521,13 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
-  const assistantMethods = { readAssistantHistory, setAssistantAuthorization, savePersonalTrainingProfile, executeAssistantOperation };
-  const value = useMemo(() => ({ ...assistantMethods, ready, profile, sessions, settings, dailyEdits, nutritionJournal, nutritionStorageIssue, storageIssues, retryStorageLoading, setPhotoConsent, setAssistantConsent, appendAssistantConversation, saveAssistantFact, deleteAssistantFact, clearAssistantHistory, saveNutritionPreferences, saveIntakeEntry, deleteIntakeEntry, setPlannedMealRevision, saveCustomFood, deleteCustomFood, captureNutritionTarget, confirmNutritionLogging, applyNutritionMealDraft, resetNutritionMeal, saveProfile, patchProfile, switchTrainingGoal, saveSession, deleteSession, addDailyExercise, removeDailyExercise, resetTrainingDay, updateSettings, exportData, clearData }), [ready, profile, sessions, settings, dailyEdits, nutritionJournal, nutritionStorageIssue, storageIssues, retryStorageLoading, setPhotoConsent, setAssistantConsent, appendAssistantConversation, saveAssistantFact, deleteAssistantFact, clearAssistantHistory, saveNutritionPreferences, saveIntakeEntry, deleteIntakeEntry, setPlannedMealRevision, saveCustomFood, deleteCustomFood, captureNutritionTarget, confirmNutritionLogging, applyNutritionMealDraft, resetNutritionMeal, saveProfile, patchProfile, switchTrainingGoal, saveSession, deleteSession, addDailyExercise, removeDailyExercise, resetTrainingDay, updateSettings, exportData, clearData, readAssistantHistory, setAssistantAuthorization, savePersonalTrainingProfile, executeAssistantOperation]);
-  return <Store.Provider value={value}>{children}</Store.Provider>;
+  const assistantMethods = { readAssistantHistory, setAssistantAuthorization, savePersonalTrainingProfile, executeAssistantOperation, setNutritionMealStatus };
+  const value = useMemo(() => ({ ...assistantMethods, ready, profile, sessions, settings, dailyEdits, nutritionJournal, nutritionStorageIssue, storageIssues, retryStorageLoading, setPhotoConsent, setAssistantConsent, appendAssistantConversation, saveAssistantFact, deleteAssistantFact, clearAssistantHistory, saveNutritionPreferences, saveIntakeEntry, deleteIntakeEntry, setPlannedMealRevision, saveCustomFood, deleteCustomFood, captureNutritionTarget, confirmNutritionLogging, applyNutritionMealDraft, resetNutritionMeal, saveProfile, patchProfile, switchTrainingGoal, saveSession, deleteSession, addDailyExercise, removeDailyExercise, resetTrainingDay, updateSettings, exportData, clearData }), [ready, profile, sessions, settings, dailyEdits, nutritionJournal, nutritionStorageIssue, storageIssues, retryStorageLoading, setPhotoConsent, setAssistantConsent, appendAssistantConversation, saveAssistantFact, deleteAssistantFact, clearAssistantHistory, saveNutritionPreferences, saveIntakeEntry, deleteIntakeEntry, setPlannedMealRevision, saveCustomFood, deleteCustomFood, captureNutritionTarget, confirmNutritionLogging, applyNutritionMealDraft, resetNutritionMeal, saveProfile, patchProfile, switchTrainingGoal, saveSession, deleteSession, addDailyExercise, removeDailyExercise, resetTrainingDay, updateSettings, exportData, clearData, readAssistantHistory, setAssistantAuthorization, savePersonalTrainingProfile, executeAssistantOperation, setNutritionMealStatus]);
+  const exposedValue = useMemo(() => {
+    const projectedProfile = effectiveTrainingProfile(value.profile, value.nutritionJournal.assistant);
+    return { ...value, setAgentPreferences, profile: projectedProfile, dailyEdits: effectiveDailyEdits(value.dailyEdits, projectedProfile) };
+  }, [value, setAgentPreferences]);
+  return <Store.Provider value={exposedValue}>{children}</Store.Provider>;
 }
 
 export function useAppStore() {

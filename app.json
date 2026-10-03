@@ -2,7 +2,7 @@
   "expo": {
     "name": "Uncover",
     "slug": "uncover",
-    "version": "1.5.1",
+    "version": "1.6.0",
     "orientation": "portrait",
     "icon": "./assets/app-icon.png",
     "userInterfaceStyle": "light",
@@ -14,6 +14,8 @@
       }
     },
     "plugins": [
+      "./plugins/with-personal-agent.cjs",
+      "expo-secure-store",
       "expo-sqlite",
       [
         "expo-camera",
@@ -49,11 +51,11 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.zizhong.jinjie",
-      "buildNumber": "7"
+      "buildNumber": "8"
     },
     "android": {
       "package": "com.zizhong.jinjie",
-      "versionCode": 7,
+      "versionCode": 8,
       "permissions": [
         "CAMERA",
         "ACCESS_COARSE_LOCATION",

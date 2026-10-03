@@ -1,0 +1,9 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+  <uses-permission android:name="android.permission.RECORD_AUDIO" />
+  <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+  <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />
+  <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
+  <application>
+    <service android:name=".CopilotWakeService" android:exported="false" android:foregroundServiceType="microphone" android:stopWithTask="true" />
+  </application>
+</manifest>

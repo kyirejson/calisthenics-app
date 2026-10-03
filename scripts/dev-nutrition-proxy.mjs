@@ -3,12 +3,12 @@ import http from 'node:http';
 // Local browser development only: reuse the deployed API without copying its secret.
 const upstream = 'https://uncover-nutrition-api.onrender.com';
 const origins = new Set(['http://127.0.0.1:8081', 'http://localhost:8081']);
-const posts = new Set(['/v1/nutrition/advice', '/v1/nutrition/analyze-photo', '/v1/nutrition/read-label', '/v1/nutrition/lookup-barcode']);
+const posts = new Set(['/v1/nutrition/advice', '/v1/nutrition/analyze-photo', '/v1/nutrition/read-label', '/v1/nutrition/lookup-barcode', '/v1/nutrition/search-food']);
 const maxBody = 4 * 1024 * 1024;
 let active = 0;
 const server = http.createServer(async (req, res) => {
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 110000);
+  const timer = setTimeout(() => controller.abort(), 150000);
   res.once('close', () => { if (!res.writableEnded) controller.abort(); });
   let acquired = false;
   const reply = (status, value) => {

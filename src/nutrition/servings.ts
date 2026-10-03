@@ -81,6 +81,7 @@ const portions: Record<string, readonly FoodServing[]> = {
 export function getFoodServings(input: string | Food): FoodServing[] {
   const food = typeof input === 'string' ? getFood(input) : input;
   if (!food) return [];
+  if (food.source.kind === 'recipe_estimate') return []; // A recipe does not establish the user's bowl or serving weight.
   if (food.source.kind === 'user_label') {
     const serving = food.serving;
     return serving && Number.isFinite(serving.grams) && serving.grams > 0 && serving.grams <= 2000

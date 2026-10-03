@@ -6,6 +6,8 @@ export type EquipmentSplit = 'bro' | 'ppl' | 'upper_lower';
 export type EquipmentSpec = 'mini' | 'light' | 'standard' | 'pro' | 'ultra';
 
 export type Profile = {
+  /** Derived read-only projection from the agent journal; never a second persisted plan. */
+  agentTrainingOverlay?: import('./agent/trainingOverlay').TrainingOverlay;
   name: string;
   sex: 'male' | 'female' | 'unspecified';
   age: number;

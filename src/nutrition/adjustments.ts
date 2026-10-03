@@ -22,11 +22,11 @@ export type MealAdjustmentDraft = {
   projected: Nutrients; projectionLabel: '推荐菜单合计' | '已记＋余下推荐';
   explanation: string; notes: string[];
 };
-export type MealDraftResult = { status: 'ready'; draft: MealAdjustmentDraft } | { status: 'paused' | 'needs_logs' | 'no_candidate' | 'no_change'; message: string };
+export type MealDraftResult = { status: 'ready'; draft: MealAdjustmentDraft } | { status: 'paused' | 'no_candidate' | 'no_change'; message: string };
 
 function draftToken(menu: DailyMenu, journal: NutritionJournal, training: NutritionTrainingContext): string {
   const day = journal.days[menu.date];
-  return JSON.stringify([menu.date, menu.signature, day?.confirmedSlots || [], day?.completedAt || null,
+  return JSON.stringify([menu.date, menu.signature, day?.confirmedSlots || [], day?.skippedSlots || [], day?.completedAt || null,
     journal.entries.filter(item => item.date === menu.date).sort((a, b) => a.id.localeCompare(b.id)).map(item => [item.id, item.slot, item.updatedAt, item.nutrients]),
     training]);
 }
@@ -56,12 +56,16 @@ export function prepareMealAdjustment(profile: Profile, journal: NutritionJourna
   if (!original) return { status: 'no_candidate', message: '当前限制下这餐没有完整菜谱。过敏限制不能放宽，可调整制作时间或预算。' };
   const entries = journal.entries.filter(item => item.date === date);
   const consumed = sumNutrients(entries.map(item => item.nutrients));
+  const day = journal.days[date];
+  const earlier = MEAL_SLOTS.slice(0, MEAL_SLOTS.indexOf(slot));
+  const knownEarlierIntake = earlier.every(item => day?.confirmedSlots.includes(item)) && entries.every(item => day?.confirmedSlots.includes(item.slot));
+  const useActualIntake = request.type === 'rebalance_meal' && knownEarlierIntake && menu.meals.length === MEAL_SLOTS.length;
   const notes = ['只修改这餐推荐，不改全天目标、不动其他餐，也不自动记为已吃。'];
   let meal: PlannedMeal | undefined;
   let projected: Nutrients;
   let projectionLabel: MealAdjustmentDraft['projectionLabel'];
   let explanation: string;
-  if (request.type === 'swap_meal') {
+  if (!useActualIntake) {
     const alternatives = getMealAlternatives(profile, prefs, date, journal.mealRevisions, slot, nutritionPlanningContext(journal, training));
     const ranked = [...alternatives].sort((a, b) => {
       const score = (candidate: typeof a) => mealScore(candidate.meal.nutrients, original.nutrients)
@@ -75,13 +79,11 @@ export function prepareMealAdjustment(profile: Profile, journal: NutritionJourna
     projectionLabel = '推荐菜单合计';
     explanation = request.focus === 'quick' ? '优先选择制作更省时、营养差距较小的菜谱。'
       : request.focus === 'protein' ? '在现有完整菜谱中优先考虑蛋白质，不直接加开补剂。' : '换一道符合当前偏好的菜，先比较营养差异。';
-  } else {
-    const day = journal.days[date];
-    const earlier = MEAL_SLOTS.slice(0, MEAL_SLOTS.indexOf(slot));
-    if (earlier.some(item => !day?.confirmedSlots.includes(item)) || entries.some(item => !day?.confirmedSlots.includes(item.slot))) {
-      return { status: 'needs_logs', message: '先确认前面各餐和已有记录已记完整（包括饮料、用油；未吃也要确认），再按实际摄入调整下一餐。漏记不算少吃。' };
+    if (request.type === 'rebalance_meal') {
+      explanation = '按原推荐与当前偏好调整这餐；未记录餐次保留未知，不要求补填。';
+      notes.push('记录可选；当前不据空白记录计算全天摄入缺口。合计仅是推荐菜单，不是实际摄入。');
     }
-    if (menu.meals.length !== MEAL_SLOTS.length) return { status: 'no_candidate', message: '今日菜单不完整，暂不推算余下全天供能。可以直接换一道，不强行补齐。' };
+  } else {
     const later = menu.meals.filter(item => MEAL_SLOTS.indexOf(item.slot) > MEAL_SLOTS.indexOf(slot)
       && !day?.confirmedSlots.includes(item.slot) && !entries.some(entry => entry.slot === item.slot));
     const fixed = sumNutrients([consumed, ...later.map(item => item.nutrients)]);

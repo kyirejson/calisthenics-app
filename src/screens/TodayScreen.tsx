@@ -24,6 +24,7 @@ import { RunningSession } from './RunScreen';
 import { TrainingGoalPicker, TrainingGoalSelector } from '../components/TrainingGoalPicker';
 import { EquipmentTodayScreen } from './EquipmentTodayScreen';
 import { useUpdateBlock } from '../components/AppUpdates';
+import { usePersonalAgent } from '../agent/PersonalAgentHost';
 
 type Props = {
   onStart: (workoutId: string, setMultiplier?: number, rirTarget?: number, equipmentPlan?: import('../data/equipmentTraining').EquipmentSessionPlan) => void;
@@ -41,6 +42,8 @@ export function TodayScreen(props: Props) {
   const selectedRef = useRef<0 | 1 | 2>(0);
   const scrollTarget = useRef<0 | 1 | 2 | null>(null);
   const resizing = useRef(false);
+  const { setAgentScene } = usePersonalAgent();
+  useEffect(() => { setAgentScene(['今日训练', '饮食记录', '跑步记录'][selectedPage]); }, [selectedPage, setAgentScene]);
 
   useEffect(() => {
     if (!pageWidth) return;

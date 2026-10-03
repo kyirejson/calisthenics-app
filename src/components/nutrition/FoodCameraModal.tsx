@@ -83,7 +83,7 @@ function FoodCameraSession({ onClose, onSave, initialSlot = 'lunch', saveLabel }
   const title = picker !== null ? '选择食材与份量' : stage === 1 ? '拍照记餐' : stage === 3 ? '确认这一餐' : labelDraft ? '核对包装标签' : labelFood ? '实际吃了多少？' : '核对食材';
   return <Modal visible transparent animationType="slide" onRequestClose={back}>
     <KeyboardAvoidingView style={s.backdrop} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
-      <View style={s.sheet} accessibilityViewIsModal>
+      <View testID="food-camera-sheet" style={s.sheet} accessibilityViewIsModal>
         <View style={s.header}><Icon label="返回" name="back" onPress={back} disabled={saving.current} /><Text style={s.title}>{title}</Text><Text style={s.step}>{stage === 1 ? '' : stage + ' / 3'}</Text></View>
         {stage === 1 ? <FoodCaptureCamera onResult={receiveCapture} onBusyChange={value => { if (alive.current) setPhase(value ? 'capturing' : 'idle'); }} /> : <ScrollView style={s.scroll} contentContainerStyle={s.content} keyboardShouldPersistTaps="handled">
           {picker !== null ? <>

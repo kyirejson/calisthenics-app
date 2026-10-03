@@ -29,7 +29,7 @@ const { assistantDataBasis } = require('../src/nutrition/assistantAuthorization.
 
 // Exercise the real provider callbacks with reusable hook state and isolated in-memory
 // AsyncStorage. No browser, native runtime, user storage or extra test dependency is used.
-function harness({ initial = {}, before = async () => {}, readBefore = async () => {}, deletePhotos } = {}) {
+function harness({ initial = {}, before = async () => {}, readBefore = async () => {}, deletePhotos, openURL = async () => {}, canOpenURL = async () => true } = {}) {
   const disk = new Map(Object.entries(initial));
   const { rankArchive, validatedTurn } = require('../src/nutrition/assistantArchiveCore.ts');
   const archiveKey = '__test_archive';
@@ -67,6 +67,7 @@ function harness({ initial = {}, before = async () => {}, readBefore = async () 
   const exportsObject = {};
   vm.runInNewContext(source, {
     exports: exportsObject, require: id => id === 'react' ? react : id === '@react-native-async-storage/async-storage' ? storage
+      : id === 'react-native' ? { Platform: { OS: 'android' }, Linking: { openURL, canOpenURL } }
       : id === '../nutrition/assistantArchive' ? { assistantArchive }
       : id === '../nutrition/photoStorage' && deletePhotos ? { deleteStoredPhotos: deletePhotos } : localRequire(id),
     console: { warn: (...items) => warnings.push(items) }, Promise, Date,
@@ -113,6 +114,155 @@ test('Harness V2 confirms or directly commits intake once, with persistent recei
   await restart.store().executeAssistantOperation(accepted); assert.equal(restart.store().nutritionJournal.entries.length, 1);
   await assert.rejects(restart.store().executeAssistantOperation({ ...accepted, input: { ...accepted.input, name: '改写' } }), /重放/);
 });
+
+test('personal agent training overlay and receipt commit together, reload, invalidate stale cards and leave base history untouched', async () => {
+  const { explicitTrainingIntent } = require('../src/agent/trainingIntent.mjs');
+  const { prepareTrainingAdjustment } = require('../src/agent/trainingActions.ts');
+  const { getPlanDay } = require('../src/data/trainingPlans.ts');
+  const { equipmentSessionPlan, EQUIPMENT_PLAN_ID } = require('../src/data/equipmentTraining.ts');
+  const p = { ...profile, goal: 'equipment', frequency: 6, equipmentSplit: 'ppl', experience: 'advanced', planId: EQUIPMENT_PLAN_ID, planStartedAt: new Date().toISOString() };
+  const h = harness({ initial: { user_profile: JSON.stringify(p) } }); await h.load();
+  const s = h.store(), base = h.disk.get('user_profile');
+  const draft = prepareTrainingAdjustment(s.profile, s.sessions, s.dailyEdits, explicitTrainingIntent('今天训练减载'));
+  const operation = { id: 'training_adjustment-qa', kind: 'training_adjustment', draft, confirmed: false, policyVersion: 0, basis: assistantDataBasis(s.nutritionJournal, s.profile, s.sessions, s.dailyEdits) };
+  await assert.rejects(s.executeAssistantOperation(operation), /确认/);
+  await s.executeAssistantOperation({ ...operation, confirmed: true });
+  assert.equal(h.disk.get('user_profile'), base); assert.equal(h.store().sessions.length, 0);
+  assert.ok(h.store().profile.agentTrainingOverlay); assert.ok(h.store().nutritionJournal.assistant.receipts[operation.id]);
+  const next = h.store(), course = getPlanDay(next.profile).day.workoutId;
+  assert.deepEqual(equipmentSessionPlan(course, next.profile).items.map(i => i.targetSets), equipmentSessionPlan(course, { ...next.profile, agentTrainingOverlay: undefined }).items.map(i => Math.max(1, Math.round(i.targetSets / 2))));
+  const restarted = harness({ initial: Object.fromEntries(h.disk) }); await restarted.load();
+  assert.deepEqual(restarted.store().profile.agentTrainingOverlay, next.profile.agentTrainingOverlay);
+  await restarted.store().executeAssistantOperation(operation);
+  await assert.rejects(restarted.store().executeAssistantOperation({ ...operation, id: 'training-stale', confirmed: true }), /变化/);
+});
+
+test('failed training tool write leaves both base plan and overlay untouched and later writes remain usable', async () => {
+  const { explicitTrainingIntent } = require('../src/agent/trainingIntent.mjs');
+  const { prepareTrainingAdjustment } = require('../src/agent/trainingActions.ts');
+  let fail = false; const h = harness({ initial: { user_profile: JSON.stringify({ ...profile, goal: 'equipment', frequency: 6, equipmentSplit: 'ppl', planStartedAt: new Date().toISOString() }) }, before: async event => { if (fail && event.key === 'nutrition_journal_v1') throw Error('QA disk failure'); } }); await h.load();
+  await h.store().setAssistantAuthorization('full_access');
+  const s = h.store(), draft = prepareTrainingAdjustment(s.profile, [], {}, explicitTrainingIntent('今天训练减载'));
+  const operation = { id: 'training-failed', kind: 'training_adjustment', draft, confirmed: false, policyVersion: 1, basis: assistantDataBasis(s.nutritionJournal, s.profile, [], {}) };
+  fail = true; await assert.rejects(s.executeAssistantOperation(operation), /disk failure/); assert.equal(h.store().profile.agentTrainingOverlay, undefined); assert.equal(h.store().nutritionJournal.assistant.receipts?.[operation.id], undefined);
+  fail = false; await h.store().executeAssistantOperation(operation); assert.ok(h.store().profile.agentTrainingOverlay);
+});
+
+for (const command of ['今天和明天训练交换', '今天训练移到明天']) test('manual additions follow ' + command + ', support writes, reload and undo without mutating base dates', async () => {
+  const { explicitTrainingIntent } = require('../src/agent/trainingIntent.mjs');
+  const { prepareTrainingAdjustment } = require('../src/agent/trainingActions.ts');
+  const { getPlanDay } = require('../src/data/trainingPlans.ts');
+  const { dailyWorkoutKey, trainingDateKey } = require('../src/data/sessionRecords.ts');
+  const { exercises } = require('../src/data/catalog.ts');
+  const today = new Date(), tomorrow = new Date(today); tomorrow.setDate(today.getDate() + 1);
+  const p = { ...profile, goal: 'equipment', frequency: 6, equipmentSplit: 'ppl', planStartedAt: today.toISOString() };
+  const h = harness({ initial: { user_profile: JSON.stringify(p) } }); await h.load();
+  const a = trainingDateKey(today), b = trainingDateKey(tomorrow), course = getPlanDay(h.store().profile, today).day.workoutId;
+  await h.store().addDailyExercise(a, course, exercises[0].id);
+  const execute = async (store, text, id) => {
+    const draft = prepareTrainingAdjustment(store.profile, store.sessions, store.dailyEdits, explicitTrainingIntent(text));
+    await store.executeAssistantOperation({ id, kind: 'training_adjustment', draft, confirmed: true, policyVersion: 0, basis: assistantDataBasis(store.nutritionJournal, store.profile, store.sessions, store.dailyEdits) });
+  };
+  await execute(h.store(), command, 'move-additions');
+  assert.equal(h.store().dailyEdits[dailyWorkoutKey(a, course)], undefined);
+  assert.deepEqual([...h.store().dailyEdits[dailyWorkoutKey(b, course)].exerciseIds], [exercises[0].id]);
+  await h.store().addDailyExercise(b, course, exercises[1].id);
+  const raw = JSON.parse(h.disk.get('daily_workout_edits'));
+  assert.deepEqual(raw[dailyWorkoutKey(a, course)].exerciseIds, [exercises[0].id, exercises[1].id]);
+  assert.equal(raw[dailyWorkoutKey(b, course)], undefined);
+  const restart = harness({ initial: Object.fromEntries(h.disk) }); await restart.load();
+  assert.deepEqual([...restart.store().dailyEdits[dailyWorkoutKey(b, course)].exerciseIds], [exercises[0].id, exercises[1].id]);
+  await restart.store().removeDailyExercise(b, course, exercises[0].id);
+  await execute(restart.store(), '撤销今天训练调整', 'undo-additions');
+  assert.deepEqual([...restart.store().dailyEdits[dailyWorkoutKey(a, course)].exerciseIds], [exercises[1].id]);
+  assert.equal(restart.store().dailyEdits[dailyWorkoutKey(b, course)], undefined);
+});
+
+test('training write guard prevents manual edits during an overlay commit and releases after success or failure', async () => {
+  const { explicitTrainingIntent } = require('../src/agent/trainingIntent.mjs');
+  const { prepareTrainingAdjustment } = require('../src/agent/trainingActions.ts');
+  const { exercises } = require('../src/data/catalog.ts');
+  const gate = deferred(); let wait = false;
+  const h = harness({ initial: { user_profile: JSON.stringify({ ...profile, goal: 'equipment', frequency: 6, equipmentSplit: 'ppl', planStartedAt: new Date().toISOString() }) }, before: async event => { if (wait && event.key === 'nutrition_journal_v1') await gate.promise; } });
+  await h.load(); const s = h.store(), draft = prepareTrainingAdjustment(s.profile, [], {}, explicitTrainingIntent('今天训练减载'));
+  wait = true;
+  const task = s.executeAssistantOperation({ id: 'guarded-deload', kind: 'training_adjustment', draft, confirmed: true, policyVersion: 0, basis: assistantDataBasis(s.nutritionJournal, s.profile, [], {}) });
+  await assert.rejects(h.store().addDailyExercise(date, 'custom_daily', exercises[0].id), /正在保存训练调整/);
+  await assert.rejects(h.store().patchProfile({ weight: 80 }), /正在保存训练调整/);
+  gate.resolve(); await task; wait = false;
+  await h.store().addDailyExercise(date, 'custom_daily', exercises[0].id);
+  assert.ok(h.store().dailyEdits['2026-9-27:custom_daily']);
+});
+
+test('music opening checks permissions, uses configured scheme, persists receipt and replay does not launch twice', async () => {
+  const opened = []; const h = harness({ initial: { user_profile: JSON.stringify(profile) }, openURL: async url => opened.push(url) }); await h.load();
+  await h.store().setAgentPreferences({ musicPlaylist: '123456' });
+  const s = h.store(), operation = { id: 'music-qa', kind: 'open_music', playlist: '123456', confirmed: false, policyVersion: 0, basis: assistantDataBasis(s.nutritionJournal, s.profile, s.sessions, s.dailyEdits) };
+  await assert.rejects(s.executeAssistantOperation(operation), /确认/); assert.equal(opened.length, 0);
+  await s.executeAssistantOperation({ ...operation, confirmed: true }); await h.store().executeAssistantOperation(operation);
+  assert.deepEqual(opened, ['orpheus://playlist/123456']);
+});
+
+test('dispatched music with failed receipt reports partial success rather than pretending nothing happened', async () => {
+  let fail = false; const opened = [];
+  const h = harness({ initial: { user_profile: JSON.stringify(profile) }, openURL: async url => opened.push(url), before: async event => { if (fail && event.key === 'nutrition_journal_v1') throw Error('disk failed'); } });
+  await h.load(); await h.store().setAgentPreferences({ musicPlaylist: '123456' });
+  const s = h.store(), operation = { id: 'music-partial', kind: 'open_music', playlist: '123456', confirmed: true, policyVersion: 0, basis: assistantDataBasis(s.nutritionJournal, s.profile, s.sessions, s.dailyEdits) };
+  fail = true; await assert.rejects(s.executeAssistantOperation(operation), /请求已发出.*不要重复/);
+  assert.equal(opened.length, 1); assert.equal(h.store().nutritionJournal.assistant.receipts?.[operation.id], undefined);
+});
+
+test('an unavailable music scheme falls back to the official web URL without claiming an installed app', async () => {
+  const opened = []; const h = harness({ initial: { user_profile: JSON.stringify(profile) }, canOpenURL: async () => false, openURL: async url => opened.push(url) });
+  await h.load(); await h.store().setAgentPreferences({ musicPlaylist: '123456' });
+  const s = h.store(); await s.executeAssistantOperation({ id: 'music-web', kind: 'open_music', playlist: '123456', confirmed: true, policyVersion: 0, basis: assistantDataBasis(s.nutritionJournal, s.profile, s.sessions, s.dailyEdits) });
+  assert.deepEqual(opened, ['https://music.163.com/#/playlist?id=123456']);
+});
+
+test('a rejected music open call leaves no success receipt', async () => {
+  const h = harness({ initial: { user_profile: JSON.stringify(profile) }, openURL: async () => { throw Error('OS rejected the link'); } });
+  await h.load(); await h.store().setAgentPreferences({ musicPlaylist: '123456' });
+  const s = h.store(), operation = { id: 'music-rejected', kind: 'open_music', playlist: '123456', confirmed: true, policyVersion: 0, basis: assistantDataBasis(s.nutritionJournal, s.profile, s.sessions, s.dailyEdits) };
+  await assert.rejects(s.executeAssistantOperation(operation), /OS rejected/);
+  assert.equal(h.store().nutritionJournal.assistant.receipts?.[operation.id], undefined);
+});
+
+test('concurrent proactive dismissals merge the latest preferences instead of restoring stale lists', async () => {
+  const h = harness({ initial: { user_profile: JSON.stringify(profile) } }); await h.load();
+  await Promise.all([h.store().setAgentPreferences(current => ({ dismissed: [...current.dismissed, 'review:2026-10-02'] })), h.store().setAgentPreferences(current => ({ dismissed: [...current.dismissed, 'training:qa-two'] }))]);
+  assert.deepEqual(Array.from(h.store().nutritionJournal.assistant.agentPreferences.dismissed), ['review:2026-10-02', 'training:qa-two']);
+});
+test('meal state tool confirms or executes once under full access and survives restart without food entries', async () => {
+  const h = harness({ initial: { user_profile: JSON.stringify(profile) } }); await h.load();
+  const today = localWeightDate(new Date()), createdAt = new Date().toISOString();
+  const basis = () => { const s = h.store(); return assistantDataBasis(s.nutritionJournal, s.profile, s.sessions, s.dailyEdits); };
+  await h.store().appendAssistantConversation({ id: 'skip-qa', question: '早餐没吃', answer: '待确认早餐状态。', createdAt });
+  const operation = { id: 'meal_status-skip-qa', kind: 'meal_status', date: today, slot: 'breakfast', status: 'not_eaten', confirmed: false, policyVersion: 0, basis: basis() };
+  await assert.rejects(h.store().executeAssistantOperation(operation), /确认/);
+  await h.store().executeAssistantOperation({ ...operation, confirmed: true });
+  assert.deepEqual(h.store().nutritionJournal.days[today].skippedSlots, ['breakfast']);
+  assert.equal(h.store().nutritionJournal.days[today].completedAt, null); assert.equal(h.store().nutritionJournal.entries.length, 0);
+  assert.match((await h.store().readAssistantHistory({ limit: 1 }))[0].answer, /标为没吃/);
+  const restored = harness({ initial: Object.fromEntries(h.disk) }); await restored.load();
+  await restored.store().executeAssistantOperation(operation);
+  assert.deepEqual(restored.store().nutritionJournal.days[today].skippedSlots, ['breakfast']);
+  await restored.store().setAssistantAuthorization('full_access');
+  const s = restored.store();
+  await restored.store().executeAssistantOperation({ ...operation, id: 'meal_status-direct-qa', slot: 'dinner', policyVersion: 1, basis: assistantDataBasis(s.nutritionJournal, s.profile, s.sessions, s.dailyEdits) });
+  assert.deepEqual(restored.store().nutritionJournal.days[today].skippedSlots, ['breakfast', 'dinner']);
+  assert.equal(restored.store().nutritionJournal.entries.length, 0);
+});
+
+test('failed optional meal state persistence leaves UI state untouched and the next write remains usable', async () => {
+  let fail = true;
+  const h = harness({ before: async event => { if (fail && event.key === 'nutrition_journal_v1') throw Error('QA meal state disk full'); } });
+  const today = localWeightDate(new Date());
+  await assert.rejects(h.store().setNutritionMealStatus(today, 'breakfast', 'not_eaten'), /disk full/);
+  assert.equal(h.store().nutritionJournal.days[today], undefined);
+  fail = false; await h.store().setNutritionMealStatus(today, 'breakfast', 'not_eaten');
+  assert.deepEqual(h.store().nutritionJournal.days[today].skippedSlots, ['breakfast']);
+});
+
 test('full-access menu tool validates locally, commits once and never turns recommendations into intake', async () => {
   const h = harness(); await h.store().saveProfile(profile);
   await h.store().saveNutritionPreferences({ ...defaultNutritionPreferences(profile), screeningCompletedAt: new Date().toISOString() });

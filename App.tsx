@@ -19,10 +19,11 @@ import { colors, progressPageLayout } from './src/theme';
 import { AppUpdatesProvider, useAppUpdates } from './src/components/AppUpdates';
 import type { Route } from './src/types';
 import { confirmAction } from './src/utils/confirm';
+import { PersonalAgentHost, usePersonalAgent } from './src/agent/PersonalAgentHost';
 
 export default function App() {
   useWebDocumentSetup();
-  return <AppStoreProvider><StatusBar style="dark" /><AppUpdatesProvider><AppShell /></AppUpdatesProvider><ConfirmHost /></AppStoreProvider>;
+  return <AppStoreProvider><StatusBar style="dark" /><AppUpdatesProvider><PersonalAgentHost><AppShell /></PersonalAgentHost></AppUpdatesProvider><ConfirmHost /></AppStoreProvider>;
 }
 
 // web 端文档级修正：body 背景跟随屏幕主色（防深色屏露出白边）、
@@ -43,6 +44,11 @@ function AppShell() {
   const { setSafeScreen } = useAppUpdates();
   const [tab, setTab] = useState<TabKey>('today');
   const [route, setRoute] = useState<Route>({ name: 'tabs' });
+  const { setAgentScene } = usePersonalAgent();
+  useEffect(() => {
+    if (route.name === 'tabs' && tab === 'today') return; // Today owns its training/diet/running sub-route.
+    setAgentScene(route.name === 'tabs' ? ({ progress: '进阶动作库', data: '训练数据', profile: '个人档案' } as const)[tab as Exclude<TabKey, 'today'>] : route.name === 'training' ? '正在训练' : route.name === 'exercise' ? '动作详情' : route.name === 'run' ? '正在跑步' : '饮食记录');
+  }, [route.name, tab, setAgentScene]);
 
   const returnToTabs = useCallback(() => setRoute({ name: 'tabs' }), []);
   const returnFromActiveSession = useCallback(() => {

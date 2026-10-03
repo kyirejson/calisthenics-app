@@ -58,10 +58,10 @@ export function createVoiceSession(d: Dependencies) {
     catch { fail('结束语音输入失败，已保留输入内容，可编辑后发送。'); }
   };
   const start = async (existing: string) => {
-    if (phase !== 'idle') { stop(); return; }
+    if (phase !== 'idle') return;
     const own = ++ticket;
     const valid = () => own === ticket;
-    prefix = existing.trim(); finalParts = []; heard = false;
+    prefix = existing; finalParts = []; heard = false;
     setPhase('starting');
     watchdog(30000, () => fail('语音权限或服务响应超时，请检查系统设置后重试。'));
     try {
@@ -94,16 +94,21 @@ export function createVoiceSession(d: Dependencies) {
         if (!valid()) return;
         const text = event.results[0]?.transcript?.trim(); if (!text) return;
         heard = true;
-        // iOS returns cumulative text. Android/Web return final segments;
-        // retain those while replacing the current interim hypothesis.
-        const parts = d.platform === 'ios' ? [text] : [...finalParts, text];
+        // iOS is cumulative. Android uses one non-continuous utterance here,
+        // so repeated final hypotheses replace rather than append. Web alone
+        // retains separate final segments from its continuous session.
+        const cumulative = d.platform !== 'web';
+        const parts = cumulative ? [text] : [...finalParts, text];
         d.onText([prefix, ...parts].filter(Boolean).join('，').slice(0, 1000));
-        if (event.isFinal && d.platform !== 'ios') finalParts.push(text);
+        if (event.isFinal && !cumulative) finalParts.push(text);
       }));
       subscriptions.push(speech.addListener('nomatch', () => { if (valid()) fail('没有识别出内容，请重新说一次，或使用键盘输入。'); }));
       subscriptions.push(speech.addListener('error', event => {
         if (!valid()) return;
         if (event.error === 'aborted') { finish(); return; }
+        // Some OEM services report ERROR_CLIENT when stopListening finishes.
+        // Only salvage an explicit stop with a non-empty interim transcript.
+        if (d.platform === 'android' && phase === 'stopping' && heard && event.code === 5) { finish(); return; }
         fail(errors[event.error] || '语音识别未完成，已保留输入内容；请重试或使用输入法语音。');
       }));
       watchdog(10000, () => fail('系统语音服务未开始收音，请重试或使用输入法语音。'));
@@ -125,5 +130,6 @@ export function createVoiceSession(d: Dependencies) {
         ? reason.message : '当前安装包的语音模块不可用，请更新 App；仍可使用键盘或输入法语音。');
     }
   };
-  return { start, abort, background: () => { if (!permissionPending) abort(); }, getPhase: () => phase };
+  return { start, stop, cancel: () => { abort(); d.onText(prefix); }, abort,
+    background: () => { if (!permissionPending) abort(); }, getPhase: () => phase };
 }

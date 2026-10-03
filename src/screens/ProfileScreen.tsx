@@ -59,7 +59,7 @@ export function ProfileScreen({ onNutrition, onOpenExercise }: { onNutrition: ()
     .catch(() => showMessage('备份未导出', '请稍后重试系统分享。'));
   const confirmClear = () => confirmAction(
     '清除全部数据？',
-    '训练记录、饮食记录、保存的饮食照片和个人档案都会从本机移除。JSON备份不包含照片文件，清除后不能用JSON恢复照片。此操作无法撤销。',
+    '训练记录、饮食记录、保存的饮食照片、个人档案及本机 API 密钥都会移除。JSON备份不包含照片文件或密钥，不能用于恢复它们。此操作无法撤销。',
     () => void clearData().catch(() => showMessage('清除失败', '数据未确认移除，请重试。')),
     { confirmLabel: '确认清除', destructive: true },
   );

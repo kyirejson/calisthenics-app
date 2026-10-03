@@ -1,4 +1,5 @@
-import { FOOD_DATA_VERSION, getFood } from './catalog';
+import { FOOD_DATA_VERSION, FOODS, getFood } from './catalog';
+import { normalizeDishFood } from './dishEstimate';
 import type { Food, FoodArtworkCategory, NutritionPhoto, Nutrients } from './types';
 import { normalizeFoodImportOrigin } from './foodImport';
 import { normalizeNutritionPhoto } from './photoMetadata';
@@ -51,6 +52,9 @@ function normalizeProvenance(input: unknown, nutrients: Nutrients): PhotoItemPro
     || !keys.every(k => number((input.per100g as Record<string, unknown>)[k], k === 'calories' ? 1000 : 100))
     || !['title', 'foodCode', 'version', 'license'].every(k => text((input.source as Record<string, unknown>)[k], 500))) return null;
   const source = input.source;
+  const dish = source.kind === 'recipe_estimate' ? normalizeDishFood({ id: input.foodId, name: input.foodName, source }, FOODS) : null;
+  if (source.kind === 'recipe_estimate' && (!dish || !keys.every(k => dish.per100g[k] === (input.per100g as Nutrients)[k]))) return null;
+  if (source.kind !== undefined && !['user_label', 'recipe_estimate'].includes(String(source.kind))) return null;
   const custom = source.kind === 'user_label';
   const photo = input.photo === undefined ? undefined : normalizeNutritionPhoto(input.photo);
   if (photo === null || (input.artworkCategory !== undefined && !isFoodArtworkCategory(input.artworkCategory))) return null;
@@ -71,7 +75,7 @@ function normalizeProvenance(input: unknown, nutrients: Nutrients): PhotoItemPro
   if (!keys.every(k => Math.abs(calculated[k] - nutrients[k]) < 0.001)) return null;
   return { kind: 'catalog', foodId: input.foodId, foodName: input.foodName, state: input.state, foodDataVersion: input.foodDataVersion,
     grams: input.grams, servingLabel: input.servingLabel, per100g,
-    source: { title: input.source.title as string, url: input.source.url as string, foodCode: input.source.foodCode as string,
+    source: dish ? dish.source : { title: input.source.title as string, url: input.source.url as string, foodCode: input.source.foodCode as string,
       version: input.source.version as string, license: input.source.license as string,
       ...(custom ? { kind: 'user_label' as const } : {}), ...(origin ? { origin } : {}) },
     ...(input.fiberKnown !== undefined ? { fiberKnown: input.fiberKnown as boolean } : {}),
@@ -169,7 +173,7 @@ export function replacePhotoItemWithFood(estimate: PhotoEstimate, index: number,
   return editItem(estimate, index, item => {
     const nutrients = nutrientsAt(food.per100g, serving.grams);
     const ratio = item.nutrients.calories > 0 ? nutrients.calories / item.nutrients.calories : null;
-    const inherited = food.source.kind !== 'user_label' && ratio !== null && (item.provenance?.kind !== 'catalog' || item.provenance.rangeBasis === 'inherited-photo');
+    const inherited = !food.source.kind && ratio !== null && (item.provenance?.kind !== 'catalog' || item.provenance.rangeBasis === 'inherited-photo');
     return { name: food.name, portionLabel: `${serving.label} · ${serving.grams} g`, nutrients, estimatedGrams: serving.grams,
       calorieRange: inherited ? { min: Math.min(nutrients.calories, Math.floor(item.calorieRange.min * ratio!)), max: Math.max(nutrients.calories, Math.ceil(item.calorieRange.max * ratio!)) }
         : { min: nutrients.calories, max: nutrients.calories },

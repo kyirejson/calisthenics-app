@@ -38,6 +38,7 @@ export function assistantFoodWarnings(rows: AssistantFoodRow[], preferences: Nut
 export function assistantFoodTotals(rows: AssistantFoodRow[]) {
   if (!rows.length || rows.some(r => !r.food || r.grams === null || !Number.isFinite(r.grams) || r.grams <= 0 || r.grams > 2000)) return null;
   const portions: FoodPortion[] = rows.map(r => ({ foodId: r.food!.id, grams: r.grams! }));
-  return { portions, nutrients: calculatePortions(portions, rows.map(r => r.food!).filter(f => f.source.kind === 'user_label')) };
+  const custom = [...new Map(rows.filter(r => r.food?.source.kind).map(r => [r.food!.id, r.food!])).values()];
+  return { portions, nutrients: calculatePortions(portions, custom) };
 }
 export { getFoodServings };

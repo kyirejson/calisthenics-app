@@ -8,7 +8,7 @@ const record = (value: unknown): value is Record<string, unknown> => Boolean(val
 const finite = (value: unknown, max: number) => typeof value === 'number' && Number.isFinite(value) && value >= 0 && value <= max;
 const text = (value: unknown, max: number): value is string => typeof value === 'string' && Boolean(value.trim()) && value.length <= max && !/[\u0000-\u0008\u000b\u000c\u000e-\u001f]/u.test(value);
 
-export function emptyNutritionDay(): NutritionDayState { return { targetHistory: [], confirmedSlots: [], completedAt: null }; }
+export function emptyNutritionDay(): NutritionDayState { return { targetHistory: [], confirmedSlots: [], skippedSlots: [], completedAt: null }; }
 
 export function normalizeTargetSnapshot(input: unknown): NutritionTargetSnapshot | null {
   if (!record(input) || !text(input.signature, 3000) || !validTimestamp(input.capturedAt)
@@ -47,7 +47,8 @@ export function normalizeNutritionDays(input: unknown): Record<string, Nutrition
       .sort((a, b) => a.capturedAt.localeCompare(b.capturedAt));
     const confirmedSlots = MEAL_SLOTS.filter(slot => Array.isArray(raw.confirmedSlots) && raw.confirmedSlots.includes(slot));
     const completedAt = confirmedSlots.length === MEAL_SLOTS.length && validTimestamp(raw.completedAt) ? raw.completedAt : null;
-    days[date] = { targetHistory: history, confirmedSlots, completedAt };
+    const skippedSlots = confirmedSlots.filter(slot => Array.isArray(raw.skippedSlots) && raw.skippedSlots.includes(slot));
+    days[date] = { targetHistory: history, confirmedSlots, skippedSlots, completedAt };
   }
   return days;
 }

@@ -15,6 +15,7 @@ import { TrainingGoalPicker, TrainingGoalSelector } from '../components/Training
 import { useAppStore } from '../store/AppStore';
 import { appPalette as p, progressPageLayout } from '../theme';
 import type { Goal } from '../types';
+import { overlayDate } from '../agent/trainingOverlay';
 
 type Props = { onStart: (id: string, multiplier?: number, rir?: number, plan?: EquipmentSessionPlan) => void; onOpenExercise: (id: string) => void; onSelectGoal: (goal: Goal) => Promise<boolean>; goalError: string; savingGoal: boolean };
 export function EquipmentTodayScreen({ onStart, onOpenExercise, onSelectGoal, goalError, savingGoal }: Props) {
@@ -32,8 +33,10 @@ export function EquipmentTodayScreen({ onStart, onOpenExercise, onSelectGoal, go
   const day = week.find(entry => localDateKey(entry.date) === selected) || week.find(entry => localDateKey(entry.date) === localDateKey(now))!;
   const today = localDateKey(day.date) === localDateKey(now);
   const plan = day.workoutId ? equipmentSessionPlan(day.workoutId, profile, day.date) : undefined;
-  const unavailable = !!day.workoutId && (plan?.status === 'infeasible' || review?.status === 'infeasible');
-  const notice = unavailable ? plan?.issues[0] || review?.issues[0] : plan?.notice;
+  const editedCourses = Object.keys(profile.agentTrainingOverlay?.courses || {});
+  const agentEditedWeek = week.some(entry => profile.agentTrainingOverlay?.days[overlayDate(entry.date)] || editedCourses.some(key => key.startsWith(overlayDate(entry.date) + ':')));
+  const unavailable = !!day.workoutId && (plan?.status === 'infeasible' || !agentEditedWeek && review?.status === 'infeasible');
+  const notice = unavailable ? plan?.issues[0] || review?.issues[0] : agentEditedWeek ? `已应用助手调整，周审计${review?.status === 'infeasible' ? '存在差异：' + review.issues[0] : '通过'}；不是原模板剂量。` : plan?.notice;
   const items = plan?.items || [];
   const estimate = plan?.estimate;
   const setCount = items.reduce((sum, item) => sum + item.targetSets, 0);

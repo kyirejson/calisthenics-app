@@ -44,14 +44,26 @@ export function withMealLoggingConfirmation(current: NutritionJournal, date: str
   const confirmedSlots = slot === 'day' ? confirmed ? [...MEAL_SLOTS] : []
     : MEAL_SLOTS.filter(item => item === slot ? confirmed : day.confirmedSlots.includes(item));
   const completedAt = confirmedSlots.length === MEAL_SLOTS.length ? day.completedAt || now : null;
-  return { ...current, days: { ...current.days, [date]: { ...day, confirmedSlots, completedAt } } };
+  const skippedSlots = (day.skippedSlots || []).filter(item => confirmedSlots.includes(item));
+  return { ...current, days: { ...current.days, [date]: { ...day, confirmedSlots, skippedSlots, completedAt } } };
+}
+
+/** Explicitly not eaten is a meal state, never a fabricated zero-calorie food. */
+export function withMealStatus(current: NutritionJournal, date: string, slot: MealSlot, status: 'not_eaten' | 'unrecorded', now = new Date().toISOString()): NutritionJournal {
+  if (!['not_eaten', 'unrecorded'].includes(status) || !MEAL_SLOTS.includes(slot)) throw new Error('餐次状态无效。');
+  if (status === 'not_eaten' && current.entries.some(entry => entry.date === date && entry.slot === slot)) throw new Error('这餐已有实际饮食记录，不能同时标为没吃。请先核对或编辑已有记录；不会替你删除。');
+  const next = withMealLoggingConfirmation(current, date, slot, status === 'not_eaten', now);
+  const day = next.days[date];
+  const skippedSlots = MEAL_SLOTS.filter(item => item === slot ? status === 'not_eaten' : day.skippedSlots?.includes(item));
+  // Marking individual meal states does not opt the user into a full-day review.
+  return { ...next, days: { ...next.days, [date]: { ...day, skippedSlots, completedAt: status === 'not_eaten' ? current.days[date]?.completedAt || null : null } } };
 }
 
 /** Any log edit invalidates completeness, including edits to another date/slot. */
 export function invalidateMealLogging(current: NutritionJournal, date: string, slot: MealSlot): NutritionJournal {
   const day = current.days[date];
   if (!day || (!day.completedAt && !day.confirmedSlots.includes(slot))) return current;
-  return { ...current, days: { ...current.days, [date]: { ...day, confirmedSlots: day.confirmedSlots.filter(item => item !== slot), completedAt: null } } };
+  return { ...current, days: { ...current.days, [date]: { ...day, confirmedSlots: day.confirmedSlots.filter(item => item !== slot), skippedSlots: (day.skippedSlots || []).filter(item => item !== slot), completedAt: null } } };
 }
 
 export function latestNutritionTarget(journal: NutritionJournal, date: string): NutritionTargetSnapshot | null { return journal.days[date]?.targetHistory.at(-1) || null; }
@@ -75,7 +87,7 @@ export function summarizeNutritionWeek(journal: NutritionJournal, profile: Profi
   const items = dates.map(date => {
     const entries = journal.entries.filter(entry => entry.date === date);
     const complete = Boolean(journal.days[date]?.completedAt);
-    return { date, state: complete ? 'complete' as const : entries.length ? 'partial' as const : 'missing' as const,
+    return { date, state: complete ? 'complete' as const : entries.length || journal.days[date]?.skippedSlots?.length ? 'partial' as const : 'missing' as const,
       calories: sumNutrients(entries.map(entry => entry.nutrients)).calories,
       hasPhoto: entries.some(entry => entry.source === 'photo_estimate' && !photoUsesOnlyLabels(entry.photoEstimate)), target: latestNutritionTarget(journal, date) };
   });

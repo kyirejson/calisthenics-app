@@ -52,7 +52,7 @@ function FoodRow({ item, foods, disabled, onEdit }: { item: PhotoFoodItem; foods
   const actualGrams = catalog?.grams ?? item.estimatedGrams;
   useEffect(() => setGrams(String(actualGrams ?? '')), [actualGrams]);
   return <View style={styles.item}>
-    <View style={styles.between}><Text style={styles.badge}>{labelBased ? '包装标签计算' : catalog ? '食物库参考' : '视觉估算'}</Text><Control label="移除此项" accessibilityLabel={'移除' + item.name} disabled={disabled} onPress={() => apply(removePhotoItem)} /></View>
+    <View style={styles.between}><Text style={styles.badge}>{catalog?.source.kind === 'recipe_estimate' ? '联网配方估算' : labelBased ? '包装标签计算' : catalog ? '食物库参考' : '视觉估算'}</Text><Control label="移除此项" accessibilityLabel={'移除' + item.name} disabled={disabled} onPress={() => apply(removePhotoItem)} /></View>
     <View style={styles.foodHeader}><FoodArtwork food={catalog ? { id: catalog.foodId, name: item.name, photo: catalog.photo, artworkCategory: catalog.artworkCategory } : undefined} /><Text style={[styles.name, styles.flex]}>{item.name}</Text></View>
     <Text style={styles.small}>{item.portionLabel}</Text>
     <Text style={styles.small}>{actualGrams ? (catalog ? '计算份量 ' : '视觉估计约 ') + actualGrams + 'g · 请核对实际食用量' : '份量未知 · 不能把这一份当成100g'}</Text>

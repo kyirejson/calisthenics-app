@@ -57,3 +57,6 @@ credentials.json
 /scripts/*original*
 /assets/training-demos/*-v1.png
 /assets/training-demos/*.md
+# Licensed wake models are private opt-in, not public build resources.
+/modules/uncover-copilot/android/src/main/assets/*.ppn
+/modules/uncover-copilot/android/src/main/assets/*.pv

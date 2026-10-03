@@ -6,6 +6,7 @@ require.extensions['.ts'] = (module, filename) => module._compile(ts.transpileMo
   compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 },
 }).outputText, filename);
 const { createVoiceSession } = require('../src/nutrition/voiceSession.ts');
+const { createVoiceHold } = require('../src/nutrition/voiceHold.ts');
 
 function fixture(t, platform = 'android') {
   const texts = [], errors = [], phases = [], listeners = new Map();
@@ -41,7 +42,8 @@ test('Android uses system service, Chinese vocabulary and native microphone with
   f.emit('start'); assert.equal(f.session.getPhase(), 'listening');
   f.result('半斤牛'); f.result('半斤牛肉', true);
   assert.equal(f.texts.at(-1), '原有文字，半斤牛肉');
-  await f.session.start('ignored'); assert.equal(f.session.getPhase(), 'stopping'); assert.equal(f.stops(), 1);
+  await f.session.start('ignored'); assert.equal(f.session.getPhase(), 'listening');
+  f.session.stop(); assert.equal(f.session.getPhase(), 'stopping'); assert.equal(f.stops(), 1);
   f.emit('end'); assert.equal(f.session.getPhase(), 'idle'); assert.equal(f.errors.length, 0);
 });
 
@@ -62,7 +64,7 @@ test('iOS cumulative results do not duplicate finalized text or change quantitie
 test('cancel during startup prevents native start and subsequent stale callbacks', async t => {
   const f = fixture(t); let release;
   f.dependencies.load = () => new Promise(resolve => { release = resolve; });
-  const first = f.session.start('原有文字'); await f.session.start('');
+  const first = f.session.start('原有文字'); f.session.stop();
   release(f.speech); await first; assert.equal(f.starts(), 0); assert.equal(f.session.getPhase(), 'idle');
   f.dependencies.load = async () => f.speech;
   await f.session.start(''); f.emit('start');
@@ -105,7 +107,7 @@ test('denied permission, unsupported service, busy recognizer and network errors
 test('stop/abort/subscription bridge failures are caught and listeners are cleaned up', async t => {
   const f = fixture(t); await f.session.start(''); f.emit('start'); f.result('鸡蛋');
   f.speech.stop = () => { throw Error('native stop failed'); }; f.speech.abort = () => { throw Error('native abort failed'); };
-  await assert.doesNotReject(f.session.start('')); assert.match(f.errors.at(-1), /结束语音输入失败/);
+  assert.doesNotThrow(() => f.session.stop()); assert.match(f.errors.at(-1), /结束语音输入失败/);
   assert.equal(f.texts.at(-1), '鸡蛋'); assert.equal(f.session.getPhase(), 'idle');
   for (const set of f.listeners.values()) assert.equal(set.size, 0);
   const add = f.speech.addListener;
@@ -131,4 +133,40 @@ test('start, recording and finalization watchdogs bound stuck services without s
   f.dependencies.load = () => new Promise(() => {});
   void f.session.start(''); t.mock.timers.tick(30000); assert.equal(f.session.getPhase(), 'idle');
   assert.match(f.errors.at(-1), /响应超时/);
+});
+
+test('hold begins after a short threshold, release stops once, quick taps never start', t => {
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+  const events = []; const h = createVoiceHold({ start: () => events.push('start'), stop: () => events.push('stop'), cancel: () => events.push('cancel'), change: () => {} });
+  h.begin(); t.mock.timers.tick(100); h.release(); t.mock.timers.tick(1000); assert.deepEqual(events, []);
+  h.begin(); t.mock.timers.tick(180); h.release(); h.release(); assert.deepEqual(events, ['start', 'stop']);
+  h.begin(); t.mock.timers.tick(180); h.move(-60); h.move(0); h.release(); assert.deepEqual(events.slice(-2), ['start', 'stop']);
+});
+
+test('upward cancellation and responder termination discard only the new speech', async t => {
+  const f = fixture(t); await f.session.start(' 原有输入 '); f.emit('start'); f.result('不该保留');
+  const stale = [...f.listeners.get('result')][0];
+  f.session.cancel(); stale({ isFinal: true, results: [{ transcript: '迟到结果' }] });
+  assert.equal(f.texts.at(-1), ' 原有输入 '); assert.equal(f.session.getPhase(), 'idle');
+  t.mock.timers.enable({ apis: ['setTimeout'] }); const events = [];
+  const h = createVoiceHold({ start: () => events.push('start'), stop: () => events.push('stop'), cancel: () => events.push('cancel'), change: () => {} });
+  h.begin(); t.mock.timers.tick(180); h.move(-55); h.release(); assert.deepEqual(events, ['start', 'cancel']);
+  h.begin(); t.mock.timers.tick(180); h.interrupt(); h.release(); assert.deepEqual(events.slice(-2), ['start', 'cancel']);
+  h.begin(); h.dispose(); t.mock.timers.tick(1000); assert.equal(events.length, 4);
+});
+
+test('release while permission is pending cannot start a microphone later', async t => {
+  const f = fixture(t); let grant;
+  f.speech.getPermissionsAsync = async () => ({ granted: false });
+  f.speech.requestPermissionsAsync = () => new Promise(resolve => { grant = resolve; });
+  const pending = f.session.start('保留'); await new Promise(resolve => setImmediate(resolve));
+  f.session.stop(); grant({ granted: true }); await pending;
+  assert.equal(f.starts(), 0); assert.equal(f.session.getPhase(), 'idle');
+});
+
+test('Android repeated final hypotheses do not duplicate words; OEM stop client error keeps interim text only on explicit stop', async t => {
+  const f = fixture(t); await f.session.start(''); f.emit('start');
+  f.result('你好', true); f.result('你好', true); assert.equal(f.texts.at(-1), '你好');
+  f.session.stop(); f.emit('error', { error: 'unknown', code: 5 }); assert.equal(f.errors.length, 0); assert.equal(f.session.getPhase(), 'idle');
+  await f.session.start(''); f.emit('start'); f.result('鸡蛋'); f.emit('error', { error: 'unknown', code: 5 }); assert.equal(f.errors.length, 1);
 });

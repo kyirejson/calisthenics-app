@@ -15,7 +15,7 @@ import { useAppStore } from '../../store/AppStore';
 import { fitnessColors as colors, appPalette, radius, progressPageLayout } from '../../theme';
 import { confirmAction, showMessage } from '../../utils/confirm';
 
-type Props = { date: string; entry?: IntakeEntry; onClose: () => void };
+type Props = { date: string; entry?: IntakeEntry; initialSlot?: MealSlot; onClose: () => void };
 type DraftPortion = { key: string; foodId: string; grams: string };
 const slots: { value: MealSlot; label: string }[] = [
   { value: 'breakfast', label: '早餐' }, { value: 'lunch', label: '午餐' },
@@ -29,10 +29,10 @@ function gramsValue(value: string): number {
 }
 function validGrams(value: string): boolean { const n = gramsValue(value); return Number.isFinite(n) && n > 0 && n <= 2000; }
 
-export function IntakeEditor({ date, entry, onClose }: Props) {
+export function IntakeEditor({ date, entry, initialSlot, onClose }: Props) {
   const { saveIntakeEntry, saveCustomFood, deleteCustomFood, nutritionJournal } = useAppStore();
   const initial = entry;
-  const [slot, setSlot] = useState<MealSlot>(initial?.slot ?? 'lunch');
+  const [slot, setSlot] = useState<MealSlot>(initial?.slot ?? initialSlot ?? 'lunch');
   const [name, setName] = useState(initial?.name ?? '');
   const [query, setQuery] = useState('');
   const [selectedFood, setSelectedFood] = useState<string | null>(null);
@@ -122,10 +122,10 @@ export function IntakeEditor({ date, entry, onClose }: Props) {
           <Pressable accessibilityRole="button" accessibilityLabel="关闭实际摄入编辑器" disabled={busy} onPress={close} style={[styles.close, busy && styles.disabled]}><Text style={styles.closeText}>关闭</Text></Pressable>
         </View>
         <ScrollView style={styles.scroll} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-          <View style={styles.slotRow}>{slots.map(item => <Pressable key={item.value} accessibilityRole="button" accessibilityState={{ selected: item.value === slot, disabled: busy }} disabled={busy} onPress={() => setSlot(item.value)} style={[styles.slot, item.value === slot && styles.selected]}><Text style={styles.buttonText}>{item.label}</Text></Pressable>)}</View>
+          <View style={styles.slotRow}>{slots.map(item => <Pressable key={item.value} accessibilityRole="radio" accessibilityLabel={'记餐到' + item.label} aria-checked={item.value === slot} aria-disabled={busy} disabled={busy} onPress={() => setSlot(item.value)} style={[styles.slot, item.value === slot && styles.selected]}><Text style={styles.buttonText}>{item.label}</Text></Pressable>)}</View>
           <TextInput accessibilityLabel="摄入记录名称，可选" placeholder="记录名称（可选，留空按食物命名）" value={name} onChangeText={setName} editable={!busy} maxLength={200} style={styles.input} placeholderTextColor={colors.inkMuted} />
           {entry && entry.foodDataVersion !== FOOD_DATA_VERSION ? <Text style={styles.notice}>这是旧版数据记录；保存修改后，将按当前食材数据重新计算营养。</Text> : null}
-          {initial?.customFoods?.length ? <Text style={styles.small}>自定义食品使用这份记录保留的标签快照，不跟随食品库修改。</Text> : null}
+          {initial?.customFoods?.length ? <Text style={styles.small}>个人食品保留本次标签或参考配方快照，不跟随食品库修改。联网配方仍为估算。</Text> : null}
           <View style={styles.slotRow}>
             <Pressable accessibilityRole="button" disabled={busy} onPress={() => { setLabelDraft(undefined); setCustomEditing('new'); }} style={styles.secondary}><Text style={styles.buttonText}>＋ 按包装标签添加食品</Text></Pressable>
             <Pressable accessibilityRole="button" disabled={busy} onPress={() => setImportMode('label')} style={styles.secondary}><Text style={styles.buttonText}>拍营养标签</Text></Pressable>

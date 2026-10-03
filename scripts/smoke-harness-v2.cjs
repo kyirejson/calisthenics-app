@@ -29,6 +29,7 @@ const b = (page, name) => page.getByRole('button', { name, exact: true });
           const headers = { 'Access-Control-Allow-Origin': 'http://127.0.0.1:8081', 'Access-Control-Allow-Headers': 'Content-Type', 'Access-Control-Allow-Methods': 'GET,POST,OPTIONS' };
           if (req.method() === 'OPTIONS') return route.fulfill({ status: 204, headers });
           if (url.endsWith('/health')) return route.fulfill({ headers, json: { configured: true, readiness: 'ready', model: 'offline', provider: 'offline' } });
+          if (url.endsWith('/search-food')) return route.fulfill({ headers, json: { candidates: [], message: '请补充主要食材和做法后重新搜索。' } });
           const input = req.postDataJSON(); validateAdviceRequest(input); requests.push(input);
           let reply = { answer: '你之前提到过，上胸是训练重点。', sources: [] };
           if (input.question.includes('香菜')) reply = { answer: '已整理忌口，交由本机保存。', sources: [], intent: { type: 'remember', kind: 'avoid', text: '香菜' } };
@@ -77,6 +78,12 @@ const b = (page, name) => page.getByRole('button', { name, exact: true });
         await send('早餐吃了两个水煮鸡蛋，帮我记录');
         await page.waitForFunction(() => JSON.parse(localStorage.getItem('nutrition_journal_v1')).entries.length === 1);
         assert.equal((await read()).entries[0].nutrients.calories, 155); assert.equal(await b(page, '确认助手记餐').count(), 0);
+        const beforeNoMeal = requests.length;
+        await send('晚餐，我没吃');
+        await page.waitForFunction(() => Object.values(JSON.parse(localStorage.getItem('nutrition_journal_v1')).days).some(d => d.skippedSlots?.includes('dinner')));
+        assert.equal(await b(page, '确认助手餐次状态').count(), 0); assert.equal((await read()).entries.length, 1); assert.equal(requests.length, beforeNoMeal);
+        await send('晚餐撤销没吃');
+        await page.waitForFunction(() => Object.values(JSON.parse(localStorage.getItem('nutrition_journal_v1')).days).every(d => !d.skippedSlots?.includes('dinner')));
         await send('帮我记录未知食品'); await b(page, '保存助手记餐').waitFor();
         assert.equal(await b(page, '保存助手记餐').isDisabled(), true); assert.equal((await read()).entries.length, 1);
         const rows = Array.from({ length: 140 }, (_, i) => {
@@ -100,7 +107,7 @@ const b = (page, name) => page.getByRole('button', { name, exact: true });
         const residue = await page.evaluate(() => new Promise(resolve => { const r = indexedDB.open('uncover-assistant-memory-v2', 1); r.onsuccess = () => { const db = r.result, q = db.transaction('turns').objectStore('turns').getAll(); q.onsuccess = () => { db.close(); resolve(q.result.filter(t => t.question.includes('香菜') || t.answer.includes('香菜')).length); }; }; }));
         assert.equal(residue, 0); assert.equal((await read()).entries.length, 1);
         assert.deepEqual(errors, []);
-        console.log('PASS Harness V2 ' + width + 'px: questionnaire, restart, actual snapshot contract, 140-turn IndexedDB recall, full-access tools, unknown-food refusal, forget purge');
+        console.log('PASS Harness V2 ' + width + 'px: questionnaire, restart, actual snapshot contract, 140-turn IndexedDB recall, full-access tools, unknown-food refinement, forget purge');
       } catch (error) { console.error((await page.locator('body').innerText()).slice(-2500)); throw error; }
       finally { await context.close(); }
     }

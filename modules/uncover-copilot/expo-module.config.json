@@ -1,0 +1,1 @@
+{"platforms":["apple","android"],"apple":{"modules":["UncoverCopilotModule"]},"android":{"modules":["expo.modules.uncovercopilot.UncoverCopilotModule"]}}

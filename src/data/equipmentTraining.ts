@@ -8,6 +8,7 @@ import { equipmentProgram } from './equipmentProgram';
 import { equipmentMuscleTargets, equipmentRegionTargets, equipmentFunctionTargets } from './equipmentDosePolicy';
 export { equipmentRegionTargets, equipmentFunctionTargets } from './equipmentDosePolicy';
 import { estimateEquipmentSession, type EquipmentEstimate } from './equipmentTimeline';
+import { applyCourseOverlay } from '../agent/trainingOverlay';
 
 export const EQUIPMENT_PLAN_ID = 'equipment_training_v2';
 export const equipmentSplitLabels: Record<EquipmentSplit, string> = { bro: '传统五分化', ppl: '推 / 拉 / 腿', upper_lower: '上 / 下肢分化' };
@@ -150,7 +151,7 @@ export function equipmentSessionPlan(id: string, profile: Profile, _date?: Date)
   // Reserve deliberate overrides and available defaults before choosing equipment fallbacks.
   const reserved = new Set((template?.doses || []).map(dose =>
     profile.equipmentMovementOverrides?.[id]?.[dose.id] || (equipmentReplacementIds(dose.id, profile).includes(dose.id) ? dose.id : undefined)).filter(Boolean));
-  const items: PrescribedExercise[] = (template?.doses || []).flatMap((dose, priority) => {
+  let items: PrescribedExercise[] = (template?.doses || []).flatMap((dose, priority) => {
     if (!validSets(dose.sets) || !Array.isArray(dose.range) || dose.range.length !== 2 || !dose.range.every(validSets)
       || dose.range[1] < dose.range[0] || !Number.isFinite(dose.rest) || dose.rest < 0) {
       issues.push('动作处方剂量无效：' + dose.id);
@@ -172,6 +173,10 @@ export function equipmentSessionPlan(id: string, profile: Profile, _date?: Date)
     return [{ ...movement, targetSets: dose.sets, targetValue: dose.range[0], targetUnit: 'reps' as const, repRange: dose.range,
       restSeconds: dose.rest, loadBasis: basis, perSide: meta.unilateral, priority, equipmentSourceId: dose.id,
       defaultPrescription: { ...movement.defaultPrescription, rirTarget: meta.purpose === 'control' ? 3 : 2 } }];
+  });
+  items = applyCourseOverlay(items, profile, id, _date || new Date(), replacement => {
+    const movement = getEquipmentMovement(replacement); if (!movement) return undefined;
+    return { ...movement, loadBasis: equipmentLoadBasis(replacement), perSide: equipmentExecution(replacement).unilateral };
   });
   items.sort((a, b) => Number(equipmentExecution(b.id).compound) - Number(equipmentExecution(a.id).compound));
   if (profile.equipmentPriority && profile.equipmentPriority !== 'balanced') items.sort((a, b) => Number(getEquipmentMovement(b.id)?.group === profile.equipmentPriority) - Number(getEquipmentMovement(a.id)?.group === profile.equipmentPriority));

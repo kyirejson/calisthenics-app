@@ -146,9 +146,9 @@ function dateKey(value) {
 function boolean(value) { if (typeof value !== 'boolean') throw BAD(); return value; }
 function integer(value, max) { const n = number(value, max); if (!Number.isInteger(n)) throw BAD(); return n; }
 export function validateAdviceRequest(value) {
-  record(value, ['question', 'context', 'history', 'assistantMode', 'memory', 'harness']);
+  record(value, ['question', 'context', 'history', 'assistantMode', 'memory', 'harness', 'webSearch']);
   const question = text(value.question, 1000);
-  const input = record(value.context, ['safetyStatus', 'objective', 'pattern', 'riskFlags', 'age', 'targets', 'preferences', 'consumed', 'menu', 'logging', 'training', 'weekly', 'toolsAllowed']);
+  const input = record(value.context, ['safetyStatus', 'objective', 'pattern', 'riskFlags', 'age', 'targets', 'preferences', 'consumed', 'menu', 'logging', 'training', 'weekly', 'weightTrend', 'toolsAllowed']);
   const context = {};
   if (input.safetyStatus !== undefined) context.safetyStatus = choice(input.safetyStatus, STATUSES);
   if (input.objective !== undefined) context.objective = choice(input.objective, OBJECTIVES);
@@ -193,8 +193,11 @@ export function validateAdviceRequest(value) {
     });
   }
   if (input.logging !== undefined) {
-    const logging = record(input.logging, ['date', 'confirmedSlots', 'complete', 'recordCount', 'containsPhoto']);
+    const logging = record(input.logging, ['date', 'confirmedSlots', 'skippedSlots', 'recordedSlots', 'complete', 'recordCount', 'containsPhoto']);
     context.logging = { date: dateKey(logging.date), confirmedSlots: choices(logging.confirmedSlots, SLOTS, 4), complete: boolean(logging.complete), recordCount: integer(logging.recordCount, 500), containsPhoto: boolean(logging.containsPhoto) };
+    if (logging.skippedSlots !== undefined) context.logging.skippedSlots = choices(logging.skippedSlots, SLOTS, 4);
+    if (logging.recordedSlots !== undefined) context.logging.recordedSlots = choices(logging.recordedSlots, SLOTS, 4);
+    if (context.logging.skippedSlots?.some(slot => !context.logging.confirmedSlots.includes(slot) || context.logging.recordedSlots?.includes(slot))) throw BAD();
     if (context.logging.complete && context.logging.confirmedSlots.length !== 4) throw BAD();
   }
   if (input.training !== undefined) {
@@ -208,6 +211,17 @@ export function validateAdviceRequest(value) {
     context.weekly = { completeDays: integer(weekly.completeDays, 7), comparableDays: integer(weekly.comparableDays, 7), trainingDays: integer(weekly.trainingDays, 7), photoDays: integer(weekly.photoDays, 7),
       status: choice(weekly.status, ['insufficient', 'ready', 'goal_changed', 'paused']), average: weekly.average === null ? null : nutrients(weekly.average, 30000, 5000) };
     if (context.weekly.comparableDays > context.weekly.completeDays) throw BAD();
+  }
+  if (input.weightTrend !== undefined) {
+    const trend = record(input.weightTrend, ['end', 'recentCount', 'previousCount', 'recentMean', 'previousMean', 'comparison']);
+    const recentCount = integer(trend.recentCount, 7), previousCount = integer(trend.previousCount, 7);
+    const recentMean = trend.recentMean === null ? null : number(trend.recentMean, 300, 30);
+    const previousMean = trend.previousMean === null ? null : number(trend.previousMean, 300, 30);
+    if ((recentCount === 0) !== (recentMean === null) || (previousCount === 0) !== (previousMean === null)) throw BAD();
+    const comparison = recentCount < 5 || previousCount < 5 ? 'insufficient'
+      : Math.abs(recentMean - previousMean) <= .200001 ? 'stable' : 'changed';
+    if (trend.comparison !== comparison) throw BAD();
+    context.weightTrend = { end: dateKey(trend.end), recentCount, previousCount, recentMean, previousMean, comparison };
   }
   if (input.toolsAllowed !== undefined) context.toolsAllowed = boolean(input.toolsAllowed);
   const history = [];
@@ -231,5 +245,5 @@ export function validateAdviceRequest(value) {
   }
   let harness;
   if (value.harness !== undefined) { try { if (!assistantMode) throw BAD(); harness = validateHarness(value.harness, { record, text, number }); } catch { throw BAD(); } }
-  return { question, context, history, ...(assistantMode ? { assistantMode } : {}), ...(memory.length ? { memory } : {}), ...(harness ? { harness } : {}) };
+  return { question, context, history, ...(assistantMode ? { assistantMode } : {}), ...(memory.length ? { memory } : {}), ...(harness ? { harness } : {}), ...(value.webSearch === undefined ? {} : { webSearch: boolean(value.webSearch) }) };
 }

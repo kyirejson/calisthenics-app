@@ -17,9 +17,11 @@ const turn = (patch = {}) => ({ id: 'turn-1', question: '早餐吃了鸡蛋', an
 const intake = (patch = {}) => ({ type: 'log_intake', slot: 'breakfast', items: [{ name: '水煮鸡蛋', state: 'cooked', quantity: 2, unit: 'piece' }], ...patch });
 const ready = { safetyStatus: 'ready', preferences: { version: 1, objective: 'maintain', pattern: 'balanced', activity: 'light', allergens: [], riskFlags: [], screeningCompletedAt: now, maxCookingMinutes: 30, budget: 'standard' }, targets: { calories: 2000, protein: 100, carbs: 280, fat: 60, status: 'ready' }, consumed: { calories: 0, protein: 0, carbs: 0, fat: 0, fiber: 0 }, menu: [] };
 
-test('50 Unicode characters are allowed; overlong replies fail whole instead of truncating safety text', () => {
-  assert.equal(Array.from(state.shortAssistantReply('🥚'.repeat(50))).length, 50);
-  assert.equal(state.shortAssistantReply('🥚'.repeat(51)), '这次回答过长，请重试；没有改动记录。');
+test('answers beyond fifty characters remain intact; only abnormal transport-sized replies are rejected', () => {
+  assert.equal(state.normalizeAssistantReply('🥚'.repeat(500)), '🥚'.repeat(500));
+  assert.equal(state.normalizeAssistantReply('字'.repeat(8001)), '服务返回内容异常偏大，请重试；没有改动记录。');
+  const full = '这是完整的解释，不应该被固定字数限制截断。'.repeat(10);
+  assert.equal(state.normalizeAssistantState({ version: 1, conversations: [turn({ answer: full })] }).conversations[0].answer, full);
 });
 test('memory and recent context survive journal normalization; legacy journal remains compatible', () => {
   const journal = engine.emptyNutritionJournal();
@@ -100,11 +102,12 @@ async function run() {
     const i = input('训练后吃什么比较好？'); i.history = [{ role: 'user', content: '我对花生过敏' }, { role: 'assistant', content: '已提出记忆，请确认。' }]; i.memory = [{ kind: 'allergy', text: '花生' }];
     assert.equal(guardAdvice(i), null);
     i.memory.push({ kind: 'need', text: '糖尿病' }); assert.ok(guardAdvice(i));
-    assert.ok(Array.from(fallbackAdvice().answer).length <= 50);
+    assert.ok(fallbackAdvice().answer.length > 0 && fallbackAdvice().answer.length <= 8000);
   });
   test('overlong answer, invented source or simultaneous intents/actions fail as a whole', () => {
     const i = input('早餐吃了鸡蛋，帮我记录'), knowledge = selectKnowledge(i.question);
-    assert.equal(validateAdviceResult({ answer: '字'.repeat(51), sourceIds: ['balanced'], intent: intake() }, knowledge, i), null);
+    assert.ok(validateAdviceResult({ answer: '解释'.repeat(100), sourceIds: ['balanced'], intent: intake() }, knowledge, i));
+    assert.equal(validateAdviceResult({ answer: '字'.repeat(8001), sourceIds: ['balanced'], intent: intake() }, knowledge, i), null);
     assert.equal(validateAdviceResult({ answer: '请确认草案。', sourceIds: ['invented'], intent: intake() }, knowledge, i), null);
     assert.equal(validateAdviceResult({ answer: '请确认草案。', sourceIds: ['balanced'], action: { type: 'swap_meal', slot: 'next', focus: 'balanced' }, intent: intake() }, knowledge, i), null);
     i.memory = [{ kind: 'avoid', text: '香菜' }];
@@ -114,21 +117,21 @@ async function run() {
     const f = await fixture(t, () => { throw new Error('no paid calls allowed'); });
     const result = await f.post({ question: '记住我不吃香菜', context: ready, assistantMode: true });
     assert.equal(result.status, 200); assert.equal(result.body.intent.type, 'remember'); assert.equal(f.calls.length, 0);
-    assert.ok(Array.from(result.body.answer).length <= 50); assert.match(result.body.answer, /确认/);
+    assert.ok(result.body.answer.length > 0 && result.body.answer.length <= 8000); assert.match(result.body.answer, /确认/);
   });
   test('assistant food tool route sends confirmed memory/context and returns intent, never nutrients', async t => {
     const negative = await fixture(t, () => { throw Error('negation must not call model'); });
     for (const question of ['我对牛奶不过敏', '我没有牛奶过敏', '我对牛奶并非过敏']) {
       const response = await negative.post({ question, context: ready, assistantMode: true });
       assert.equal(response.status, 200); assert.equal(response.body.intent, undefined);
-      assert.ok(Array.from(response.body.answer).length <= 50);
+      assert.ok(response.body.answer.length > 0 && response.body.answer.length <= 8000);
     }
     assert.equal(negative.calls.length, 0);
     const f = await fixture(t, () => upstream({ answer: '已整理早餐，请核对并确认记餐。', sourceIds: ['measurement'], intent: intake() }));
     const result = await f.post({ question: '早餐吃了两个水煮鸡蛋，帮我记录', context: ready, assistantMode: true, memory: [{ kind: 'avoid', text: '香菜' }] });
     assert.equal(result.status, 200); assert.deepEqual(result.body.intent, intake()); assert.equal(result.body.nutrients, undefined);
     const payload = JSON.parse(f.calls[0][1].body); const sent = JSON.parse(payload.messages[1].content);
-    assert.equal(sent.assistantMode, true); assert.deepEqual(sent.memory, [{ kind: 'avoid', text: '香菜' }]); assert.match(payload.messages[0].content, /最多50/);
+    assert.equal(sent.assistantMode, true); assert.deepEqual(sent.memory, [{ kind: 'avoid', text: '香菜' }]); assert.doesNotMatch(payload.messages[0].content, /最多50/);
   });
   test('book answer cites only original excerpts selected by retriever', { skip: !fs.existsSync(path.resolve(__dirname, '../server/private/prisoner-index.json')) && 'local user-owned book index is not part of source distribution' }, async t => {
     const f = await fixture(t, (_, init) => { const refs = JSON.parse(JSON.parse(init.body).messages[0].content.split('知识摘要：')[1]); const id = refs.find(r => r.id.startsWith('cc-')).id; return upstream({ answer: '原书按能力选择计划，循序渐进，休息优先。', sourceIds: [id] }); });

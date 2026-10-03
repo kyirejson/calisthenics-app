@@ -6,7 +6,7 @@ import { AppGlyph, type GlyphName } from '../components/AppGlyph';
 import { IntakeEditor } from '../components/nutrition/IntakeEditor';
 import { FoodCameraModal } from '../components/nutrition/FoodCameraModal';
 import { PhotoIntakeEditor } from '../components/nutrition/PhotoIntakeEditor';
-import { NutritionAgentModal } from '../components/nutrition/NutritionAgentModal';
+import { usePersonalAgent } from '../agent/PersonalAgentHost';
 import { LoggingCompletenessControls } from '../components/nutrition/NutritionLoopCards';
 import { MealArtwork } from '../components/nutrition/MealArtwork';
 import { mealFoodArtwork } from '../nutrition/foodArtwork';
@@ -18,15 +18,14 @@ import { useAppUpdates } from '../components/AppUpdates';
 import { localWeightDate, recordWeight, suggestedPlanningWeight, summarizeWeightTrend } from '../data/weightTrend';
 import { FOODS, FOOD_DATA_VERSION } from '../nutrition/catalog';
 import { sumNutrients } from '../nutrition/engine';
-import { buildNutritionMenu, prepareMealAdjustment } from '../nutrition/adjustments';
+import { buildNutritionMenu } from '../nutrition/adjustments';
 import { getNutritionTrainingContext } from '../nutrition/training';
-import { latestNutritionTarget, summarizeNutritionWeek } from '../nutrition/timeline';
-import { MEAL_SLOTS } from '../nutrition/state';
+import { latestNutritionTarget } from '../nutrition/timeline';
 import { summarizeMealSlots } from '../nutrition/presentation';
 import { offsetDate } from '../nutrition/validation';
 import { NUTRITION_KNOWLEDGE, OBJECTIVE_EXPLANATIONS } from '../nutrition/knowledge';
 import { slotLabels } from '../nutrition/labels';
-import type { IntakeEntry, MealSlot, NutritionAgentAction } from '../nutrition/types';
+import type { IntakeEntry, MealSlot } from '../nutrition/types';
 import { useAppStore } from '../store/AppStore';
 import { appPalette, fitnessColors as colors, progressPageLayout } from '../theme';
 import { confirmAction, showMessage } from '../utils/confirm';
@@ -35,13 +34,13 @@ const rounded = (value: number) => Math.round(value);
 
 export function NutritionScreen({ onBack, embedded = false }: { onBack: () => void; embedded?: boolean }) {
   const { profile, sessions, dailyEdits, nutritionJournal, nutritionStorageIssue, saveIntakeEntry, deleteIntakeEntry, patchProfile,
-    captureNutritionTarget, confirmNutritionLogging } = useAppStore();
+    captureNutritionTarget, confirmNutritionLogging, setNutritionMealStatus } = useAppStore();
   const { blockUpdates } = useAppUpdates();
   const [today, setToday] = useState(() => localWeightDate(new Date()));
   const [chosenDate, setChosenDate] = useState<string | null>(null);
-  const [editor, setEditor] = useState<{ date: string; entry?: IntakeEntry } | null>(null);
+  const [editor, setEditor] = useState<{ date: string; entry?: IntakeEntry; slot?: MealSlot } | null>(null);
   const [cameraDate, setCameraDate] = useState<string | null>(null);
-  const [showAgent, setShowAgent] = useState(false);
+  const { openAgent } = usePersonalAgent();
   const [showKnowledge, setShowKnowledge] = useState(false);
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [recordSlot, setRecordSlot] = useState<MealSlot | 'all' | null>(null);
@@ -54,7 +53,7 @@ export function NutritionScreen({ onBack, embedded = false }: { onBack: () => vo
   const prefs = nutritionJournal.preferences;
   const date = chosenDate || today;
   const isToday = date === today;
-  const editing = Boolean(editor || cameraDate || showAgent || showDatePicker || recordSlot || busy || (showWeight && weight.trim()));
+  const editing = Boolean(editor || cameraDate || showDatePicker || recordSlot || busy || (showWeight && weight.trim()));
   useLayoutEffect(() => {
     if (embedded && editing) return blockUpdates();
   }, [embedded, editing, blockUpdates]);
@@ -66,7 +65,6 @@ export function NutritionScreen({ onBack, embedded = false }: { onBack: () => vo
   }, []);
   const training = useMemo(() => profile ? getNutritionTrainingContext(profile, sessions, dailyEdits, today) : null, [profile, sessions, dailyEdits, today]);
   const menu = useMemo(() => profile && training ? buildNutritionMenu(profile, nutritionJournal, training, today) : null, [profile, training, nutritionJournal, today]);
-  const review = useMemo(() => profile ? summarizeNutritionWeek(nutritionJournal, profile, sessions, today) : null, [profile, nutritionJournal, sessions, today]);
   useEffect(() => {
     if (!profile || !training) return;
     let active = true;
@@ -76,14 +74,12 @@ export function NutritionScreen({ onBack, embedded = false }: { onBack: () => vo
   const records = useMemo(() => nutritionJournal.entries.filter(item => item.date === date), [nutritionJournal.entries, date]);
   const actual = useMemo(() => sumNutrients(records.map(item => item.nutrients)), [records]);
   const mealSummaries = useMemo(() => summarizeMealSlots(records), [records]);
-  if (!profile || !menu || !training || !review) return null;
+  if (!profile || !menu || !training) return null;
   const ready = menu.targets.status === 'ready';
   const snapshot = latestNutritionTarget(nutritionJournal, date);
   const reference = isToday ? menu.targets : snapshot?.targets;
   const referenceReady = reference?.status === 'ready';
   const dayState = nutritionJournal.days[date];
-  const availableSlots = MEAL_SLOTS.filter(slot => menu.meals.some(meal => meal.slot === slot)
-    && !nutritionJournal.days[today]?.confirmedSlots.includes(slot) && !nutritionJournal.entries.some(entry => entry.date === today && entry.slot === slot));
   const trend = summarizeWeightTrend(profile.weightHistory);
   const planningWeight = suggestedPlanningWeight(profile.weight, trend);
   const run = async (key: string, operation: () => Promise<void>) => {
@@ -92,13 +88,12 @@ export function NutritionScreen({ onBack, embedded = false }: { onBack: () => vo
     try { await operation(); } catch (reason) { setError(reason instanceof Error ? reason.message : '保存失败，请重试。'); }
     finally { pending.current = false; setBusy(''); }
   };
-  const prepareAction = (action: NutritionAgentAction) => prepareMealAdjustment(profile, nutritionJournal, training, today, action);
   const confirmLogging = (slot: MealSlot | 'day', confirmed: boolean) => {
     const apply = () => void run('logging-' + slot, () => confirmNutritionLogging(date, slot, confirmed));
     if (!confirmed) { apply(); return; }
     const hasRecords = slot === 'day' ? records.length > 0 : records.some(entry => entry.slot === slot);
     confirmAction(slot === 'day' ? '确认当天全部记完整？' : '确认' + slotLabels[slot] + '已记完整？',
-      hasRecords ? '请确认食物、饮料、零食和用油均已记入，没吃的餐也已核对。之后补录、修改或删除会撤销完整确认。'
+      hasRecords ? '仅在你确认实际吃喝都已记录时选择。无需逐餐填写；之后补录、修改或删除会撤销完整确认。'
         : '当前没有对应摄入记录。只有确实没有吃、而不是尚未记餐，才确认完成；这会按没有摄入参与完整记录统计。', apply, { confirmLabel: '确认已记完整' });
   };
   const removeEntry = (entry: IntakeEntry) => confirmAction('删除这条饮食记录？', '只删除这一次记录，菜谱和其他日期不受影响。',
@@ -135,20 +130,21 @@ export function NutritionScreen({ onBack, embedded = false }: { onBack: () => vo
       {!referenceReady || !isToday ? <Text style={styles.target}>{referenceReady ? '当日保存参考 ' + reference.calories + ' kcal' : isToday ? menu.targets.status === 'needs_setup' ? '告诉助手你的营养目标与饮食偏好' : '自动目标暂停 · 仍可记录饮食' : snapshot ? '当日自动目标暂停 · 不套用今天的目标' : '该日未保存目标 · 不补造历史参考值'}</Text> : null}
       <View style={styles.macroRow}><Macro label="蛋白质" value={actual.protein} target={referenceReady ? reference.protein : undefined} empty={!records.length} /><Macro label="碳水" value={actual.carbs} target={referenceReady ? reference.carbs : undefined} empty={!records.length} /><Macro label="脂肪" value={actual.fat} target={referenceReady ? reference.fat : undefined} empty={!records.length} /></View>
     </View>
-    <View testID="nutrition-primary-actions" style={styles.quickActions}><CaptureAction icon="camera" label="拍照记餐" caption="食物 · 标签 · 条码" accessibilityLabel="拍照记餐" onPress={() => setCameraDate(date)} /><CaptureAction icon="chat" label="营养助手" caption="饮食问题，问我吧" accessibilityLabel="问营养助手" onPress={() => setShowAgent(true)} /></View>
+    <View testID="nutrition-primary-actions" style={styles.quickActions}><CaptureAction icon="camera" label="拍照记餐" caption="食物 · 标签 · 条码" accessibilityLabel="拍照记餐" onPress={() => setCameraDate(date)} /><CaptureAction icon="chat" label="个人助手" caption="训练 · 饮食 · 记忆" accessibilityLabel="问营养助手" onPress={() => openAgent('饮食记录')} /></View>
     {error ? <Text accessibilityRole="alert" style={styles.error}>{error}</Text> : null}
     {nutritionStorageIssue ? <View style={styles.warning}><Text accessibilityRole="alert" style={styles.warningText}>{nutritionStorageIssue}</Text></View> : historyError ? <View style={styles.warning}><Text accessibilityRole="alert" style={styles.warningText}>{historyError}</Text><Action label="重试保存目标" small onPress={() => void run('capture-target', async () => { await captureNutritionTarget(); setHistoryError(''); })} /></View> : null}
-    {isToday && !ready ? <Card style={styles.notice}><Text style={styles.cardTitle}>{menu.targets.status === 'needs_setup' ? '先了解你的饮食需要' : '自动配餐暂不可用'}</Text><Text style={styles.body}>{menu.targets.message}</Text><Action label="告诉营养助手" onPress={() => setShowAgent(true)} /></Card> : null}
+    {isToday && !ready ? <Card style={styles.notice}><Text style={styles.cardTitle}>{menu.targets.status === 'needs_setup' ? '先了解你的饮食需要' : '自动配餐暂不可用'}</Text><Text style={styles.body}>{menu.targets.message}</Text><Action label="告诉营养助手" onPress={() => openAgent('饮食记录')} /></Card> : null}
 
-    <View style={styles.section}><Text style={styles.sectionTitle}>{isToday ? '今日饮食' : '当日饮食'}</Text><Pressable accessibilityRole="button" accessibilityLabel="管理当日饮食记录" onPress={() => setRecordSlot('all')} style={styles.textAction}><Text style={styles.subtle}>管理</Text><AppGlyph name="chevron" size={14} /></Pressable></View>
+    <View style={styles.section}><Text style={styles.sectionTitle}>{isToday ? '今日饮食' : '当日饮食'}</Text><Pressable accessibilityRole="button" accessibilityLabel="管理当日饮食记录" onPress={() => setRecordSlot('all')} style={styles.textAction}><Text style={styles.subtle}>记录／没吃</Text><AppGlyph name="chevron" size={14} /></Pressable></View>
     {!records.length ? <View testID="nutrition-empty-meals" style={styles.emptyMeal}><View style={styles.emptyMealIcon}><AppGlyph name="utensils" color={appPalette.lime} size={22} /></View><Text style={styles.emptyTitle}>从这一餐开始</Text></View> : <View testID="nutrition-recorded-meals" style={styles.mealRows}>{mealSummaries.map(summary => {
       const savedPhoto = summary.entries.flatMap(entry => entry.photos ?? [])[0];
       return <View key={summary.slot} style={styles.mealRow}>
       {savedPhoto ? <NutritionPhotoView photo={savedPhoto} fallbackFood={mealFoodArtwork(summary.entries)} /> : <Pressable accessibilityRole="button" accessibilityLabel={'查看' + slotLabels[summary.slot] + '食物明细'} onPress={() => setRecordSlot(summary.slot)}><MealArtwork food={mealFoodArtwork(summary.entries)} portions={summary.entries.flatMap(entry => entry.portions)} photoEstimate={summary.entries.some(entry => entry.photoEstimate)} size={60} name={summary.names.join('、')} /></Pressable>}
       <Pressable accessibilityRole="button" accessibilityLabel={'查看' + slotLabels[summary.slot] + '饮食记录'} onPress={() => setRecordSlot(summary.slot)} style={({ pressed }) => [{ flex: 1, minWidth: 0, minHeight: 60, flexDirection: 'row', gap: 8, alignItems: 'center' }, pressed && { opacity: .75 }]}>
-      <View style={styles.flex}><View style={styles.mealRowHead}><Text style={styles.mealRowTitle}>{slotLabels[summary.slot]} · {rounded(summary.nutrients.calories)} kcal</Text>{summary.entries.some(entry => entry.photoEstimate && !entry.photoEstimate.calculation && !photoUsesOnlyLabels(entry.photoEstimate)) ? <Text style={styles.photoBadge}>照片估算</Text> : summary.entries.some(entry => entry.photoEstimate?.calculation === 'ingredients') ? <Text style={styles.photoBadge}>食材计算</Text> : summary.entries.some(entry => photoUsesOnlyLabels(entry.photoEstimate)) ? <Text style={styles.photoBadge}>标签计算</Text> : null}</View><Text numberOfLines={2} style={styles.subtle}>{summary.entries.map(entry => entry.photoEstimate?.dishName || photoPortionSummary(entry.photoEstimate) || entry.name).join('；')}</Text></View><AppGlyph name="chevron" size={16} />
+      <View style={styles.flex}><View style={styles.mealRowHead}><Text style={styles.mealRowTitle}>{slotLabels[summary.slot]} · {rounded(summary.nutrients.calories)} kcal</Text>{summary.entries.some(entry => entry.customFoods?.some(f => f.source.kind === 'recipe_estimate')) ? <Text style={styles.photoBadge}>配方估算</Text> : summary.entries.some(entry => entry.photoEstimate && !entry.photoEstimate.calculation && !photoUsesOnlyLabels(entry.photoEstimate)) ? <Text style={styles.photoBadge}>照片估算</Text> : summary.entries.some(entry => entry.photoEstimate?.calculation === 'ingredients') ? <Text style={styles.photoBadge}>食材计算</Text> : summary.entries.some(entry => photoUsesOnlyLabels(entry.photoEstimate)) ? <Text style={styles.photoBadge}>标签计算</Text> : null}</View><Text numberOfLines={2} style={styles.subtle}>{summary.entries.map(entry => entry.photoEstimate?.dishName || photoPortionSummary(entry.photoEstimate) || entry.name).join('；')}</Text></View><AppGlyph name="chevron" size={16} />
     </Pressable></View>; })}</View>}
 
+    {dayState?.skippedSlots?.map(slot => <Pressable accessibilityRole="button" accessibilityLabel={'查看' + slotLabels[slot] + '没吃状态'} key={'skipped-' + slot} onPress={() => setRecordSlot('all')} style={styles.emptyMeal}><Text style={styles.subtle}>{slotLabels[slot]} · 没吃</Text></Pressable>)}
     <View style={styles.section}><Text style={styles.sectionTitle}>体重趋势</Text><Action label={showWeight ? '收起' : '记录体重'} small onPress={() => setShowWeight(value => !value)} /></View>
     <Card><WeightTrendChart history={profile.weightHistory} today={today} />
       {showWeight ? <View style={styles.weightEditor}><Text style={styles.body}>记录的是今天体重，不会自动覆盖饮食估算体重。</Text><View style={styles.actions}><TextInput accessibilityLabel="今日体重kg" placeholder="体重 kg" keyboardType="decimal-pad" value={weight} onChangeText={setWeight} style={styles.input} /><Action label="保存体重" disabled={Boolean(busy)} onPress={saveWeight} /></View>
@@ -163,16 +159,8 @@ export function NutritionScreen({ onBack, embedded = false }: { onBack: () => vo
       <Text style={styles.footnote}>{FOODS.length} 种本地参考食材 · {FOOD_DATA_VERSION}{'\n'}食材计算与照片估算分别标注。照片无法可靠判断油量、隐藏配料或过敏原，结果不是称重实测。资料已核对来源，尚未完成执业营养专业审核。</Text>
     </Card> : null}
 
-    {editor?.entry?.source === 'photo_estimate' ? <PhotoIntakeEditor entry={editor.entry} onClose={() => setEditor(null)} /> : editor ? <IntakeEditor date={editor.date} entry={editor.entry} onClose={() => setEditor(null)} /> : null}
+    {editor?.entry?.source === 'photo_estimate' ? <PhotoIntakeEditor entry={editor.entry} onClose={() => setEditor(null)} /> : editor ? <IntakeEditor date={editor.date} entry={editor.entry} initialSlot={editor.slot} onClose={() => setEditor(null)} /> : null}
     {cameraDate ? <FoodCameraModal visible onClose={() => setCameraDate(null)} onSave={savePhoto} /> : null}
-    {showAgent ? <NutritionAgentModal context={{ safetyStatus: menu.targets.status, preferences: prefs, targets: menu.targets,
-      consumed: sumNutrients(nutritionJournal.entries.filter(item => item.date === today).map(item => item.nutrients)),
-      menu: menu.meals.map(meal => ({ slot: meal.slot, name: meal.name, nutrients: meal.nutrients, editable: availableSlots.includes(meal.slot) })),
-      logging: { date: today, confirmedSlots: nutritionJournal.days[today]?.confirmedSlots || [], complete: Boolean(nutritionJournal.days[today]?.completedAt), recordCount: nutritionJournal.entries.filter(entry => entry.date === today).length, containsPhoto: nutritionJournal.entries.some(entry => entry.date === today && entry.source === 'photo_estimate' && !photoUsesOnlyLabels(entry.photoEstimate)) },
-      training: { ...training, time: nutritionJournal.trainingTime },
-      weekly: { completeDays: review.completeDays, comparableDays: review.comparableDays, trainingDays: review.trainingDays, photoDays: review.photoDays, status: review.status, average: review.average },
-      toolsAllowed: ready && availableSlots.length > 0 && !nutritionJournal.days[today]?.completedAt }}
-      onPrepare={prepareAction} onClose={() => setShowAgent(false)} /> : null}
     <Modal transparent visible={showDatePicker} animationType="fade" onRequestClose={() => setShowDatePicker(false)}><View style={styles.backdrop}><View style={styles.sheet} accessibilityViewIsModal>
       <View style={styles.between}><Text style={styles.sectionTitle}>饮食日期</Text><IconAction name="plus" close label="关闭饮食日期" onPress={() => setShowDatePicker(false)} /></View>
       <View style={styles.dateRow}><Action label="‹" accessibilityLabel="前一天饮食记录" onPress={() => { setChosenDate(offsetDate(date, -1)); setShowDatePicker(false); }} small /><Pressable accessibilityRole="button" accessibilityLabel="回到今天饮食记录" onPress={() => { setChosenDate(null); setShowDatePicker(false); }} style={styles.dateCenter}><Text style={styles.dateText}>{date}</Text><Text style={styles.subtle}>{isToday ? '今天' : '点此回到今天'}</Text></Pressable><Action label="›" accessibilityLabel="后一天饮食记录" disabled={isToday} onPress={() => { setChosenDate(offsetDate(date, 1)); setShowDatePicker(false); }} small /></View>
@@ -187,13 +175,16 @@ export function NutritionScreen({ onBack, embedded = false }: { onBack: () => vo
             <View style={styles.between}><Text style={styles.slot}>{slotLabels[entry.slot]}</Text><Text style={styles.mealMacros}>{rounded(entry.nutrients.calories)} kcal</Text></View>
             <Text style={styles.recordName}>{entry.name}</Text><Text style={styles.subtle}>蛋白 {rounded(entry.nutrients.protein)}g · 碳水 {rounded(entry.nutrients.carbs)}g · 脂肪 {rounded(entry.nutrients.fat)}g</Text>
             {entry.photoEstimate ? <><Text style={styles.subtle}>{photoPortionSummary(entry.photoEstimate)}</Text><Text style={styles.estimateNote}>{photoUsesOnlyLabels(entry.photoEstimate) ? '按包装标签与所选份量计算' : entry.photoEstimate.calculation === 'ingredients' ? '按确认食材查库计算 · 份量仍为估计' : '含照片估算 · ' + summarizePhotoEstimate(entry.photoEstimate).calorieRange.min + '–' + summarizePhotoEstimate(entry.photoEstimate).calorieRange.max + ' kcal'}</Text></> : null}
+            {entry.customFoods?.filter(f => f.source.kind === 'recipe_estimate').map(f => <View key={f.id}><Text style={styles.estimateNote}>联网参考配方估算 · 非实测</Text><Text style={styles.subtle}>{f.source.recipe?.description}</Text>{f.source.recipe?.sources.map(source => <Pressable accessibilityRole="link" key={source.url} onPress={() => void Linking.openURL(source.url).catch(() => setError('暂时无法打开来源。'))}><Text style={styles.subtle}>{source.title} ↗</Text></Pressable>)}</View>)}
             {entry.photos?.length ? <View style={styles.actions}>{entry.photos.map(photo => <NutritionPhotoView key={photo.id} photo={photo} size={70} />)}</View> : null}
             {entry.fiberIncomplete ? <Text style={styles.subtle}>部分标签未标注纤维</Text> : null}
             <View style={styles.recordActions}><Action label="编辑" small onPress={() => { setRecordSlot(null); setEditor({ date: entry.date, entry }); }} disabled={Boolean(busy)} /><Action label="删除" small onPress={() => removeEntry(entry)} disabled={Boolean(busy)} /></View>
           </Card>;
         })}
         {!records.some(entry => recordSlot === 'all' || entry.slot === recordSlot) ? <Text style={styles.body}>暂无记录，未记录不代表没有吃。</Text> : null}
-        <LoggingCompletenessControls state={dayState} disabled={Boolean(busy)} onConfirm={confirmLogging} />
+        <LoggingCompletenessControls state={dayState} recordedSlots={[...new Set(records.map(entry => entry.slot))]} disabled={Boolean(busy)} onConfirm={confirmLogging}
+          onStatus={(slot, status) => void run('meal-status-' + slot, () => setNutritionMealStatus(date, slot, status))}
+          onRecord={slot => { setRecordSlot(null); setEditor({ date, slot }); }} />
       </ScrollView>
       <Action label="添加饮食记录" onPress={() => { setRecordSlot(null); setEditor({ date }); }} disabled={Boolean(busy)} />
     </View></View></Modal>
