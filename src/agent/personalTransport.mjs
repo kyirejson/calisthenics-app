@@ -1,7 +1,7 @@
-import { ServiceError, validateAdviceRequest, validateIngredientResult, record } from '../../server/validation.mjs';
-import { guardAdvice, selectKnowledge, adviceSystemPrompt, validateAdviceResult, fallbackAdvice } from '../../server/knowledge.mjs';
-import { LABEL_PROMPT, validateLabelResult, validBarcode, normalizeOpenFoodProduct } from '../../server/food-import.mjs';
-import { explicitMemoryIntent, hasAllergyNegation } from '../../server/assistant-intents.mjs';
+import { ServiceError, validateAdviceRequest, validateIngredientResult, record } from './core/validation.mjs';
+import { guardAdvice, selectKnowledge, adviceSystemPrompt, validateAdviceResult, fallbackAdvice } from './core/knowledge.mjs';
+import { LABEL_PROMPT, validateLabelResult, validBarcode, normalizeOpenFoodProduct } from './core/food-import.mjs';
+import { explicitMemoryIntent, hasAllergyNegation } from './core/assistant-intents.mjs';
 import { explicitMealStatusIntent, mealStatusReply } from '../nutrition/mealStatusIntent.mjs';
 import { explicitPreferenceIntent } from '../nutrition/preferenceIntent.mjs';
 import { explicitTrainingIntent } from './trainingIntent.mjs';

@@ -1,4 +1,4 @@
-import { ServiceError } from '../../server/validation.mjs';
+import { ServiceError } from './core/validation.mjs';
 import { publicSourceURL } from '../nutrition/sourceURL.mjs';
 import { readBoundedJSON } from './httpJSON.mjs';
 

@@ -1,6 +1,6 @@
 import { FOODS } from '../nutrition/catalog.ts';
 import { normalizeDishFood } from '../nutrition/dishEstimate.ts';
-import { ServiceError, record, text } from '../../server/validation.mjs';
+import { ServiceError, record, text } from './core/validation.mjs';
 let candidateSequence = 0;
 
 export async function searchDish(input, { search, generate, signal }) {
