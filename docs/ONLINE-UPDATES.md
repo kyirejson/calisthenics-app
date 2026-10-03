@@ -2,7 +2,7 @@
 
 ## Current status
 
-The existing project is [@kyirechou/uncover](https://expo.dev/accounts/kyirechou/projects/uncover), ID `f6e5af9d-46ec-4f38-be5e-ec267e071eb7`. On 2026-09-30, [production build daacb5e0-fd52-4eb5-9d06-a7e6eacb3c05](https://expo.dev/accounts/kyirechou/projects/uncover/builds/daacb5e0-fd52-4eb5-9d06-a7e6eacb3c05) completed for v1.4.0/build 5 with runtime `8927a55b51aaa5ede65a3fbbde03dd50e2ba57e6`, the existing dedicated signing credentials and the production nutrition URL. Expo Doctor passed 21/21 checks. Physical-device acceptance remains required. New camera and speech native dependencies require this new APK; a content update cannot add them to v1.3.0. Pushing GitHub code does not publish OTA content. Web is a development preview, not an OTA device.
+The existing project is [@kyirechou/uncover](https://expo.dev/accounts/kyirechou/projects/uncover), ID `f6e5af9d-46ec-4f38-be5e-ec267e071eb7`. On 2026-10-03, [production build 2e9c6c3c-39ac-4763-90ee-0d296900911f](https://expo.dev/accounts/kyirechou/projects/uncover/builds/2e9c6c3c-39ac-4763-90ee-0d296900911f) completed for v1.6.0/build 8 with runtime `eb98f91ec90d0bf641500e691bc021037908efed` and existing dedicated credentials. APK signature, modules, version and public download were verified; see [release verification](release-v1.6.0-2026-10-03.md). The native client now uses user-owned API keys and does not depend on the historical Render backend. Physical-device acceptance remains required. SecureStore and the new system entry require the new APK, not an OTA sent to an older binary. Pushing GitHub code does not publish OTA content. Web is a development preview, not an OTA device.
 
 ## User flow
 
@@ -48,8 +48,8 @@ Book excerpts, book images, derived skill/demon photos and raw downloaded source
 
 ## Android acceptance checklist
 
-- The user confirmed there are no existing users. Test a clean install; no legacy migration workflow is provided.
-- Install the dedicated-key APK, confirm version 1.4.0/build 5 and test profile/history persistence. Dedicated-key releases support in-place upgrades without changing the key; a data export is still recommended.
+- Export existing device data before an in-place upgrade; do not uninstall or clear application storage. A separate test device may be used for clean-install checks; JSON import/restore is not implemented.
+- Install the dedicated-key APK, confirm version 1.6.0/build 8 and test profile/history persistence. Dedicated-key releases reuse the same certificate. Configure the user's own API keys and check that no developer gateway is silently used.
 - Check camera, barcode scanning, microphone and system speech recognition on a physical Android device. Confirm revoked permissions and network timeouts remain actionable, and that consent survives an app restart.
 - Confirm the app starts with the computer disconnected; opening a workout and leaving without checked sets must not create history.
 - Check one set, leave training, restart and verify only the checked set is saved.
