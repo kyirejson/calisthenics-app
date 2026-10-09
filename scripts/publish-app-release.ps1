@@ -1,4 +1,4 @@
-param([Parameter(Mandatory=$true)][string]$BuildId)
+param([Parameter(Mandatory=$true)][string]$BuildId, [switch]$VerifyOnly)
 $ErrorActionPreference = 'Stop'
 $publishRoot = Split-Path -Parent $PSScriptRoot
 $releaseConfig = ([IO.File]::ReadAllText((Join-Path $publishRoot 'app.json')) | ConvertFrom-Json).expo
@@ -90,6 +90,11 @@ if (($apkPermissions -join "`n") -match "android.permission.CAMERA'") { throw 'R
 if (($apkPermissions -join "`n") -match "android.permission.ACCESS_MOCK_LOCATION'") { throw 'Emulator QA permission must not enter the production APK' }
 & $publishNode (Join-Path $publishRoot 'scripts/inspect-apk-running-diagnostics.cjs') $apk
 if ($LASTEXITCODE -ne 0) { throw 'GPS repair missing from release artifact; publication stopped' }
+if ($VerifyOnly) {
+  Write-Output ('VERIFIED_APK ' + $apk)
+  Write-Output ('SHA256 ' + $apkInfo.sha256)
+  return
+}
 $credential = "protocol=https`nhost=github.com`n`n" | git -C $publishRoot credential fill
 $password = $credential | Where-Object { $_ -like 'password=*' } | Select-Object -First 1
 if (!$password) { throw 'GitHub publishing credentials unavailable' }
