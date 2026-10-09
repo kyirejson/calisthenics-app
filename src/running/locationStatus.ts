@@ -14,14 +14,14 @@ export function locationStatus(snapshot: RunSnapshot, requested = false, waitMs 
   const result = (title: string, detail = '', settings = false, good = false) => ({ title, detail, settings, good });
   const timing = active ? '计时继续，暂未测得距离。' : '可先开始计时，定位就绪后记录里程。';
   if (snapshot.mode === 'indoor' && snapshot.phase !== 'idle') return result('室内跑 · 无需 GPS', '结束时可填写跑步机距离；未填写则只保存用时。');
-  if (snapshot.locationError) return result('定位暂不可用', snapshot.locationError);
   if (d?.systemEnabled === false) return result('系统定位已关闭', timing, true);
   const display = mapPosition(snapshot);
+  if (snapshot.locationError && !display) return result('定位暂不可用', snapshot.locationError);
   const gpsReady = usablePoint(snapshot.preview) && (snapshot.preview?.ageMs ?? Infinity) <= 15000;
   if (gpsReady) return result(active ? '定位正常 · 记录中' : `定位就绪 · ±${Math.round(snapshot.preview!.accuracy)} m`, '', false, true);
-  if (display && (display.cached || display.provider === 'network' || display.provider === 'fused')) {
-    const source = display.cached ? '缓存位置' : display.provider === 'network' ? '网络定位' : '融合定位';
-    return result(display.cached ? '地图显示最近位置' : '地图已定位 · 大致位置', `${source} · 估计误差约 ${Math.round(display.accuracy)} 米。${timing}`);
+  if (display && (display.cached || display.provider === 'network' || display.provider === 'fused' || display.provider === 'browser-preview')) {
+    const source = display.cached ? '缓存位置' : display.provider === 'network' ? '网络定位' : display.provider === 'browser-preview' ? '浏览器大致位置（仅地图）' : '融合定位';
+    return result(display.cached ? '地图显示最近位置' : '地图已定位 · 大致位置', `${source} · 估计误差约 ${Math.round(display.accuracy)} 米。${snapshot.locationError || timing}`);
   }
   if (d && !d.permission) return result('精确位置未开启', `可在定位设置中开启。${timing}`, true);
   if (d?.requestError) return result('定位请求失败', `${d.requestError} ${timing}`);

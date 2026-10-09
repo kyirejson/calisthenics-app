@@ -2,6 +2,7 @@
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const vm = require('node:vm');
+const appVersion = require('../app.json').expo.version;
 const prefix = fs.readFileSync(require.resolve('./smoke-running-android.cjs'), 'utf8').split('(async () => {')[0];
 const { adb, tap, waitFor, dump, screenshot, sleep, dismissPermissionRequests } = vm.runInNewContext(prefix + ';({adb,tap,waitFor,dump,screenshot,sleep,dismissPermissionRequests})', { require, process, console, Buffer, setTimeout, clearTimeout });
 async function scrollFor(pattern) {
@@ -46,7 +47,7 @@ async function scrollFor(pattern) {
   await tap('查看跑步记录'); await waitFor(/2.50/); screenshot('production-history'); await tap('关闭跑步记录');
   adb('shell', 'am', 'force-stop', 'com.zizhong.jinjie'); adb('shell', 'am', 'start', '-n', 'com.zizhong.jinjie/.MainActivity');
   await tap('切换到跑步'); await tap('查看跑步记录'); await waitFor(/2.50/); await tap('关闭跑步记录');
-  await tap('切换到我的'); await scrollFor(/1\.7\.8/); screenshot('production-profile');
+  await tap('切换到我的'); await scrollFor(new RegExp(appVersion.replace(/\./g, '\\.'))); screenshot('production-profile');
   assert.ok(!dump().includes('知识库管理'));
-  console.log('PASS signed production APK startup, profile creation, sensor-unavailable fallback, native fullscreen/pause/resume, indoor save and history after restart; version 1.7.8');
+  console.log('PASS signed production APK startup, profile creation, sensor-unavailable fallback, native fullscreen/pause/resume, indoor save and history after restart; version ' + appVersion);
 })().catch(error => { console.error(error); try { screenshot('production-failed'); } catch {} process.exitCode = 1; });

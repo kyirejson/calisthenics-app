@@ -123,7 +123,7 @@ async function emit(page, distance, seconds = 3, accuracy = 5) { await page.eval
     }
     const denied = await prepare(browser, 390, 844, true);
     try {
-      await denied.page.getByRole('button', { name: '检查跑步定位', exact: true }).click(); await denied.page.getByText(/浏览器拒绝位置访问/).waitFor();
+      await denied.page.getByRole('button', { name: '检查跑步定位', exact: true }).click(); await denied.page.getByText(/访问被拒绝.*浏览器错误 1/).waitFor();
       assert.deepEqual(await records(denied.page), []);
       await denied.page.getByRole('button', { name: '开始跑步', exact: true }).click(); await denied.page.getByText('正在跑步', { exact: true }).waitFor();
       await denied.page.waitForFunction(() => { const value = document.querySelector('[data-testid="run-duration"]')?.textContent; return value && value !== '00:00'; }, undefined, { timeout: 5000 });

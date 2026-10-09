@@ -2,6 +2,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { emptyRun, usablePoint, analyseRun, cleanRunOptions, defaultRunOptions, type RunOptions, type RunSnapshot, type RunPoint, type RunMode } from './model';
 import { MotionGate } from './motionGate';
 import { webRunVoice, stopWebRunVoice } from './webVoice';
+import { browserLocationError, browserPositionValid } from './browserLocation';
 
 // Browser-only adapter. Refresh restores a pause; it never counts a closed page.
 const KEY = 'uncover.running.web-journal.v2';
@@ -28,7 +29,7 @@ async function load() {
       if (!saved.id || !Array.isArray(saved.samples) || !Number.isFinite(saved.elapsedMs) || !['running', 'paused', 'finished'].includes(saved.phase)) throw Error();
       if (saved.mode !== undefined && !['outdoor', 'indoor'].includes(saved.mode)) throw Error();
       if (saved.manualDistanceKm !== undefined && (!Number.isFinite(saved.manualDistanceKm) || saved.manualDistanceKm < 0 || saved.manualDistanceKm > 1000)) throw Error();
-      state = { ...saved, phase: saved.phase === 'running' ? 'paused' : saved.phase, interrupted: saved.phase === 'running' || saved.autoPaused, autoPaused: false, preview: null, locationError: '' };
+      state = { ...saved, phase: saved.phase === 'running' ? 'paused' : saved.phase, interrupted: saved.phase === 'running' || saved.autoPaused, autoPaused: false, preview: null, mapPosition: null, locationError: '' };
       base = Math.max(0, saved.elapsedMs); segment = (saved.samples.at(-1)?.segment || 0) + 1;
     } catch { storageCorrupt = true; state.error = '本机跑步草稿无法读取，未覆盖原文件。'; }
   }
@@ -56,16 +57,40 @@ async function preview() {
   if (typeof isSecureContext !== 'undefined' && !isSecureContext) throw Error('浏览器定位需要 HTTPS 或本机 localhost。');
   state.locationError = '';
   const ownGeneration = generation;
-  watch = navigator.geolocation.watchPosition(position => {
+  let preciseError = '', approximateError = '';
+  const report = () => { if (generation === ownGeneration) state.locationError = [preciseError, approximateError].filter(Boolean).join(' ') + '计时不受影响；不会用虚构位置替代当前坐标。'; };
+  const receive = (position: GeolocationPosition, mapOnly: boolean) => {
     if (generation !== ownGeneration) return;
-    const point: RunPoint = { latitude: position.coords.latitude, longitude: position.coords.longitude, accuracy: position.coords.accuracy, timestamp: position.timestamp, elapsedMs: elapsed(), segment };
-    if (Date.now() - point.timestamp > 15000 || Date.now() - point.timestamp < -1000 || point.timestamp <= lastTimestamp) return;
-    lastTimestamp = point.timestamp; state.preview = point; state.locationError = '';
+    if (!browserPositionValid(position)) {
+      const message = '浏览器返回无效或超过两分钟的坐标，未采用。';
+      if (mapOnly) approximateError = message; else preciseError = message;
+      report(); return;
+    }
+    const age = Math.max(0, Date.now() - position.timestamp);
+    const point: RunPoint = { latitude: position.coords.latitude, longitude: position.coords.longitude, accuracy: position.coords.accuracy, timestamp: position.timestamp, elapsedMs: elapsed(), segment, provider: mapOnly ? 'browser-preview' : 'browser', cached: age > 15000 };
+    // A quick approximate/cached fix is map-only. Never replace a fresh, more
+    // accurate tracking position with a late, coarse preview callback.
+    const displayed = state.mapPosition;
+    if (!displayed || point.timestamp >= displayed.timestamp && (Date.now() - displayed.timestamp > 15000 || !mapOnly || point.accuracy < displayed.accuracy)) state.mapPosition = point;
+    if (mapOnly) { approximateError = ''; state.locationError = preciseError; return; }
+    preciseError = ''; state.locationError = '';
+    if (!state.preview || point.timestamp >= state.preview.timestamp) state.preview = point;
+    if (age > 15000 || point.timestamp <= lastTimestamp) return;
+    lastTimestamp = point.timestamp;
     const transition = automaticMotion(point, position.coords.speed);
     point.elapsedMs = elapsed(); point.segment = segment;
     if (state.phase === 'running') { state.samples.push(point); state.sampleCount = state.samples.length; }
     if (state.phase === 'running' || transition) void persist().catch(() => { base = elapsed(); activeSince = 0; state.phase = 'paused'; state.autoPaused = false; state.error = '草稿保存失败，已暂停以保护记录。'; });
-  }, failure => { if (generation === ownGeneration) state.locationError = failure.code === 1 ? '浏览器拒绝位置访问；计时仍可使用，开启权限后可记录轨迹。' : failure.code === 3 ? '定位暂未返回坐标，计时不受影响。' : '浏览器报告位置不可用，计时不受影响。'; }, { enableHighAccuracy: true, maximumAge: 0, timeout: 15000 });
+  };
+  // Fast map preview runs alongside the tracking request, not instead of it.
+  // Browser providers may share a backend; failure of both is still reported.
+  if (navigator.geolocation.getCurrentPosition) {
+    try { navigator.geolocation.getCurrentPosition(position => receive(position, true), failure => { approximateError = browserLocationError(failure, '大致位置请求'); report(); }, { enableHighAccuracy: false, maximumAge: 60000, timeout: 12000 }); }
+    catch (failure) { approximateError = failure instanceof Error ? failure.message : '大致位置请求启动失败。'; report(); }
+  }
+  watch = navigator.geolocation.watchPosition(position => {
+    receive(position, false);
+  }, failure => { preciseError = browserLocationError(failure, '连续定位请求'); report(); }, { enableHighAccuracy: true, maximumAge: 0, timeout: 15000 });
 }
 export const browserRunning = {
   snapshot: async (after: number): Promise<RunSnapshot> => {
@@ -76,7 +101,7 @@ export const browserRunning = {
       try { await persist(); } catch { base = elapsed(); activeSince = 0; state.phase = 'paused'; state.error = '草稿保存失败，已暂停以保护记录。'; }
     }
     const ageMs = state.preview ? Math.max(0, Date.now() - state.preview.timestamp) : 0;
-    return { ...state, options: state.options ?? options, stepAvailable: false, elapsedMs: elapsed(), preview: state.preview ? { ...state.preview, ageMs } : null, samples: state.samples.slice(Math.max(0, after)), sampleCount: state.samples.length };
+    return { ...state, options: state.options ?? options, stepAvailable: false, elapsedMs: elapsed(), preview: state.preview ? { ...state.preview, ageMs } : null, mapPosition: state.mapPosition ? { ...state.mapPosition, ageMs: Math.max(0, Date.now() - state.mapPosition.timestamp) } : null, samples: state.samples.slice(Math.max(0, after)), sampleCount: state.samples.length };
   },
   configure: async (value: RunOptions) => {
     await load(); if (state.phase !== 'idle') throw Error('请先结束本次跑步，再调整记录设置。');
@@ -88,9 +113,9 @@ export const browserRunning = {
     await load();
     if (state.phase !== 'idle' || storageCorrupt) throw Error(state.error || '请先处理上次跑步。');
     if (!['outdoor', 'indoor'].includes(mode)) throw Error('跑步模式无效。');
-    const first = state.preview;
+    const first = state.preview, firstMap = state.mapPosition;
     stopPreview();
-    state = { ...emptyRun(), options, id, mode, startedAt: Date.now(), phase: 'running', preview: mode === 'outdoor' ? first : null }; base = 0; activeSince = monotonic(); segment = 0; motion.reset(); spokenKm = 0; spokenMinutes = 0;
+    state = { ...emptyRun(), options, id, mode, startedAt: Date.now(), phase: 'running', preview: mode === 'outdoor' ? first : null, mapPosition: mode === 'outdoor' ? firstMap : null }; base = 0; activeSince = monotonic(); segment = 0; motion.reset(); spokenKm = 0; spokenMinutes = 0;
     if (mode === 'outdoor' && usablePoint(first) && Date.now() - first!.timestamp >= 0 && Date.now() - first!.timestamp <= 15000) state.samples.push({ ...first!, elapsedMs: 0, segment });
     try { await persist(); } catch (error) { base = elapsed(); activeSince = 0; state.phase = 'paused'; throw error; }
     speak('开始跑步');
@@ -113,6 +138,6 @@ export const browserRunning = {
     if (state.phase !== 'finished') { base = elapsed(); activeSince = 0; state.phase = 'finished'; state.autoPaused = false; state.completedAt = Date.now(); stopPreview(); stopWebRunVoice(); }
     await persist();
   },
-  acknowledge: async (id: string) => { if (state.id !== id || state.phase !== 'finished') return; await pending.catch(() => undefined); await AsyncStorage.removeItem(KEY); state = { ...emptyRun(), preview: state.preview }; base = 0; },
+  acknowledge: async (id: string) => { if (state.id !== id || state.phase !== 'finished') return; await pending.catch(() => undefined); await AsyncStorage.removeItem(KEY); state = { ...emptyRun(), preview: state.preview, mapPosition: state.mapPosition }; base = 0; },
   clear: async () => { stopPreview(); stopWebRunVoice(); motion.reset(); await pending.catch(() => undefined); await AsyncStorage.removeItem(KEY); await AsyncStorage.removeItem(OPTIONS); options = defaultRunOptions(); state = emptyRun(); base = 0; activeSince = 0; loaded = true; storageCorrupt = false; lastTimestamp = 0; },
 };
