@@ -8,11 +8,28 @@ function fix(metres, speed) {
   const result = adb('shell', 'am', 'instrument', '-w', '-e', 'gpsMetres', String(metres), '-e', 'gpsSpeed', String(speed), 'com.uncover.uidump/.DumpInstrumentation');
   assert.match(result, /gps=injected/);
 }
+function options() {
+  try {
+    const xml = adb('shell', 'run-as', 'com.zizhong.jinjie', 'cat', 'shared_prefs/running-options-v1.xml');
+    const raw = xml.match(/<string name="options">(.*?)<\/string>/)?.[1];
+    return raw ? JSON.parse(raw.replace(/&quot;/g, '"').replace(/&amp;/g, '&')) : { autoPause: false, voice: false };
+  } catch { return { autoPause: false, voice: false }; }
+}
+async function setOptions(autoPause, voice) {
+  const old = options(); await tap('打开跑步设置');
+  if (old.autoPause !== autoPause) await tap('自动暂停');
+  if (old.voice !== voice) await tap('语音播报');
+  await tap('保存跑步设置');
+}
 (async () => {
+  const originalOptions = options();
   try {
     if (dump().includes('返回动作列表')) await tap('返回动作列表');
-    await tap('切换到今日'); await tap('切换到跑步'); await tap('选择户外跑');
-    await tap('打开跑步设置'); await tap('自动暂停'); await tap('语音播报'); await tap('保存跑步设置');
+    await tap('切换到今日'); await tap('切换到跑步');
+    if (dump().includes('结束并保存跑步')) {
+      await tap('结束并保存跑步'); await tap('结束并保存'); await waitFor(/跑步已保存/); await tap('关闭跑步总结');
+    }
+    await tap('选择户外跑'); await setOptions(true, true);
     adb('shell', 'appops', 'set', 'com.uncover.uidump', 'android:mock_location', 'allow');
     adb('shell', 'appops', 'set', '2000', 'android:mock_location', 'allow');
     adb('shell', 'cmd', 'location', 'providers', 'add-test-provider', 'gps', '--requiresSatellite', '--supportsSpeed');
@@ -29,7 +46,7 @@ function fix(metres, speed) {
     const points = journal().samples; assert.ok(new Set(points.map(p => p.segment)).size >= 2);
     const { analyseRun } = require('../src/running/model.ts'); assert.ok(analyseRun(points).distanceM < 100, 'No kilometre bridge across automatic pause');
     await tap('结束并保存跑步'); await tap('结束并保存'); await waitFor(/跑步已保存/); await tap('关闭跑步总结');
-    await tap('打开跑步设置'); await tap('自动暂停'); await tap('语音播报'); await tap('保存跑步设置');
+    await setOptions(originalOptions.autoPause, originalOptions.voice);
     console.log('PASS native automatic pause/recovery, frozen elapsed time, manual pause, route boundaries and speech failure resilience');
   } finally {
     try { adb('shell', 'cmd', 'location', 'providers', 'remove-test-provider', 'gps'); } catch {}

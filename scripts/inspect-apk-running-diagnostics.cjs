@@ -7,7 +7,7 @@ assert.ok(file, 'Usage: node scripts/inspect-apk-running-diagnostics.cjs <apk>')
 const entries = unzipSync(fs.readFileSync(file), { filter: entry => /^classes\d*\.dex$/.test(entry.name) });
 const dex = Object.values(entries).map(bytes => Buffer.from(bytes));
 assert.ok(dex.length, 'APK has no DEX files');
-for (const symbol of ['Luncover/running/GpsDiagnostics;', 'Luncover/running/GpsSubscription;', 'Luncover/running/MotionGate;', 'Luncover/running/RunSteps;', 'Luncover/running/StepEvidence;', 'Luncover/running/RunVoice;', 'mapLocation', 'mapPosition', 'auxiliaryProviders', 'networkAvailable', 'autoPaused', 'stepCount']) {
+for (const symbol of ['Luncover/running/GpsDiagnostics;', 'Luncover/running/GpsSubscription;', 'Luncover/running/MotionGate;', 'Luncover/running/MotionSources;', 'Luncover/running/RunSteps;', 'Luncover/running/StepEvidence;', 'Luncover/running/RunVoice;', 'mapLocation', 'mapPosition', 'auxiliaryProviders', 'networkAvailable', 'autoPaused', 'stepCount']) {
   assert.ok(dex.some(bytes => bytes.includes(Buffer.from(symbol))), `GPS repair missing from APK: ${symbol}`);
 }
 const figures = [];

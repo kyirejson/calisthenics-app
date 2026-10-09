@@ -4,6 +4,20 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class RunningBehaviorTest {
+  @Test fun simultaneousWeakOrGoodFusedFixesCannotBreakReliableGpsIntervals() {
+    for (weak in listOf(true, false)) {
+      val source = MotionSources()
+      for (second in 1L..8) {
+        assertNull(source.update("gps", second * 1000, 0.0, 5.0, .1, false))
+        assertNull(source.update("fused", second * 1000 + 1, if (weak) null else 3.0, if (weak) 100.0 else 5.0, .1, false))
+      }
+      assertEquals("pause", source.update("gps", 9000, 0.0, 5.0, .1, false))
+    }
+    val fallback = MotionSources()
+    assertNull(fallback.update("gps", 1000, 0.0, 5.0, .1, false))
+    for (second in 6L..13) assertNull(fallback.update("fused", second * 1000, 0.0, 5.0, .1, false))
+    assertEquals("pause", fallback.update("fused", 14000, 0.0, 5.0, .1, false))
+  }
   @Test fun stepCounterBaselinesResetAndNeverCountThePausedInterval() {
     val steps = StepEvidence(); steps.reset(1000000000)
     assertEquals(0, steps.accept(true, 100f, 1000000000, 1000000000))

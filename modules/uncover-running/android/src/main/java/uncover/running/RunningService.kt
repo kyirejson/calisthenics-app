@@ -20,7 +20,7 @@ class RunningService : Service() {
   private var request: GpsSubscription? = null
   private var steps: RunSteps? = null
   private var voice: RunVoice? = null
-  private val motion = MotionGate()
+  private val motion = MotionSources()
   private val checkpoint = object : Runnable {
     override fun run() {
       try { announceProgress(); RunStore.persist(this@RunningService); notifyState() }
@@ -102,7 +102,8 @@ class RunningService : Service() {
     if (age !in 0..3_000_000_000L) { motion.reset(); return }
     val speed = if (location.hasSpeed()) location.speed.toDouble() else null
     val uncertainty = if (Build.VERSION.SDK_INT >= 26 && location.hasSpeedAccuracy()) location.speedAccuracyMetersPerSecond.toDouble() else null
-    val action = motion.update(location.elapsedRealtimeNanos / 1000000, speed, if (location.hasAccuracy()) location.accuracy.toDouble() else Double.NaN, uncertainty, RunStore.autoPaused())
+    if (!location.latitude.isFinite() || location.latitude !in -90.0..90.0 || !location.longitude.isFinite() || location.longitude !in -180.0..180.0) return
+    val action = motion.update(provider, location.elapsedRealtimeNanos / 1000000, speed, if (location.hasAccuracy()) location.accuracy.toDouble() else Double.NaN, uncertainty, RunStore.autoPaused())
     if (action == "pause") { RunStore.pause(this, automatic = true); voice?.say("已自动暂停，重新跑动后继续"); notifyState() }
     if (action == "resume") { RunStore.resume(this); voice?.say("已自动继续跑步"); notifyState() }
     // Auto-pause deliberately retains GPS updates; manual pause unsubscribes.
