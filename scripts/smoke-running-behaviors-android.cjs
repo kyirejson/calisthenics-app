@@ -24,6 +24,7 @@ async function setOptions(autoPause, voice) {
 (async () => {
   const originalOptions = options();
   try {
+    adb('shell', 'am', 'start', '-n', 'com.zizhong.jinjie/.MainActivity'); await waitFor(/切换到今日|返回动作列表/);
     if (dump().includes('返回动作列表')) await tap('返回动作列表');
     await tap('切换到今日'); await tap('切换到跑步');
     if (dump().includes('结束并保存跑步')) {
@@ -47,7 +48,7 @@ async function setOptions(autoPause, voice) {
     const { analyseRun } = require('../src/running/model.ts'); assert.ok(analyseRun(points).distanceM < 100, 'No kilometre bridge across automatic pause');
     await tap('结束并保存跑步'); await tap('结束并保存'); await waitFor(/跑步已保存/); await tap('关闭跑步总结');
     await setOptions(originalOptions.autoPause, originalOptions.voice);
-    console.log('PASS native automatic pause/recovery, frozen elapsed time, manual pause, route boundaries and speech failure resilience');
+    console.log('PASS native automatic pause/recovery, frozen elapsed time, manual pause, route boundaries and recording with voice enabled');
   } finally {
     try { adb('shell', 'cmd', 'location', 'providers', 'remove-test-provider', 'gps'); } catch {}
     try { adb('shell', 'appops', 'set', 'com.uncover.uidump', 'android:mock_location', 'default'); } catch {}

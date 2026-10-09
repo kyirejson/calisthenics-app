@@ -87,6 +87,7 @@ foreach ($locationPermission in @('ACCESS_FINE_LOCATION', 'ACCESS_COARSE_LOCATIO
   if (($apkPermissions -join "`n") -notmatch ('android.permission.' + $locationPermission + "'")) { throw ('Required running permission missing: ' + $locationPermission) }
 }
 if (($apkPermissions -join "`n") -match "android.permission.CAMERA'") { throw 'Removed camera permission unexpectedly present' }
+if (($apkPermissions -join "`n") -match "android.permission.ACCESS_MOCK_LOCATION'") { throw 'Emulator QA permission must not enter the production APK' }
 & $publishNode (Join-Path $publishRoot 'scripts/inspect-apk-running-diagnostics.cjs') $apk
 if ($LASTEXITCODE -ne 0) { throw 'GPS repair missing from release artifact; publication stopped' }
 $credential = "protocol=https`nhost=github.com`n`n" | git -C $publishRoot credential fill
@@ -97,6 +98,7 @@ $api = 'https://api.github.com/repos/kyirejson/calisthenics-app/releases'
 $body = [IO.File]::ReadAllText((Join-Path $publishRoot 'RELEASE-NOTES.md')) + "`n`nAPK SHA-256: " + $apkInfo.sha256 + "`nSigner verified against " + $previous.tag_name + "."
 $releaseCommit = (git -C $publishRoot rev-parse HEAD).Trim()
 if ($LASTEXITCODE -ne 0 -or $releaseCommit -notmatch '^[a-f0-9]{40}$') { throw 'Unable to resolve release source commit' }
+if ($build.gitCommitHash -ne $releaseCommit) { throw 'Build source differs from the release source commit; publication stopped' }
 $remoteCommit = (git -C $publishRoot ls-remote origin refs/heads/main).Split()[0]
 if ($LASTEXITCODE -ne 0 -or $remoteCommit -ne $releaseCommit) { throw 'Release source must be synchronized to main before publication' }
 $data = @{tag_name=$releaseTag;target_commitish=$releaseCommit;name=('Uncover ' + $releaseTag);body=$body;draft=$true;prerelease=$false} | ConvertTo-Json
