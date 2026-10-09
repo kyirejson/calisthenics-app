@@ -5,7 +5,7 @@ param(
   [string]$NodeExecutable,
   [string]$ProjectRoot,
   [string]$BuildToolsRoot = 'D:/UncoverBuildTools',
-  [ValidateSet('Native', 'DebugApk', 'ModuleTests')][string]$Target = 'Native'
+  [ValidateSet('Native', 'DebugApk', 'ModuleTests', 'VerifiedApk')][string]$Target = 'Native'
 )
 
 $ErrorActionPreference = 'Stop'
@@ -55,16 +55,16 @@ try {
   Write-Host $buildJavaVersion.Trim()
   Push-Location (Join-Path $buildRepoPath 'android')
   try {
-    $buildGradleTask = if ($Target -eq 'DebugApk') { ':app:assembleDebug' } elseif ($Target -eq 'ModuleTests') { ':uncover-running:testDebugUnitTest' } else { ':app:compileDebugKotlin' }
+    $buildGradleTask = if ($Target -eq 'VerifiedApk') { @(':uncover-running:testDebugUnitTest', ':app:assembleDebug') } elseif ($Target -eq 'DebugApk') { ':app:assembleDebug' } elseif ($Target -eq 'ModuleTests') { ':uncover-running:testDebugUnitTest' } else { ':app:compileDebugKotlin' }
     # UTF-8 fixes Kotlin/Node path decoding, but C++ still needs an ASCII build snapshot.
-    if ($Target -in @('DebugApk', 'ModuleTests') -and $buildRepoPath -match '[^\x00-\x7F]') {
+    if ($Target -in @('DebugApk', 'ModuleTests', 'VerifiedApk') -and $buildRepoPath -match '[^\x00-\x7F]') {
       throw 'Windows C++ builds and JVM test workers require an ASCII-path snapshot. Pass -ProjectRoot with that snapshot; do not move the original repository.'
     }
     $buildGradleArgs = @('-Dfile.encoding=UTF-8')
     if ($buildRepoPath -match '[^\x00-\x7F]') { $buildGradleArgs += '-Pandroid.overridePathCheck=true' }
     & ./gradlew.bat @buildGradleArgs $buildGradleTask --no-daemon --console=plain
     if ($LASTEXITCODE -ne 0) { throw "Android build failed with exit code $LASTEXITCODE. See Gradle output above." }
-    if ($Target -eq 'DebugApk') {
+    if ($Target -in @('DebugApk', 'VerifiedApk')) {
       $buildApkPath = Join-Path $buildRepoPath 'android/app/build/outputs/apk/debug/app-debug.apk'
       if (!(Test-Path -LiteralPath $buildApkPath -PathType Leaf)) { throw 'Gradle finished without the expected debug APK.' }
       $buildBundlePath = Join-Path $buildRepoPath 'android/app/src/main/assets/index.android.bundle'
