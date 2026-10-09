@@ -72,7 +72,20 @@ $previous = Invoke-RestMethod -Uri 'https://api.github.com/repos/kyirejson/calis
 $previousApk = $previous.assets | Where-Object { $_.name -like '*.apk' } | Select-Object -First 1
 if (!$previousApk) { throw 'No previous release APK for signature comparison' }
 $previousPath = 'D:/UncoverBuildTools/temp/uncover-previous-signature-check.apk'
-Get-ReleaseApk $previousApk.browser_download_url $previousPath
+$previousReuse = $false
+if ($previousApk.name -match '^uncover-v\d+\.\d+\.\d+\.apk$' -and $previousApk.digest -match '^sha256:[a-f0-9]{64}$') {
+  $previousCandidate = Join-Path 'D:/UncoverBuildTools/temp' $previousApk.name
+  if (Test-Path -LiteralPath $previousCandidate -PathType Leaf) {
+    $previousCandidateInfo = Get-Item -LiteralPath $previousCandidate
+    if ($previousCandidateInfo.Length -eq $previousApk.size -and ('sha256:' + (Get-FileHash -LiteralPath $previousCandidate -Algorithm SHA256).Hash.ToLowerInvariant()) -eq $previousApk.digest) {
+      $previousPath = $previousCandidate
+      $previousReuse = $true
+      Write-Output ('Reusing hash-verified previous release APK: ' + $previous.tag_name)
+    }
+  }
+}
+if (!$previousReuse) { Get-ReleaseApk $previousApk.browser_download_url $previousPath }
+if ($previousApk.digest -match '^sha256:[a-f0-9]{64}$' -and ('sha256:' + (Get-FileHash -LiteralPath $previousPath -Algorithm SHA256).Hash.ToLowerInvariant()) -ne $previousApk.digest) { throw 'Previous release APK digest mismatch' }
 $previousInfo = (& $publishNode (Join-Path $publishRoot 'scripts/inspect-apk-certificate.cjs') $previousPath | Out-String) | ConvertFrom-Json
 if ($LASTEXITCODE -ne 0 -or $apkInfo.certificates[0].sha256 -ne $previousInfo.certificates[0].sha256) { throw 'Signer changed; publication stopped' }
 $sdkTool = Get-ChildItem -LiteralPath 'D:/UncoverBuildTools/android-sdk/build-tools' -Directory | Sort-Object Name -Descending | Select-Object -First 1
