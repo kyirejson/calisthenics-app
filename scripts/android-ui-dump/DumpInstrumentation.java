@@ -5,6 +5,9 @@ import android.app.Activity;
 import android.app.Instrumentation;
 import android.app.UiAutomation;
 import android.graphics.Rect;
+import android.location.Location;
+import android.location.LocationManager;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.SystemClock;
 import android.view.accessibility.AccessibilityNodeInfo;
@@ -12,12 +15,25 @@ import android.util.Xml;
 import java.io.StringWriter;
 import org.xmlpull.v1.XmlSerializer;
 
-/** Read-only UI tree capture. It never starts or restarts the app under test. */
+/** UI capture; optional synthetic GPS injection is strictly limited to the emulator. */
 public class DumpInstrumentation extends Instrumentation {
-  @Override public void onCreate(Bundle args) { super.onCreate(args); start(); }
+  private Bundle arguments;
+  @Override public void onCreate(Bundle args) { super.onCreate(args); arguments = args; start(); }
   @Override public void onStart() {
     Bundle result = new Bundle();
     try {
+      if (arguments != null && arguments.containsKey("gpsSpeed")) {
+        if (!(Build.HARDWARE.equals("ranchu") || Build.HARDWARE.equals("goldfish"))) throw new IllegalStateException("Synthetic GPS is emulator-only");
+        double metres = Double.parseDouble(arguments.getString("gpsMetres", "0"));
+        float speed = Float.parseFloat(arguments.getString("gpsSpeed"));
+        if (!Double.isFinite(metres) || Math.abs(metres) > 10000 || !Float.isFinite(speed) || speed < 0 || speed > 12) throw new IllegalArgumentException("Invalid synthetic fix");
+        Location fix = new Location("gps"); fix.setLatitude(39.91 + metres / 111195.08); fix.setLongitude(116.4);
+        fix.setAccuracy(5); fix.setSpeed(speed); if (Build.VERSION.SDK_INT >= 26) fix.setSpeedAccuracyMetersPerSecond(.1f);
+        fix.setTime(System.currentTimeMillis()); fix.setElapsedRealtimeNanos(SystemClock.elapsedRealtimeNanos());
+        LocationManager manager = (LocationManager)getContext().getSystemService(android.content.Context.LOCATION_SERVICE);
+        manager.setTestProviderLocation("gps", fix);
+        result.putString("gps", "injected"); finish(Activity.RESULT_OK, result); return;
+      }
       UiAutomation automation = getUiAutomation();
       AccessibilityServiceInfo info = automation.getServiceInfo();
       info.flags |= AccessibilityServiceInfo.FLAG_REPORT_VIEW_IDS;

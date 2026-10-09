@@ -35,7 +35,7 @@ internal class RunSteps(private val context: Context, private val handler: Handl
     return try { if (manager.registerListener(this, selected, SensorManager.SENSOR_DELAY_NORMAL, handler)) "" else "计步传感器无法启动，距离可手动填写。" }
     catch (_: Exception) { stop(); "系统拒绝计步请求，距离可手动填写。" }
   }
-  fun stop() { manager.unregisterListener(this); sensor = null; evidence.reset(0) }
+  fun stop() { try { manager.unregisterListener(this) } catch (_: Exception) { RunStore.stepIssue = "系统计步服务关闭异常，计时不受影响。" } finally { sensor = null; evidence.reset(0) } }
   override fun onSensorChanged(event: SensorEvent) {
     if (sensor == null || event.values.isEmpty()) return
     val steps = evidence.accept(event.sensor.type == Sensor.TYPE_STEP_COUNTER, event.values[0], event.timestamp, SystemClock.elapsedRealtimeNanos())

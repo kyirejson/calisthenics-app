@@ -66,6 +66,7 @@ internal object RunStore {
   @Synchronized fun spokenMinutes(): Int = journal?.optInt("spokenMinutes") ?: 0
   @Synchronized fun markSpoken(km: Int, minutes: Int) { journal?.put("spokenKm", km)?.put("spokenMinutes", minutes) }
   @Synchronized fun steps(): Int = journal?.optInt("stepCount") ?: 0
+  @Synchronized fun stepPartial(): Boolean = journal?.optBoolean("stepPartial") ?: false
   @Synchronized fun stepDistance(): Double? = journal?.let { data -> data.optJSONObject("options")?.let { options ->
     if (data.optInt("stepCount") > 0 && options.has("stepLengthM") && !options.isNull("stepLengthM")) data.optInt("stepCount") * options.getDouble("stepLengthM") else null
   } }

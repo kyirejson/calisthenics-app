@@ -71,7 +71,10 @@ class RunningService : Service() {
     if (!allowed || !LocationManagerCompat.isLocationEnabled(manager)) return
     try {
       if (Build.VERSION.SDK_INT >= 29) startForeground(4208, notification(), ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION or (if (Build.VERSION.SDK_INT >= 34) ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE else 0))
-      request = GpsSubscription(this, handler, true, ::motionFix).also { it.start() }
+      request = GpsSubscription(this, handler, true, { value, provider ->
+        try { motionFix(value, provider) }
+        catch (_: Exception) { RunStore.problem("自动暂停记录保存失败，已暂停保护记录，请检查存储空间。"); safelyPause() }
+      }).also { it.start() }
     } catch (exception: Exception) {
       request?.stop(); request = null
       GpsDiagnostics.failed("定位请求失败（${exception.javaClass.simpleName}）；计时仍在继续，可重试定位。")
@@ -111,7 +114,7 @@ class RunningService : Service() {
     val distance = if (RunStore.mode() == "indoor") RunStore.stepDistance() else metrics.first
     val km = ((distance ?: 0.0) / 1000).toInt()
     val minutes = (elapsed / 60000).toInt()
-    val partial = RunStore.mode() == "outdoor" && elapsed - metrics.second > maxOf(15000, elapsed / 10)
+    val partial = if (RunStore.mode() == "indoor") RunStore.stepPartial() else elapsed - metrics.second > maxOf(15000, elapsed / 10)
     val text = if (km > RunStore.spokenKm()) {
       val prefix = if (RunStore.mode() == "indoor") "计步估算" else if (partial) "已定位路段" else "已跑"
       val pace = if (!partial && distance != null && distance > 0) (elapsed / distance).toInt() else 0
