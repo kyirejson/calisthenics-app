@@ -1,6 +1,5 @@
-import { RECIPES, getFood } from './catalog';
 import { isValidDateKey, validTimestamp } from './validation';
-import type { FoodPortion, MealSlot, Nutrients, NutritionAgentAction, NutritionDayState, NutritionMealOverride, NutritionTargetSnapshot, NutritionTargets, TrainingTime } from './types';
+import type { MealSlot, NutritionDayState, NutritionTargetSnapshot, NutritionTargets, TrainingTime } from './types';
 
 export const MEAL_SLOTS: MealSlot[] = ['breakfast', 'lunch', 'snack', 'dinner'];
 export const TRAINING_TIMES: TrainingTime[] = ['unspecified', 'morning', 'midday', 'evening'];
@@ -51,48 +50,4 @@ export function normalizeNutritionDays(input: unknown): Record<string, Nutrition
     days[date] = { targetHistory: history, confirmedSlots, skippedSlots, completedAt };
   }
   return days;
-}
-
-/** Persisted drafts contain only bounded portions of a known, explicit recipe. */
-export function normalizeMealOverride(input: unknown): NutritionMealOverride | null {
-  if (!record(input) || !text(input.basis, 3000) || !validTimestamp(input.createdAt)
-    || !['swap', 'rebalance'].includes(input.kind as string) || !record(input.meal)) return null;
-  const meal = input.meal;
-  const recipe = RECIPES.find(item => item.id === meal.recipeId);
-  if (!recipe || !MEAL_SLOTS.includes(meal.slot as MealSlot) || !recipe.slots.includes(meal.slot as MealSlot)
-    || !Array.isArray(meal.ingredients) || meal.ingredients.length !== recipe.ingredients.length
-    || !record(meal.nutrients)) return null;
-  const ingredients: FoodPortion[] = [];
-  for (let i = 0; i < recipe.ingredients.length; i++) {
-    const portion = meal.ingredients[i];
-    const source = recipe.ingredients[i];
-    if (!record(portion) || portion.foodId !== source.foodId || !getFood(source.foodId)
-      || !finite(portion.grams, Math.min(2000, source.grams * 1.8) + 0.05) || (portion.grams as number) < source.grams * 0.65 - 0.05) return null;
-    ingredients.push({ foodId: source.foodId, grams: portion.grams as number });
-  }
-  const nutrients = Object.fromEntries(['calories', 'protein', 'carbs', 'fat', 'fiber'].map(key => {
-    const total = ingredients.reduce((sum, portion) => sum + getFood(portion.foodId)!.per100g[key as keyof Nutrients] * portion.grams / 100, 0);
-    return [key, Math.round((total + Number.EPSILON) * 10) / 10];
-  })) as NutritionMealOverride['meal']['nutrients'];
-  if (!Object.entries(nutrients).every(([key, value]) => meal.nutrients && (meal.nutrients as Record<string, unknown>)[key] === value)) return null;
-  return { basis: input.basis, createdAt: input.createdAt, kind: input.kind as NutritionMealOverride['kind'],
-    meal: { slot: meal.slot as MealSlot, recipeId: recipe.id, name: recipe.name, ingredients, nutrients, minutes: recipe.minutes, steps: [...recipe.steps] } };
-}
-
-export function normalizeMealOverrides(input: unknown): Record<string, NutritionMealOverride> {
-  if (!record(input)) return {};
-  const result: Record<string, NutritionMealOverride> = {};
-  for (const [key, value] of Object.entries(input).sort(([a], [b]) => a.localeCompare(b)).slice(-4380)) {
-    const override = normalizeMealOverride(value);
-    if (key[10] === ':' && isValidDateKey(key.slice(0, 10)) && override && key.slice(11) === override.meal.slot) result[key] = override;
-  }
-  return result;
-}
-
-export function normalizeAgentAction(input: unknown): NutritionAgentAction | null {
-  if (!record(input) || Object.keys(input).some(key => !['type', 'slot', 'focus'].includes(key))
-    || !['swap_meal', 'rebalance_meal'].includes(input.type as string)
-    || ![...MEAL_SLOTS, 'next'].includes(input.slot as MealSlot)
-    || !['balanced', 'protein', 'quick'].includes(input.focus as string)) return null;
-  return { type: input.type as NutritionAgentAction['type'], slot: input.slot as NutritionAgentAction['slot'], focus: input.focus as NutritionAgentAction['focus'] };
 }

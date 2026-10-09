@@ -1,0 +1,30 @@
+const assert=require('node:assert/strict');const {chromium}=require(process.env.PLAYWRIGHT_PATH||'playwright');
+(async()=>{const browser=await chromium.launch({headless:true,channel:'chrome'});try{for(const width of [390,1280]){
+ const context=await browser.newContext({viewport:{width,height:900}}),page=await context.newPage(),errors=[];page.on('pageerror',e=>errors.push(e.message));
+ await context.addInitScript(()=>{localStorage.setItem('profile-invitation-seen','1');localStorage.setItem('personal-memory/MEMORY.md','个人记忆不应被知识库清理');});
+ await page.goto('http://127.0.0.1:8081/');
+ // Reproduce the removed v1 library cache before opening the new collection.
+ await page.evaluate(()=>new Promise((resolve,reject)=>{const open=indexedDB.open('uncover-knowledge',1);open.onupgradeneeded=()=>open.result.createObjectStore('notes');open.onsuccess=()=>{const db=open.result,tx=db.transaction('notes','readwrite');tx.objectStore('notes').put('旧产品设计','prisoner/产品设计/旧文档.md');tx.oncomplete=()=>{db.close();resolve();};};open.onerror=()=>reject(open.error);}));
+ await page.getByRole('tab',{name:'切换到我的',exact:true}).click();await page.getByRole('button',{name:'知识库',exact:true}).click();
+ await page.getByRole('button',{name:'打开资料库 囚徒健身全集',exact:true}).waitFor();
+ const bundledCount=await page.getByRole('button',{name:/^打开资料库 /}).count();
+ assert.ok(bundledCount>=2);await page.getByRole('button',{name:'打开资料库 运动营养与食物知识库',exact:true}).waitFor();
+ assert.equal(await page.getByRole('button',{name:/^阅读 /}).count(),0,'home must not dump chapters');
+ await page.getByRole('button',{name:'打开资料库 囚徒健身全集',exact:true}).click();await page.getByText('69 篇笔记',{exact:true}).waitFor();
+ const folders=page.getByRole('button',{name:/^打开文件夹 /});assert.equal(await folders.count(),4);await folders.first().click();
+ await page.getByRole('button',{name:/^阅读 /}).first().click();await page.getByRole('button',{name:'返回知识库上一级',exact:true}).click();await page.getByRole('button',{name:'返回知识库上一级',exact:true}).click();await page.getByRole('button',{name:'返回知识库上一级',exact:true}).click();
+ await page.getByRole('button',{name:'添加资料库',exact:true}).click();await page.getByLabel('资料库名称',{exact:true}).fill('营养知识');await page.getByRole('button',{name:'创建资料库',exact:true}).click();await page.getByText('这个资料库还没有笔记',{exact:true}).waitFor();
+ await page.getByRole('button',{name:'添加笔记',exact:true}).click();await page.getByLabel('笔记文件路径',{exact:true}).fill('营养基础/蛋白质.md');await page.getByLabel('笔记 Markdown 内容',{exact:true}).fill('# 蛋白质\n这是用户添加的营养资料。\n![[image.jpeg]]');await page.getByRole('button',{name:'保存笔记',exact:true}).click();
+ await page.getByRole('button',{name:'打开文件夹 营养基础',exact:true}).waitFor();await page.getByRole('button',{name:'返回知识库上一级',exact:true}).click();
+ await page.getByRole('button',{name:'打开资料库 营养知识',exact:true}).waitFor();
+ await page.getByLabel('搜索知识库',{exact:true}).fill('用户添加的营养资料');await page.getByRole('button',{name:'阅读 蛋白质',exact:true}).waitFor();
+ await page.getByRole('button',{name:'阅读 蛋白质',exact:true}).click();await page.getByText('这是用户添加的营养资料。',{exact:true}).waitFor();
+ await page.reload();await page.getByRole('tab',{name:'切换到我的',exact:true}).click();await page.getByRole('button',{name:'知识库',exact:true}).click();await page.getByRole('button',{name:'打开资料库 营养知识',exact:true}).waitFor();
+ await page.getByRole('button',{name:'打开资料库 营养知识',exact:true}).click();await page.getByRole('button',{name:'添加笔记',exact:true}).click();
+ const chooser=page.waitForEvent('filechooser');await page.getByRole('button',{name:'导入 Markdown 文件',exact:true}).click();await (await chooser).setFiles({name:'维生素.md',mimeType:'text/markdown',buffer:Buffer.from('# 维生素\n这是文件导入测试。')});
+ await page.getByRole('button',{name:'阅读 维生素',exact:true}).waitFor();await page.getByRole('button',{name:'返回知识库上一级',exact:true}).click();
+ assert.equal(await page.evaluate(()=>localStorage.getItem('personal-memory/MEMORY.md')),'个人记忆不应被知识库清理');
+ const persisted=await page.evaluate(()=>new Promise((resolve,reject)=>{const open=indexedDB.open('uncover-knowledge',2);open.onsuccess=()=>{const db=open.result,tx=db.transaction(['notes','libraries']),request=tx.objectStore('notes').getAllKeys(),all=tx.objectStore('notes').getAll(),libs=tx.objectStore('libraries').count();tx.oncomplete=()=>{resolve({keys:request.result,texts:all.result,count:libs.result});db.close();};};open.onerror=()=>reject(open.error);}));
+ assert.equal(persisted.count,bundledCount+1);assert.ok(persisted.keys.every(key=>!key.includes('产品设计')));assert.ok(persisted.texts.every(text=>!text.includes('! [[')&&!text.includes('![[image.jpeg]]')));
+ assert.deepEqual(errors,[]);console.log('PASS multi-library hierarchy, import, global search and cleanup',width);await context.close();
+}}finally{await browser.close();}})().catch(error=>{console.error(error);process.exitCode=1;});

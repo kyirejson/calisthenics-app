@@ -1,11 +1,11 @@
 import type { DailyWorkoutEdits, Profile, TrainingSession } from '../types';
-import { getWorkoutExercises, workoutDisplayTitle } from '../data/catalog';
-import { getDayTrainingState } from '../data/planProgress';
-import { dailyWorkoutKey, sessionDateKey, trainingDateKey } from '../data/sessionRecords';
-import { getPlanDay } from '../data/trainingPlans';
-import { equipmentSessionPlan } from '../data/equipmentTraining';
-import { estimateStrengthSession, preferredSessionMinutes } from '../data/trainingPrescription';
-import { localWeightDate } from '../data/weightTrend';
+import { getWorkoutExercises, workoutDisplayTitle } from '../domain/training/catalog';
+import { getDayTrainingState } from '../domain/training/planProgress';
+import { dailyWorkoutKey, sessionDateKey, trainingDateKey } from '../domain/training/sessionRecords';
+import { getPlanDay } from '../domain/training/trainingPlans';
+import { equipmentSessionPlan } from '../domain/training/equipment/equipmentTraining';
+import { estimateStrengthSession, preferredSessionMinutes } from '../domain/training/trainingPrescription';
+import { localWeightDate } from '../domain/weight/weightTrend';
 import { dateAtNoon, isValidDateKey } from './validation';
 import type { NutritionTrainingContext, TrainingTime } from './types';
 

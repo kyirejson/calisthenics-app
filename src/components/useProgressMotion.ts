@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { AccessibilityInfo, Animated, AppState, Easing, Platform } from 'react-native';
-import { progressMotion } from '../data/progressChart';
+import { progressMotion } from '../domain/training/progressChart';
 
 export function useReducedMotion(): boolean | null {
   const [reduced, setReduced] = useState<boolean | null>(() => Platform.OS === 'web' && typeof window !== 'undefined'

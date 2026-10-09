@@ -1,6 +1,6 @@
 const ts = require('typescript');
-require.extensions['.ts'] = (m, f) => m._compile(ts.transpileModule(require('node:fs').readFileSync(f, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText, f);
-const expectedSets = require('../src/data/equipmentDosePolicy.ts').equipmentWeeklyUnits.flatMap(unit => unit.doses).reduce((sum, dose) => sum + dose.sets, 0);
+require('./lib/register-typescript.cjs')({ compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 }, extensions: ['.ts'] });
+const expectedSets = require('../src/domain/training/equipment/equipmentDosePolicy.ts').equipmentWeeklyUnits.flatMap(unit => unit.doses).reduce((sum, dose) => sum + dose.sets, 0);
 // Exhaustive UI coverage test uses a separate synthetic browser context.
 const assert = require('node:assert/strict');
 const { chromium } = require(process.env.PLAYWRIGHT_PATH || 'playwright');

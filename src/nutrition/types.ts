@@ -25,8 +25,6 @@ export type NutritionPreferences = {
   allergens: Allergen[];
   riskFlags: NutritionRisk[];
   screeningCompletedAt: string | null;
-  maxCookingMinutes: 15 | 30 | 45;
-  budget: 'economy' | 'standard';
 };
 export type Food = {
   id: string;
@@ -41,7 +39,7 @@ export type Food = {
   packageGrams?: number;
   photo?: NutritionPhoto;
   artworkCategory?: FoodArtworkCategory;
-  source: { title: string; url: string; foodCode: string; version: string; license: string; kind?: 'user_label' | 'recipe_estimate'; origin?: FoodImportOrigin; recipe?: import('./dishEstimate').DishRecipe };
+  source: { title: string; url: string; foodCode: string; version: string; license: string; kind?: 'user_label'; origin?: FoodImportOrigin };
 };
 export type FoodImportOrigin = { provider: 'label_photo' | 'open_food_facts'; identifier: string; fetchedAt: string; url: string; license: string };
 export type FoodLabelDraft = {
@@ -51,25 +49,6 @@ export type FoodLabelDraft = {
   packageGrams?: number | null;
 };
 export type FoodPortion = { foodId: string; grams: number };
-export type Recipe = {
-  id: string;
-  name: string;
-  slots: MealSlot[];
-  ingredients: FoodPortion[];
-  steps: string[];
-  minutes: number;
-  budget: 'economy' | 'standard';
-  vegetarian: boolean;
-};
-export type PlannedMeal = {
-  slot: MealSlot;
-  recipeId: string;
-  name: string;
-  ingredients: FoodPortion[];
-  nutrients: Nutrients;
-  minutes: number;
-  steps: string[];
-};
 export type NutritionTargets = {
   calories: number;
   protein: number;
@@ -79,15 +58,6 @@ export type NutritionTargets = {
   tdee: number;
   status: 'ready' | 'needs_setup' | 'blocked' | 'unsupported';
   message: string;
-};
-export type DailyMenu = {
-  date: string;
-  signature: string;
-  planningSignature: string;
-  targets: NutritionTargets;
-  meals: PlannedMeal[];
-  totals: Nutrients;
-  warnings: string[];
 };
 export type NutritionTargetSnapshot = {
   signature: string;
@@ -104,23 +74,6 @@ export type NutritionDayState = {
   confirmedSlots: MealSlot[];
   skippedSlots?: MealSlot[];
   completedAt: string | null;
-};
-export type NutritionMealOverride = {
-  basis: string;
-  meal: PlannedMeal;
-  createdAt: string;
-  kind: 'swap' | 'rebalance';
-};
-export type NutritionPlanningContext = {
-  training?: Pick<NutritionTrainingContext, 'type'>;
-  trainingTime?: TrainingTime;
-  overrides?: Record<string, NutritionMealOverride>;
-};
-/** The model may propose an intent, never quantities, targets, or database IDs. */
-export type NutritionAgentAction = {
-  type: 'swap_meal' | 'rebalance_meal';
-  slot: MealSlot | 'next';
-  focus: 'balanced' | 'protein' | 'quick';
 };
 export type IntakeEntry = {
   id: string;
@@ -144,16 +97,13 @@ export type NutritionPhoto = { id: string; kind: 'food' | 'label'; capturedAt: s
 export type NutritionJournal = {
   version: 1;
   photoConsentAt: string | null;
-  assistant: import('./assistantState').AssistantState;
   preferences: NutritionPreferences | null;
   manualAllergens?: Allergen[];
   entries: IntakeEntry[];
-  mealRevisions: Record<string, number>;
   customFoods: Food[];
   savedMeals: IntakeEntry[];
   trainingTime: TrainingTime;
   days: Record<string, NutritionDayState>;
-  mealOverrides: Record<string, NutritionMealOverride>;
 };
 
 export type CustomFoodLabelInput = {

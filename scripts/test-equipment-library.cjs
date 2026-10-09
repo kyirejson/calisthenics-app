@@ -1,10 +1,10 @@
 const assert = require('node:assert/strict');
-const fs = require('node:fs');
+
 const ts = require('typescript');
 const { test } = require('node:test');
-require.extensions['.ts'] = (module, filename) => module._compile(ts.transpileModule(fs.readFileSync(filename, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText, filename);
+require('./lib/register-typescript.cjs')({ compilerOptions: { module: ts.ModuleKind.CommonJS }, extensions: ['.ts'] });
 const { equipmentMovements } = require('../src/data/equipmentMovements.ts');
-const { equipmentFocus, equipmentGear, equipmentMuscleRegions, filterEquipmentMovements, getEquipmentMuscleLabel, getEquipmentRegions, initialEquipmentFilters } = require('../src/data/equipmentLibrary.ts');
+const { equipmentFocus, equipmentGear, equipmentMuscleRegions, filterEquipmentMovements, getEquipmentMuscleLabel, getEquipmentRegions, initialEquipmentFilters } = require('../src/domain/training/equipment/equipmentLibrary.ts');
 const groups = ['chest', 'shoulders', 'back', 'legs', 'core', 'arms'];
 test('all 112 movements have explicit valid muscle and equipment tags with no orphan IDs', () => {
   assert.deepEqual(Object.keys(equipmentFocus).sort(), equipmentMovements.map(item => item.id).sort());

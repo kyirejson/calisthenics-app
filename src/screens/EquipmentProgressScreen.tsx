@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Animated, Modal, Pressable, SafeAreaView, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import Svg, { Circle, Line } from 'react-native-svg';
 import { equipmentGroups, equipmentMovements, type EquipmentGroup } from '../data/equipment';
-import { equipmentFocus, equipmentGear, filterEquipmentMovements, getEquipmentMuscleLabel, getEquipmentRegions, getInitialEquipmentRegion, initialEquipmentFilters, type EquipmentLibraryFilters } from '../data/equipmentLibrary';
+import { equipmentFocus, equipmentGear, filterEquipmentMovements, getEquipmentMuscleLabel, getEquipmentRegions, getInitialEquipmentRegion, initialEquipmentFilters, type EquipmentLibraryFilters } from '../domain/training/equipment/equipmentLibrary';
 import { useReducedMotion, useRouteReveal } from '../components/useProgressMotion';
 import { appPalette as p, progressPageLayout } from '../theme';
 import { EquipmentPhoto } from '../components/EquipmentPhoto';
@@ -35,7 +35,7 @@ export function EquipmentProgressScreen({ onOpen }: { onOpen?: (id: string) => v
   const patch = (value: Partial<EquipmentLibraryFilters>) => { lastScrollOffset = 0; scroll.current?.scrollTo({ y: 0, animated: false }); setFilters(previous => ({ ...previous, ...value })); };
   function chooseGroup(next: EquipmentGroup) { patch({ group: next, region: getInitialEquipmentRegion(next), gear: 'all', query: '' }); }
   return <SafeAreaView style={s.root}><ScrollView ref={scroll} testID="equipment-library-scroll" showsVerticalScrollIndicator={false} contentContainerStyle={s.content} keyboardShouldPersistTaps="handled" scrollEventThrottle={64}
-    onScroll={event => { if (scrollRestored.current) lastScrollOffset = event.nativeEvent.contentOffset.y; }}
+    onScroll={event => { const y = event?.nativeEvent?.contentOffset?.y; if (scrollRestored.current && typeof y === 'number') lastScrollOffset = y; }}
     onContentSizeChange={() => { if (!scrollRestored.current) { scrollRestored.current = true; scroll.current?.scrollTo({ y: initialScroll.current, animated: false }); } }}>
     <View style={s.heading}><View style={s.headingCopy}><Text style={s.title}>器械动作库</Text><Text style={s.subtitle}>6 大部位 · {equipmentMovements.length} 动作 / 变式</Text></View><Text style={s.brand}>Uncover</Text></View>
     <View style={s.search}><SearchIcon /><TextInput accessibilityLabel="搜索器械动作" value={query} onChangeText={value => patch({ query: value })} placeholder="搜索动作、肌群或器材" placeholderTextColor={p.faint} style={s.input} returnKeyType="search" />

@@ -1,4 +1,5 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
+import Svg, { Path } from 'react-native-svg';
 import { colors, radius } from '../theme';
 
 export type TabKey = 'today' | 'progress' | 'data' | 'profile';
@@ -12,9 +13,10 @@ const tabs: Array<{ key: TabKey; label: string }> = [
 
 // 用基本 View 自绘图标（日历 / 上扬箭头 / 人形），替代辨识度弱的 ● ↗ ○ 字形；
 // 项目未引入图标字体库，纯 View 在三端渲染一致。
-function TabIcon({ tab, active }: { tab: TabKey; active: boolean }) {
-  const tone = active ? colors.ink : '#8E9188';
+function TabIcon({ tab, active, editorial }: { tab: TabKey; active: boolean; editorial: boolean }) {
+  const tone = active ? editorial ? colors.lime : colors.ink : '#8E9188';
   if (tab === 'today') {
+    if (editorial) return <Svg width={23} height={23} viewBox="0 0 24 24"><Path d="M3 10l9-8 9 8v11h-6v-7H9v7H3V10z" fill={tone} /></Svg>;
     return <View style={[styles.iconBox, { borderColor: tone }]}>
       <View style={[styles.iconBar, { backgroundColor: tone }]} />
       <View style={[styles.iconDot, { backgroundColor: tone }]} />
@@ -36,16 +38,17 @@ function TabIcon({ tab, active }: { tab: TabKey; active: boolean }) {
   </View>;
 }
 
-export function TabBar({ active, onChange }: { active: TabKey; onChange: (tab: TabKey) => void }) {
+export function TabBar({ active, onChange, appearance = 'default' }: { active: TabKey; onChange: (tab: TabKey) => void; appearance?: 'default' | 'editorial' }) {
+  const editorial = appearance === 'editorial';
   return (
-    <View style={styles.wrap}>
-      <View style={styles.bar}>
+    <View style={[styles.wrap, editorial && styles.editorialWrap]}>
+      <View style={[styles.bar, editorial && styles.editorialBar]}>
         {tabs.map((tab) => {
           const selected = active === tab.key;
           return (
             <Pressable key={tab.key} accessibilityRole="tab" accessibilityLabel={'切换到' + tab.label} accessibilityState={{ selected }} aria-selected={selected} onPress={() => onChange(tab.key)} style={styles.item}>
-              <View style={[styles.icon, selected && styles.iconActive]}><TabIcon tab={tab.key} active={selected} /></View>
-              <Text style={[styles.label, selected && styles.labelActive]}>{tab.label}</Text>
+              <View style={[styles.icon, selected && !editorial && styles.iconActive]}><TabIcon tab={tab.key} active={selected} editorial={editorial} /></View>
+              <Text style={[styles.label, selected && styles.labelActive, selected && editorial && styles.editorialActive]}>{tab.label}</Text>
             </Pressable>
           );
         })}
@@ -62,6 +65,9 @@ const styles = StyleSheet.create({
   iconActive: { backgroundColor: colors.lime },
   label: { color: '#8E9188', fontSize: 11, fontWeight: '700' },
   labelActive: { color: '#FFFFFF' },
+  editorialWrap: { bottom: 0, paddingHorizontal: 0 },
+  editorialBar: { maxWidth: 440, height: 68, borderRadius: 0, borderWidth: 0, borderTopWidth: 1, borderTopColor: '#25312C', backgroundColor: '#0D1114', shadowOpacity: 0, elevation: 0 },
+  editorialActive: { color: colors.lime },
 
   iconBox: { width: 15, height: 15, borderWidth: 2, borderRadius: 4, alignItems: 'center' },
   iconBar: { width: 9, height: 2, borderRadius: 1, marginTop: 1.5 },

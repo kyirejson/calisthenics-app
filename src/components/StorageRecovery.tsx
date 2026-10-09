@@ -6,7 +6,7 @@ import { confirmAction } from '../utils/confirm';
 import { Button, Page } from './ui';
 
 export function StorageRecovery({ full = false }: { full?: boolean }) {
-  const { storageIssues, exportData, retryStorageLoading, clearData } = useAppStore();
+  const { storageIssues, exportData, retryStorageLoading, clearData } = useAppStore(state => ({ storageIssues: state.storageIssues, exportData: state.exportData, retryStorageLoading: state.retryStorageLoading, clearData: state.clearData }));
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   if (!Object.keys(storageIssues).length) return null;

@@ -5,24 +5,18 @@ const ts = require('typescript');
 
 // Domain modules are dependency-free TypeScript; this small loader lets Node's
 // built-in test runner exercise the same source used by the app.
-require.extensions['.ts'] = (module, filename) => {
-  const source = fs.readFileSync(filename, 'utf8');
-  const output = ts.transpileModule(source, {
-    compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2020 },
-  }).outputText;
-  module._compile(output, filename);
-};
+require('./lib/register-typescript.cjs')({ compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2020 }, extensions: ['.ts'] });
 
-const { exercises, getWorkoutExercises, canAddExercise, canPlanNeckBridges } = require('../src/data/catalog.ts');
-const progression = require('../src/data/progression.ts');
-const plans = require('../src/data/trainingPlans.ts');
-const { estimateStrengthSession } = require('../src/data/trainingPrescription.ts');
-const { buildPlanDraft, generatePersonalPlan } = require('../src/data/personalPlan.ts');
-const { getCalendarMonths, getDayTrainingState, getDisplayedSchedule } = require('../src/data/planProgress.ts');
+const { exercises, getWorkoutExercises, canAddExercise, canPlanNeckBridges } = require('../src/domain/training/catalog.ts');
+const progression = require('../src/domain/training/progression.ts');
+const plans = require('../src/domain/training/trainingPlans.ts');
+const { estimateStrengthSession } = require('../src/domain/training/trainingPrescription.ts');
+const { buildPlanDraft, generatePersonalPlan } = require('../src/domain/training/personalPlan.ts');
+const { getCalendarMonths, getDayTrainingState, getDisplayedSchedule } = require('../src/domain/training/planProgress.ts');
 const { trainingGoals } = require('../src/data/trainingGoals.ts');
-const { recordWeight, suggestedPlanningWeight, summarizeWeightTrend } = require('../src/data/weightTrend.ts');
-const { headstandReadiness, cleanSession, normalizeTrainingSessions, dailyWorkoutKey, withoutTrainingDay, trainingDateKey } = require('../src/data/sessionRecords.ts');
-const { getWarmupActions, warmupDuration } = require('../src/data/trainingWarmup.ts');
+const { recordWeight, suggestedPlanningWeight, summarizeWeightTrend } = require('../src/domain/weight/weightTrend.ts');
+const { headstandReadiness, cleanSession, normalizeTrainingSessions, dailyWorkoutKey, withoutTrainingDay, trainingDateKey } = require('../src/domain/training/sessionRecords.ts');
+const { getWarmupActions, warmupDuration } = require('../src/domain/training/trainingWarmup.ts');
 const gateRecord = (id = 'gate', reps = 200, date = new Date(2026, 8, 20, 10)) => ({
   id, kind: 'strength', workoutId: 'prisonerA', startedAt: date.toISOString(), completedAt: date.toISOString(), completion: 'partial',
   exercises: [{ exerciseId: 'push_06', name: '窄距俯卧撑', category: 'push', sets: [{ completed: true, reps, unit: 'reps' }] }],
@@ -368,8 +362,8 @@ test('retired goals cannot schedule or generate old courses', async () => {
     'prisonerA', 'prisonerB', 'prisonerC', 'prisonerD', 'prisonerE', 'prisonerF',
     'prisoner_recovery_phase1', 'prisoner_recovery_trifecta', 'prisoner_recovery_elite',
   ].sort());
-  assert.equal(require('../src/data/catalog.ts').getWorkout('splitUpper'), undefined);
-  assert.equal(require('../src/data/catalog.ts').getWorkout('pplPush'), undefined);
+  assert.equal(require('../src/domain/training/catalog.ts').getWorkout('splitUpper'), undefined);
+  assert.equal(require('../src/domain/training/catalog.ts').getWorkout('pplPush'), undefined);
   const retiredPrisoner = { ...profile, goal: 'street_mastery', planId: plans.RETIRED_PLAN_ID };
   assert.equal(plans.getPlanDay(retiredPrisoner, anchor).day.title, '暂无训练计划');
   assert.deepEqual(getWorkoutExercises('prisonerA', retiredPrisoner), []);
@@ -801,7 +795,7 @@ test('stage one uses adapted beginner recovery while other recovery schedules st
     durationSeconds: 600,
     completion: 'full',
   };
-  const { getDayTrainingState } = require('../src/data/planProgress.ts');
+  const { getDayTrainingState } = require('../src/domain/training/planProgress.ts');
   const stateBefore = getDayTrainingState(tuesday, []);
   assert.equal(stateBefore.complete, false);
   const stateAfter = getDayTrainingState(tuesday, [session]);

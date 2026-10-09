@@ -1,9 +1,9 @@
 import { useEffect, useId, useMemo, useState } from 'react';
 import { Animated, PanResponder, Platform, Pressable, StyleSheet, Text, View, type ViewStyle } from 'react-native';
 import Svg, { Circle, Defs, Line, LinearGradient, Path, Stop } from 'react-native-svg';
-import type { HistoryUnit, PerformancePoint, StaircaseStep } from '../data/trainingHistory';
-import { historyUnitLabels } from '../data/trainingHistory';
-import { progressGeometry, progressNumber, visibleProgressPoints, type ProgressMetric, type ProgressRange } from '../data/progressChart';
+import type { HistoryUnit, PerformancePoint, StaircaseStep } from '../domain/training/trainingHistory';
+import { historyUnitLabels } from '../domain/training/trainingHistory';
+import { progressGeometry, progressNumber, visibleProgressPoints, type ProgressMetric, type ProgressRange } from '../domain/training/progressChart';
 import { useProgressMotion } from './useProgressMotion';
 
 type Props = {
@@ -11,7 +11,7 @@ type Props = {
   points: PerformancePoint[]; targetBenchmark: number | null; unit: HistoryUnit;
   metric: ProgressMetric; range: ProgressRange; now: Date;
   onMetric: (value: ProgressMetric) => void; onRange: (value: ProgressRange) => void;
-  onSelectStep: (level: number) => void; onSelectRecord: (date: string) => void;
+  onSelectStep: (level: number) => void;
 };
 
 const STAIR_HEIGHT = 168, PLOT_HEIGHT = 166, PLOT_TOP = 14, LEFT = 34, RIGHT = 18;
@@ -43,6 +43,17 @@ export function UnifiedProgressCard(props: Props) {
   const activeIndex = requestedIndex >= 0 ? requestedIndex : visible.length - 1;
   const active = visible[activeIndex] || visible.at(-1);
   const activeCoordinate = active ? geometry.coordinate(active) : null;
+  const moveSelection = (direction: number) => {
+    if (visible.length) setSelectedId(visible[Math.max(0, Math.min(visible.length - 1, activeIndex + direction))].id);
+  };
+  const webKeyboardProps = Platform.OS === 'web' ? {
+    tabIndex: 0 as const,
+    onKeyDown: (event: { key: string; preventDefault: () => void }) => {
+      if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') {
+        event.preventDefault(); moveSelection(event.key === 'ArrowLeft' ? -1 : 1);
+      }
+    },
+  } : {};
   const stride = Math.max(1, (width - 32) / Math.max(1, staircase.length));
   const positions = staircase.map((step, index) => ({ step, x: 16 + index * stride, end: 16 + (index + 1) * stride, y: 126 - index * 34 }));
   let stairPath = positions.length ? 'M 8 156 L 16 156' : '';
@@ -66,8 +77,16 @@ export function UnifiedProgressCard(props: Props) {
   const gestures = useMemo(() => PanResponder.create({
     onStartShouldSetPanResponder: () => true,
     onMoveShouldSetPanResponder: (_, gesture) => Math.abs(gesture.dx) > 6 && Math.abs(gesture.dx) > Math.abs(gesture.dy) * 1.2,
-    onPanResponderGrant: event => selectAt(event.nativeEvent.locationX),
-    onPanResponderMove: (event, gesture) => { if (Math.abs(gesture.dx) > Math.abs(gesture.dy) * 1.2) selectAt(event.nativeEvent.locationX); },
+    onPanResponderGrant: event => {
+      const x = event?.nativeEvent?.locationX;
+      if (typeof x === 'number') selectAt(x);
+    },
+    onPanResponderMove: (event, gesture) => {
+      if (Math.abs(gesture.dx) > Math.abs(gesture.dy) * 1.2) {
+        const x = event?.nativeEvent?.locationX;
+        if (typeof x === 'number') selectAt(x);
+      }
+    },
     onPanResponderTerminationRequest: () => true,
     onShouldBlockNativeResponder: () => false,
   }), [visible, geometry]);
@@ -80,8 +99,13 @@ export function UnifiedProgressCard(props: Props) {
     ...(dateLabelLeft(middleLabel) - dateLabelLeft(visible[0]) >= 64 && dateLabelLeft(visible.at(-1)!) - dateLabelLeft(middleLabel) >= 64 ? [middleLabel] : []), visible.at(-1)!];
 
   return <View style={styles.card} testID="unified-progress-card">
-    <View style={styles.sectionRow}><Text style={styles.sectionTitle}>动作路线</Text><Text style={styles.legend}>○ 当前选择　✓ 验收达标</Text></View>
-    <View style={styles.stairStage} onLayout={event => setWidth(event.nativeEvent.layout.width)}>
+      <View style={styles.sectionRow}><Text style={styles.sectionTitle}>动作路线</Text></View>
+    <View style={styles.stairStage} onLayout={event => {
+      const nextWidth = event?.nativeEvent?.layout?.width;
+      if (typeof nextWidth === 'number' && Number.isFinite(nextWidth) && nextWidth > 0 && Math.abs(nextWidth - width) > 0.5) {
+        setWidth(nextWidth);
+      }
+    }}>
       {width > 0 ? <Animated.View pointerEvents="none" testID="progress-stair-rise" style={[StyleSheet.absoluteFill, { opacity: motion.stairs, transform: [{ translateY: stairTranslate }, { scaleY: motion.stairs }] }]}>
         <Svg width={width} height={STAIR_HEIGHT}><Defs><LinearGradient id={gradientId + 'stairs'} x1="0" y1="0" x2="0" y2="1"><Stop offset="0" stopColor="#C8F04D" stopOpacity={0.22} /><Stop offset="1" stopColor="#C8F04D" stopOpacity={0} /></LinearGradient></Defs>
           <Path d={stairFill} fill={'url(#' + gradientId + 'stairs)'} />
@@ -105,7 +129,7 @@ export function UnifiedProgressCard(props: Props) {
     </View>
 
     <View style={styles.performanceHeading}>
-      <View style={styles.segment}>{(['best', 'total'] as const).map(value => <Pressable key={value} accessibilityRole="button" accessibilityLabel={value === 'best' ? '查看单组最佳曲线' : '查看当日总量曲线'} accessibilityState={{ selected: value === metric }} onPress={() => props.onMetric(value)} style={[styles.segmentButton, value === metric && styles.segmentActive]}><Text style={[styles.segmentText, value === metric && styles.chosen]}>{value === 'best' ? '单组最佳' : '当日总量'}</Text></Pressable>)}</View>
+      <View style={styles.segment}>{(['best', 'total'] as const).map(value => <Pressable key={value} accessibilityRole="button" accessibilityLabel={value === 'best' ? '查看单组最佳曲线' : '查看当日总量曲线'} accessibilityState={{ selected: value === metric }} aria-pressed={value === metric} onPress={() => props.onMetric(value)} style={[styles.segmentButton, value === metric && styles.segmentActive]}><Text style={[styles.segmentText, value === metric && styles.chosen]}>{value === 'best' ? '单组最佳' : '当日总量'}</Text></Pressable>)}</View>
       <Text style={styles.unit}>{historyUnitLabels[unit]}</Text>
     </View>
     <View style={styles.rangeRow}>{([30, 90, 'all'] as const).map(value => <Pressable key={value} accessibilityRole="button" accessibilityLabel={'查看' + (value === 'all' ? '全部' : '近' + value + '天') + '训练曲线'} accessibilityState={{ selected: range === value }} onPress={() => props.onRange(value)} style={[styles.rangeButton, range === value && styles.rangeActive]}><Text style={[styles.rangeText, range === value && styles.rangeSelected]}>{value === 'all' ? '全部' : value + ' 天'}</Text></Pressable>)}<Text style={styles.rangeNote}>{visible.length} 个记录日</Text></View>
@@ -130,7 +154,7 @@ export function UnifiedProgressCard(props: Props) {
           </Svg>
         </Animated.View>
         {labelPoints.map(point => <Text key={point.id} pointerEvents="none" style={[styles.dateLabel, { left: dateLabelLeft(point) }]}>{point.formattedDate}</Text>)}
-        <View style={[StyleSheet.absoluteFill, webTouchStyle]} testID="performance-touch-surface" {...gestures.panHandlers} accessible accessibilityRole="image" accessibilityLabel={visible.length ? '真实训练成绩曲线，' + visible.length + '个记录日；可使用下方前后按钮查看。' : '暂无真实训练成绩'} />
+        <View style={[StyleSheet.absoluteFill, webTouchStyle]} testID="performance-touch-surface" {...gestures.panHandlers} {...webKeyboardProps} accessible accessibilityRole="image" accessibilityLabel={visible.length ? '真实训练成绩曲线，' + visible.length + '个记录日；可点选或横向滑动，网页可用左右方向键查看。' : '暂无真实训练成绩'} accessibilityActions={[{ name: 'decrement', label: '上一条成绩' }, { name: 'increment', label: '下一条成绩' }]} onAccessibilityAction={event => { if (event.nativeEvent.actionName === 'decrement') moveSelection(-1); else if (event.nativeEvent.actionName === 'increment') moveSelection(1); }} />
         {active && activeCoordinate ? <Animated.View pointerEvents="none" style={{ position: 'absolute', left: 8, right: 8, top: tooltipTop, opacity: tooltipOpacity, flexDirection: 'row' }}>
           <View style={{ flex: tooltipAlignment }} />
           <View testID="performance-tooltip" style={[styles.tooltip, { width: tooltipWidth, maxWidth: '100%', flexShrink: 1 }]}>
@@ -140,24 +164,16 @@ export function UnifiedProgressCard(props: Props) {
           <View style={{ flex: 1 - tooltipAlignment }} />
         </Animated.View> : null}
       </> : null}
-      {!visible.length ? <View pointerEvents="none" style={styles.empty}><Text style={styles.emptyTitle}>{props.points.length ? '这个时段没有训练记录' : '你的曲线，从第一组开始'}</Text><Text style={styles.emptyText}>{props.points.length ? '切换到更长时间范围查看' : '勾选实际完成的组后，成绩会出现在这里'}</Text></View> : null}
+      {!visible.length ? <View pointerEvents="none" style={styles.empty}><Text style={styles.emptyTitle}>{props.points.length ? '这个时段没有训练记录' : '你的曲线，从第一组开始'}</Text><Text style={styles.emptyText}>{props.points.length ? '切换到更长时间范围查看' : '完成并记录第一组后，成绩会出现在这里'}</Text></View> : null}
     </View>
 
-    {active ? <View style={styles.inspection}>
-      <Pressable accessibilityRole="button" accessibilityLabel="查看上一条成绩" disabled={activeIndex <= 0} onPress={() => setSelectedId(visible[activeIndex - 1].id)} style={[styles.arrow, activeIndex <= 0 && styles.disabled]}><Text style={styles.arrowText}>‹</Text></Pressable>
-      <Pressable accessibilityRole="button" accessibilityLabel={'查看' + active.dayKey + '的训练记录'} onPress={() => props.onSelectRecord(active.dayKey)} style={styles.inspectBody}>
-        <Text style={styles.inspectTitle}>{active.formattedDate} · {active.sessionIds.length} 次训练 · {active.sets.length} 个有效组</Text>
-        <Text numberOfLines={1} style={styles.inspectSets}>{active.sets.map(progressNumber).join(' · ')} {historyUnitLabels[unit]}　查看记录 ›</Text>
-      </Pressable>
-      <Pressable accessibilityRole="button" accessibilityLabel="查看下一条成绩" disabled={activeIndex >= visible.length - 1} onPress={() => setSelectedId(visible[activeIndex + 1].id)} style={[styles.arrow, activeIndex >= visible.length - 1 && styles.disabled]}><Text style={styles.arrowText}>›</Text></Pressable>
-    </View> : <Text style={styles.emptyFoot}>仅统计已勾选记录，不预测成绩</Text>}
   </View>;
 }
 
 const styles = StyleSheet.create({
   card: { backgroundColor: '#191D22', borderWidth: 1, borderColor: '#2A3036', borderRadius: 24, overflow: 'hidden', paddingTop: 14 },
   sectionRow: { paddingHorizontal: 16, flexDirection: 'row', justifyContent: 'space-between', gap: 6 },
-  sectionTitle: { color: '#E5EAF0', fontSize: 12, fontWeight: '700' }, legend: { color: '#9CA8B1', fontSize: 10 },
+  sectionTitle: { color: '#E5EAF0', fontSize: 12, fontWeight: '700' },
   stairStage: { height: STAIR_HEIGHT, marginHorizontal: 4, overflow: 'hidden' },
   stepButton: { position: 'absolute', alignItems: 'center', justifyContent: 'flex-start', paddingTop: 6 },
   stepLabel: { color: '#A6B0B8', fontSize: 12, fontWeight: '800', marginTop: 8 }, chosen: { color: '#C8F04D' }, stepCaption: { color: '#82909A', fontSize: 9, marginTop: 3 },
@@ -176,9 +192,4 @@ const styles = StyleSheet.create({
   tooltipDate: { color: '#ABB5BE', fontSize: 9 }, tooltipValue: { color: '#F8FFE7', fontSize: 21, fontWeight: '900', marginTop: 2, fontVariant: ['tabular-nums'] },
   tooltipUnit: { fontSize: 11, fontWeight: '600' }, tooltipFeedback: { fontSize: 9, color: '#C8F04D', marginTop: 2 }, pain: { color: '#FFAA9B' }, unrated: { color: '#A8B4BF' }, hard: { color: '#EAB55F' },
   empty: { position: 'absolute', left: 36, right: 14, top: 74, alignItems: 'center', gap: 8 }, emptyTitle: { color: '#D1D9CF', fontSize: 13, fontWeight: '700' }, emptyText: { color: '#87949E', fontSize: 10, textAlign: 'center', lineHeight: 16 },
-  inspection: { flexDirection: 'row', alignItems: 'center', gap: 4, borderTopWidth: 1, borderTopColor: '#2A3036', paddingHorizontal: 10, paddingVertical: 7, marginTop: 6 },
-  arrow: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' }, arrowText: { color: '#C8F04D', fontSize: 24 },
-  disabled: { opacity: 0.25 }, inspectBody: { flex: 1, minWidth: 0, minHeight: 44, justifyContent: 'center' },
-  inspectTitle: { color: '#E2E8DF', fontSize: 10, fontWeight: '700' }, inspectSets: { color: '#93A18A', fontSize: 9, marginTop: 5 },
-  emptyFoot: { color: '#7D8B95', fontSize: 10, textAlign: 'center', paddingVertical: 16 },
 });

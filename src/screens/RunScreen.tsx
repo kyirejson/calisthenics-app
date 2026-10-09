@@ -1,295 +1,123 @@
-import * as Location from 'expo-location';
-import { useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { KeyboardAvoidingView, Linking, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
-import { Page, ProgressBar } from '../components/ui';
-import { AppGlyph, type GlyphName } from '../components/AppGlyph';
-import { GpsTrailMap } from '../components/GpsTrailMap';
-import { useAppUpdates } from '../components/AppUpdates';
+import { useEffect, useRef, useState } from 'react';
+import { ActivityIndicator, KeyboardAvoidingView, Linking, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { AppGlyph } from '../components/AppGlyph';
 import { useAppStore } from '../store/AppStore';
-import { getPlanDay } from '../data/trainingPlans';
-import { normalizeRunningGoal, resolveRunningGoal, runningGoalProgress } from '../data/runGoals';
-import { appPalette as palette, progressPageLayout } from '../theme';
+import { useRunRecorder } from '../running/RunRecorderHost';
+import { RunMap } from '../running/RunMap';
+import { RunFocus, runGoals } from '../running/RunFocus';
+import { RunRecordDetail } from '../running/RunRecordDetail';
+import { RunOptionsPanel } from '../running/RunOptionsPanel';
+import { mapPosition } from '../running/locationStatus';
+import { paceLabel, runClock, usablePoint, runMeasurement, runRecordMeasurement, type RunMode } from '../running/model';
+import { appPalette as c } from '../theme';
+import { confirmAction } from '../utils/confirm';
 import type { TrainingSession } from '../types';
-import { showMessage } from '../utils/confirm';
-import { downsampleTrack, formatPace, formatRunClock, haversine, type GeoPoint } from '../utils/geo';
-import { validGeoPoint } from '../utils/mapViewport';
 
-type RunningProps = { embedded?: boolean; onBack?: () => void; onComplete?: () => void };
-
-/** The Today pane and full-screen recorder use the same GPS / saving logic. */
-export function RunScreen({ onBack, onComplete }: { onBack: () => void; onComplete: () => void }) {
-  return <RunningSession onBack={onBack} onComplete={onComplete} />;
-}
-
-export function RunningSession({ embedded = false, onBack, onComplete }: RunningProps) {
-  const { profile, settings, saveSession, updateSettings } = useAppStore();
-  const { blockUpdates } = useAppUpdates();
-  const [status, setStatus] = useState<'idle' | 'running' | 'paused'>('idle');
-  const [elapsed, setElapsed] = useState(0);
-  const [distanceM, setDistanceM] = useState(0);
-  const [permission, setPermission] = useState<'unknown' | 'granted' | 'denied'>('unknown');
-  const [trail, setTrail] = useState<GeoPoint[]>([]);
-  const [current, setCurrent] = useState<GeoPoint | null>(null);
-  const [saving, setSaving] = useState(false);
-  const [locating, setLocating] = useState(false);
-  const [canAskLocation, setCanAskLocation] = useState(true);
-  const [showGoal, setShowGoal] = useState(false);
-  const [goalKind, setGoalKind] = useState<'distance' | 'duration'>('distance');
-  const [goalValue, setGoalValue] = useState('5');
-  const [goalSaving, setGoalSaving] = useState(false);
-  const [goalError, setGoalError] = useState('');
-  const watch = useRef<Location.LocationSubscription | null>(null);
-  const lastPoint = useRef<GeoPoint | null>(null);
-  const startedAt = useRef<Date | null>(null);
-  const statusRef = useRef<'idle' | 'running' | 'paused'>('idle');
-  const active = useRef(true);
-  const generation = useRef(0);
-  const locationPending = useRef(false);
-  const goalPending = useRef(false);
-  const savePending = useRef(false);
-  const watchStarting = useRef<number | null>(null);
-  const elapsedMs = useRef(0);
-  const runningSince = useRef<number | null>(null);
-
-  // 预览：已授权时取当前位置画底图；未授权不主动弹窗，点开始记录时再请求
+export function RunScreen({ visible }: { visible: boolean }) {
+  const run = useRunRecorder(), { sessions, deleteSession } = useAppStore(state => ({ sessions: state.sessions, deleteSession: state.deleteSession }));
+  const [historyOpen, setHistoryOpen] = useState(false), [selectedRecord, setSelectedRecord] = useState<string | null>(null), [height, setHeight] = useState(650), [width, setWidth] = useState(390);
+  const [chosenMode, setChosenMode] = useState<RunMode>('outdoor'), [distanceOpen, setDistanceOpen] = useState(false), [manualDistance, setManualDistance] = useState(''), [distanceError, setDistanceError] = useState('');
+  const [focus, setFocus] = useState(false), [goalOpen, setGoalOpen] = useState(false), [goalIndex, setGoalIndex] = useState(0), [countdown, setCountdown] = useState<number | null>(null), [receiptId, setReceiptId] = useState<string | null>(null), [historyError, setHistoryError] = useState('');
+  const lastActiveId = useRef<string | undefined>(undefined);
+  const [optionsOpen, setOptionsOpen] = useState(false);
+  const { snapshot, analysis } = run;
+  const receipt = sessions.find(session => session.id === receiptId);
   useEffect(() => {
-    active.current = true;
-    let previewActive = true;
-    (async () => {
-      try {
-        const existing = await Location.getForegroundPermissionsAsync();
-        if (!previewActive) return;
-        setCanAskLocation(existing.canAskAgain);
-        if (!existing.granted) {
-          if (!existing.canAskAgain) setPermission('denied');
-          return;
-        }
-        setPermission('granted');
-        const pos = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
-        if (previewActive && validGeoPoint(pos?.coords)) setCurrent({ latitude: pos.coords.latitude, longitude: pos.coords.longitude });
-      } catch { /* 定位预览失败不影响记录 */ }
-    })();
-    return () => { previewActive = false; active.current = false; generation.current++; watch.current?.remove(); watch.current = null; };
-  }, []);
-
+    if (snapshot.phase !== 'idle') { lastActiveId.current = snapshot.id; return; }
+    if (lastActiveId.current && sessions.some(session => session.id === lastActiveId.current)) {
+      setReceiptId(lastActiveId.current); setFocus(false); lastActiveId.current = undefined;
+    }
+  }, [snapshot.phase, snapshot.id, sessions]);
   useEffect(() => {
-    if (status !== 'running') return;
-    const update = () => setElapsed(Math.floor((elapsedMs.current + (runningSince.current === null ? 0 : Math.max(0, Date.now() - runningSince.current))) / 1000));
-    update();
-    const id = setInterval(update, 1000);
-    return () => clearInterval(id);
-  }, [status]);
-
-  useLayoutEffect(() => { if (status !== 'idle' || showGoal || locating) return blockUpdates(); }, [status, showGoal, locating, blockUpdates]);
-
-  if (!profile) return null;
-  const now = new Date();
-  const plannedDay = getPlanDay(profile, now).day;
-  const weightLoss = profile.goal === 'weight_loss';
-  const targetMinutes = plannedDay.type === 'cardio' ? plannedDay.targetMinutes : undefined;
-  const km = distanceM / 1000;
-  const pace = km > 0.03 ? elapsed / km : 0;
-  const goal = resolveRunningGoal(settings.runningGoal, targetMinutes);
-  const goalPercent = runningGoalProgress(goal, distanceM, elapsed);
-  const gpsReady = permission === 'granted' && current !== null;
-
-  const locate = async () => {
-    if (locationPending.current) return;
-    locationPending.current = true; setLocating(true);
-    try {
-      const existing = await Location.getForegroundPermissionsAsync();
-      if (!active.current) return;
-      if (!existing.granted && !existing.canAskAgain && Platform.OS !== 'web') {
-        setCanAskLocation(false); setPermission('denied');
-        void Linking.openSettings().catch(() => showMessage('无法打开定位设置', '请在系统设置中为 Uncover 开启定位权限。'));
-        return;
-      }
-      const result = existing.granted ? existing : await Location.requestForegroundPermissionsAsync();
-      if (!active.current) return;
-      setCanAskLocation(result.canAskAgain);
-      if (!result.granted) { setPermission('denied'); return; }
-      setPermission('granted');
-      const pos = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
-      if (active.current && validGeoPoint(pos?.coords)) setCurrent({ latitude: pos.coords.latitude, longitude: pos.coords.longitude });
-      if (active.current && statusRef.current === 'running') await followLocation(generation.current);
-    } catch { if (active.current) showMessage('暂时无法定位', '可重试定位，或直接开始计时。'); }
-    finally { locationPending.current = false; if (active.current) setLocating(false); }
+    if (countdown === null) return;
+    if (countdown === 0) { setCountdown(null); void run.start(chosenMode); return; }
+    const timer = setTimeout(() => setCountdown(value => value === null ? null : value - 1), 1000);
+    return () => clearTimeout(timer);
+  }, [countdown, chosenMode]);
+  useEffect(() => { if (!visible) { setCountdown(null); setFocus(false); } }, [visible]);
+  const active = snapshot.phase !== 'idle', recording = snapshot.phase === 'running', paused = snapshot.phase === 'paused', pendingSave = snapshot.phase === 'finished';
+  const indoor = (active ? snapshot.mode : chosenMode) === 'indoor';
+  const fresh = usablePoint(snapshot.preview) && (snapshot.preview?.ageMs ?? 16000) <= 15000;
+  const status = run.busy ? '正在处理…' : run.location.title;
+  const currentPace = indoor ? recording ? snapshot.stepCurrentPace : null : recording && fresh && analysis.lastPoint && snapshot.elapsedMs - analysis.lastPoint.elapsedMs < 15000 ? analysis.currentPace : null;
+  const measurement = runMeasurement(snapshot, analysis);
+  const averagePace = measurement.averagePace;
+  const distanceText = measurement.distanceKm === undefined ? '—' : measurement.distanceKm.toFixed(2);
+  const distanceFont = Math.floor(Math.max(26, Math.min(height < 600 ? 42 : 49, ((width - 64) * 1.6 / 3.6 - 27) / (distanceText.length * 0.62))));
+  const records = sessions.filter(session => session.kind === 'running').sort((a, b) => Date.parse(b.startedAt) - Date.parse(a.startedAt));
+  useEffect(() => { if (!visible) run.stopPreview(); return run.stopPreview; }, [visible, run.stopPreview]);
+  const retryLocation = () => {
+    if (!run.location.settings || Platform.OS === 'web') { void run.locate(); return; }
+    const open = Platform.OS === 'android' && snapshot.location?.enabled === false && snapshot.location.permission
+      ? Linking.sendIntent('android.settings.LOCATION_SOURCE_SETTINGS') : Linking.openSettings();
+    void open.catch(() => undefined);
   };
-
-  const editGoal = () => {
-    setGoalKind(goal?.kind || 'distance'); setGoalValue(String(goal?.value || 5)); setGoalError(''); setShowGoal(true);
-  };
-  const saveGoal = async (clear = false) => {
-    if (goalPending.current) return;
-    const next = clear ? null : normalizeRunningGoal({ kind: goalKind, value: goalValue.trim() ? Number(goalValue) : NaN });
-    if (!clear && !next) { setGoalError(goalKind === 'distance' ? '请输入 0.5–50 km 的距离。' : '请输入 1–240 分钟的整数时长。'); return; }
-    goalPending.current = true; setGoalSaving(true); setGoalError('');
-    try { await updateSettings({ runningGoal: next || undefined }); setShowGoal(false); }
-    catch { setGoalError('目标未能保存，请重试。'); }
-    finally { goalPending.current = false; setGoalSaving(false); }
-  };
-
-  const followLocation = async (ticket: number) => {
-    if (watch.current || watchStarting.current === ticket) return;
-    watchStarting.current = ticket;
-    try {
-      const subscription = await Location.watchPositionAsync(
-        { accuracy: Location.Accuracy.BestForNavigation, timeInterval: 2000, distanceInterval: 3 },
-        location => {
-          const accuracy = location.coords.accuracy;
-          if (ticket !== generation.current || statusRef.current !== 'running' || typeof accuracy !== 'number' || !Number.isFinite(accuracy) || accuracy < 0 || accuracy > 35) return;
-          const next: GeoPoint = { latitude: location.coords.latitude, longitude: location.coords.longitude };
-          if (!validGeoPoint(next)) return;
-          if (lastPoint.current) {
-            const segment = haversine(lastPoint.current, next);
-            setDistanceM(value => value + segment);
-          }
-          lastPoint.current = next; setCurrent(next);
-          // Downsample rather than discard the beginning of a long run.
-          setTrail(previous => { const points = [...previous, next]; return points.length > 600 ? downsampleTrack(points, 480) : points; });
-        },
-      );
-      if (!active.current || ticket !== generation.current) subscription.remove();
-      else watch.current = subscription;
-    } finally { if (watchStarting.current === ticket) watchStarting.current = null; }
-  };
-
-  const stopClock = () => {
-    if (runningSince.current !== null) elapsedMs.current += Math.max(0, Date.now() - runningSince.current);
-    runningSince.current = null;
-    const seconds = Math.floor(elapsedMs.current / 1000);
-    setElapsed(seconds); return seconds;
-  };
-
-  const begin = async () => {
-    if (statusRef.current !== 'idle') return;
-    const ticket = ++generation.current;
-    startedAt.current = new Date();
-    elapsedMs.current = 0; runningSince.current = Date.now();
-    statusRef.current = 'running';
-    setStatus('running');
-    setTrail([]);
-    setDistanceM(0);
-    setElapsed(0);
-    lastPoint.current = null;
-    try {
-      const existing = await Location.getForegroundPermissionsAsync();
-      const result = existing.granted || !existing.canAskAgain ? existing : await Location.requestForegroundPermissionsAsync();
-      if (!active.current || ticket !== generation.current) return;
-      setCanAskLocation(result.canAskAgain);
-      if (!result.granted) {
-        setPermission('denied');
-        setCurrent(null);
-        showMessage('仅记录运动时间', `未授权定位，仍可完成${weightLoss ? '快走或骑行' : '跑步'}计时；距离、配速和地图轨迹不会记录。`);
-        return;
-      }
-      setPermission('granted');
-      await followLocation(ticket);
-    } catch {
-      if (!active.current || ticket !== generation.current) return;
-      setPermission('denied');
-      setCurrent(null);
-      showMessage('仅记录运动时间', '定位暂不可用，本次仍可计时。');
-    }
-  };
-
-  const togglePause = () => {
-    const next = statusRef.current === 'running' ? 'paused' : 'running';
-    if (next === 'paused') stopClock(); else runningSince.current = Date.now();
-    statusRef.current = next;
-    lastPoint.current = null; // 暂停期间的位移不计入距离
-    setStatus(next);
-    if (next === 'running' && permission === 'granted' && !watch.current) {
-      void followLocation(generation.current).catch(() => showMessage('定位暂不可用', '保留已有路线，本次继续计时。'));
-    }
-  };
-
-  const finish = async () => {
-    if (statusRef.current === 'idle' || savePending.current) return;
-    savePending.current = true;
-    statusRef.current = 'paused';
-    setStatus('paused');
-    generation.current++;
-    watch.current?.remove();
-    watch.current = null;
-    const seconds = Math.max(1, stopClock());
-    const kmTotal = distanceM / 1000;
-    const session: TrainingSession = {
-      id: `run_${Date.now()}`,
-      workoutId: 'outdoor_run',
-      workoutName: plannedDay.type === 'cardio' ? plannedDay.title : '有氧活动',
-      startedAt: (startedAt.current || new Date()).toISOString(),
-      completedAt: new Date().toISOString(),
-      durationSeconds: seconds,
-      exercises: [],
-      totalReps: 0,
-      kind: 'running',
-      distanceKm: Number(kmTotal.toFixed(2)),
-      calories: weightLoss ? undefined : Math.round((profile.weight || 65) * kmTotal * 1.02),
-      completion: targetMinutes ? seconds < targetMinutes * 60 ? 'partial' : 'complete' : goal && runningGoalProgress(goal, distanceM, seconds) < 100 ? 'partial' : 'complete',
-      // 轨迹入库（降采样 ≤240 点）：最近记录卡与数据页的训练历史都能重画这条路线
-      ...(trail.length >= 2 ? { route: downsampleTrack(trail, 240) } : {}),
-    };
-    setSaving(true);
-    try {
-      await saveSession(session);
-      showMessage('跑步记录已保存', `${formatRunClock(seconds)}${kmTotal > 0.03 ? ` · ${kmTotal.toFixed(2)} 公里` : ''} · 已计入训练历史`);
-    } catch {
-      savePending.current = false;
-      setSaving(false);
-      showMessage('保存失败', '数据仍保留在此页，请重试保存。');
+  const finish = () => {
+    if (indoor) {
+      void (async () => { if (recording && !await run.pause()) return; setManualDistance(''); setDistanceError(''); setDistanceOpen(true); })();
       return;
     }
-    setSaving(false);
-    savePending.current = false;
-    setStatus('idle');
-    setTrail([]);
-    setDistanceM(0);
-    setElapsed(0);
-    elapsedMs.current = 0; runningSince.current = null;
-    startedAt.current = null;
-    statusRef.current = 'idle';
-    onComplete?.();
+    void confirmAction('结束并保存跑步？', '保存用时和已测得的路段；未定位的距离不会编造。暂停时间不计入跑步。', () => { void run.save(); }, { confirmLabel: '结束并保存' });
   };
-
-
-  return <Page tone="dark" testID="running-content" style={styles.content}>
-    {!embedded ? <View style={styles.header}><Pressable accessibilityRole="button" accessibilityLabel="返回今日页" onPress={onBack} style={styles.back}><AppGlyph name="back" color={palette.text} /></Pressable><Text style={styles.title}>有氧记录</Text></View> : null}
-    <View style={styles.heading}><Text style={styles.sectionTitle}>{weightLoss ? '步行与有氧' : '户外跑步'}</Text><View style={styles.signal}><View style={[styles.signalDot, gpsReady && { backgroundColor: palette.lime }]} /><Text testID="running-gps-status" style={styles.signalText}>{status === 'paused' ? '已暂停' : gpsReady ? status === 'running' ? 'GPS 记录中' : 'GPS 就绪' : locating ? '正在定位' : permission === 'denied' ? '仅计时' : '等待定位'}</Text></View></View>
-    <View testID="running-map" style={styles.map}><GpsTrailMap trail={trail} current={current} fitTrack style={StyleSheet.absoluteFill} placeholderTitle={permission === 'denied' ? '未开启定位' : locating ? '正在获取位置' : '定位后显示路线'} placeholderHint={permission === 'denied' ? '仍可记录运动时间' : undefined} placeholderAction={{ label: locating ? '正在定位…' : !canAskLocation && Platform.OS !== 'web' ? '打开定位设置' : '开启定位', onPress: () => void locate(), disabled: locating }} /></View>
-    <View style={styles.distanceRow}><Text testID="running-distance" style={styles.distance}>{km.toFixed(2)}<Text style={styles.unit}> km</Text></Text></View>
-    <View style={styles.stats}><RunMetric icon="clock" label="用时" value={formatRunClock(elapsed)} testID="running-elapsed" /><View style={styles.divider} /><RunMetric icon="pace" label="平均配速" value={formatPace(pace)} /></View>
-    <View testID="running-goal-card" style={styles.target}><Pressable accessibilityRole="button" accessibilityLabel="设置跑步目标" disabled={goalSaving || saving} onPress={editGoal} style={styles.targetHead}><Text style={styles.note}>{goal ? (settings.runningGoal ? '今日目标 ' : '课程目标 ') + goal.value + (goal.kind === 'distance' ? ' km' : ' 分钟') : '今日目标'}</Text><View style={styles.goalSummary}><Text testID="running-goal-progress" style={styles.targetValue}>{goal ? (goal.kind === 'distance' ? km.toFixed(2) : Math.floor(elapsed / 60)) + ' / ' + goal.value + (goal.kind === 'distance' ? ' km' : ' 分钟') : '设置目标'}</Text><AppGlyph name="chevron" size={12} /></View></Pressable><ProgressBar value={goalPercent} color={palette.lime} /></View>
-    <View style={styles.controls}>{status === 'idle' ? <Pressable accessibilityRole="button" accessibilityLabel="开始记录" disabled={saving} onPress={() => void begin()} style={[styles.primary, saving && styles.disabled]}><AppGlyph name="run" color={palette.onLime} /><Text style={styles.primaryText}>开始记录</Text></Pressable> : <><Pressable accessibilityRole="button" accessibilityLabel={status === 'running' ? '暂停记录' : '继续记录'} disabled={saving} onPress={togglePause} style={styles.secondary}><AppGlyph name={status === 'running' ? 'pause' : 'run'} color={palette.text} size={18} /><Text style={styles.secondaryText}>{status === 'running' ? '暂停' : '继续'}</Text></Pressable><Pressable accessibilityRole="button" accessibilityLabel="结束并保存" disabled={saving} onPress={() => void finish()} style={[styles.primary, saving && styles.disabled]}><AppGlyph name="stop" color={palette.onLime} size={16} /><Text style={styles.primaryText}>{saving ? '保存中…' : '结束跑步'}</Text></Pressable></>}</View>
-    <Modal transparent visible={showGoal} animationType="fade" onRequestClose={() => { if (!goalSaving) setShowGoal(false); }}><KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.backdrop}><View testID="running-goal-sheet" style={styles.goalSheet}><ScrollView keyboardShouldPersistTaps="handled" style={styles.goalScroll} contentContainerStyle={styles.goalBody}>
-      <View style={styles.goalHeader}><Text style={styles.modalTitle}>跑步目标</Text><Pressable accessibilityRole="button" accessibilityLabel="关闭跑步目标" disabled={goalSaving} onPress={() => setShowGoal(false)} style={styles.close}><AppGlyph name="plus" /></Pressable></View>
-      <View style={styles.goalKinds}>{(['distance', 'duration'] as const).map(kind => <Pressable key={kind} accessibilityRole="radio" accessibilityState={{ checked: goalKind === kind }} aria-checked={goalKind === kind} disabled={goalSaving} onPress={() => { setGoalKind(kind); setGoalValue(kind === 'distance' ? '5' : '30'); setGoalError(''); }} style={[styles.kindChoice, goalKind === kind && styles.kindChoiceActive]}><Text style={[styles.kindText, goalKind === kind && { color: palette.lime }]}>{kind === 'distance' ? '距离' : '时长'}</Text></Pressable>)}</View>
-      <View style={styles.goalInputRow}><TextInput accessibilityLabel="跑步目标数值" keyboardType={goalKind === 'distance' ? 'decimal-pad' : 'number-pad'} editable={!goalSaving} value={goalValue} onChangeText={value => { setGoalValue(value); setGoalError(''); }} style={styles.goalInput} /><Text style={styles.goalUnit}>{goalKind === 'distance' ? 'km' : '分钟'}</Text></View>
-      <View style={styles.presets}>{(goalKind === 'distance' ? [1, 3, 5, 10, 21] : [15, 20, 30, 45, 60, 90]).map(value => <Pressable key={value} accessibilityRole="button" disabled={goalSaving} accessibilityLabel={'选择跑步目标' + value + (goalKind === 'distance' ? '公里' : '分钟')} onPress={() => { setGoalValue(String(value)); setGoalError(''); }} style={[styles.preset, Number(goalValue) === value && styles.kindChoiceActive]}><Text style={styles.kindText}>{value}</Text></Pressable>)}</View>
-      <Text style={styles.goalHint}>自选目标不改变训练课程，未达标也能保存记录。</Text>{goalError ? <Text accessibilityRole="alert" style={styles.goalError}>{goalError}</Text> : null}
-      <Pressable accessibilityRole="button" accessibilityLabel="保存跑步目标" disabled={goalSaving} onPress={() => void saveGoal()} style={[styles.primary, styles.saveGoal, goalSaving && styles.disabled]}><Text style={styles.primaryText}>{goalSaving ? '保存中…' : '保存目标'}</Text></Pressable>
-      {settings.runningGoal ? <Pressable accessibilityRole="button" accessibilityLabel="清除自选跑步目标" disabled={goalSaving} onPress={() => void saveGoal(true)} style={styles.clearGoal}><Text style={styles.kindText}>{targetMinutes ? '恢复课程目标' : '清除自选目标'}</Text></Pressable> : null}
-    </ScrollView></View></KeyboardAvoidingView></Modal>
-  </Page>;
+  const saveIndoor = () => {
+    const value = manualDistance.trim(), distance = value === '' ? undefined : Number(value);
+    if (value && (!/^\d+(?:\.\d+)?$/.test(value) || !Number.isFinite(distance) || distance! < 0 || distance! > 1000)) { setDistanceError('请输入 0–1000 公里，或留空只保存用时。'); return; }
+    setDistanceOpen(false); void run.save(distance);
+  };
+  const discardRecord = (record: TrainingSession) => { void confirmAction('删除这条跑步记录？', '仅删除此记录，其他训练不受影响。', () => { void deleteSession(record.id).then(() => setSelectedRecord(null)).catch(() => setHistoryError('删除失败，记录尚未移除，请重试。')); }, { destructive: true, confirmLabel: '删除记录' }); };
+  return <View testID="running-screen" style={s.root} onLayout={event => { setHeight(event.nativeEvent.layout.height); setWidth(event.nativeEvent.layout.width); }}>
+    {active ? <Pressable accessibilityRole="button" accessibilityLabel="进入跑步全屏" onPress={() => setFocus(true)} style={s.focusEntry}><Text style={s.settingsText}>全屏专注 ↗</Text></Pressable> : null}
+    <View style={s.head}>
+      <View style={s.headLabel}>{recording ? <View style={s.liveDot} /> : null}<Text style={s.title}>{recording ? '正在跑步' : snapshot.autoPaused ? '已自动暂停' : paused ? '跑步已暂停' : pendingSave ? '待保存的跑步' : '跑步'}</Text>
+        {!active ? <View style={s.modeSwitch}>{(['outdoor', 'indoor'] as const).map(mode => <Pressable key={mode} accessibilityRole="button" accessibilityLabel={mode === 'outdoor' ? '选择户外跑' : '选择室内跑'} accessibilityState={{ selected: chosenMode === mode }} onPress={() => { setChosenMode(mode); run.stopPreview(); }} style={[s.modeChoice, chosenMode === mode && s.modeSelected]}><Text style={[s.modeChoiceText, chosenMode === mode && { color: c.lime }]}>{mode === 'outdoor' ? '户外' : '室内'}</Text></Pressable>)}</View> : null}
+      </View>
+      {!active ? <View style={s.headActions}><Pressable accessibilityRole="button" accessibilityLabel="打开跑步设置" onPress={() => setOptionsOpen(true)} style={s.history}><Text style={s.historyText}>设置</Text></Pressable><Pressable accessibilityRole="button" accessibilityLabel="查看跑步记录" onPress={() => setHistoryOpen(true)} style={s.history}><AppGlyph name="calendar" size={18} color={c.text} /></Pressable></View> : <Text style={s.historyText}>{indoor ? '室内跑' : '户外跑'}</Text>}
+    </View>
+    <View style={[s.mapArea, height < 600 && { minHeight: 120 }]}>{indoor ? <View style={s.indoorArea}><AppGlyph name="run" size={50} color={c.lime} /><Text style={s.indoorTitle}>专注跑步，无需 GPS</Text><Text style={s.indoorHint}>跑步机 · 室内训练</Text><Text style={s.indoorHint}>{snapshot.options?.stepTracking ? `${snapshot.stepCount || 0} 步 · ${snapshot.options.stepLengthM ? '距离按校准步长估算' : '未校准步长，仅计步'}` : '先记录用时，结束后填写距离'}</Text></View> : visible && !focus ? <RunMap position={mapPosition(snapshot)} segments={analysis.segments} splits={analysis.splits} status={status} good={run.location.good} onLocate={() => { void run.locate(); }} interactive /> : null}</View>
+    <View style={s.readout}>
+      <View style={s.stats}>
+        <View style={s.distance}><Text testID="run-distance" numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.65} style={[s.distanceValue, { fontSize: distanceFont, lineHeight: distanceFont + 9 }]}>{distanceText}</Text><Text style={s.distanceUnit}>公里</Text></View>
+        <View style={s.metric}><Text testID="run-duration" numberOfLines={1} adjustsFontSizeToFit style={[s.metricValue, (width < 360 || snapshot.elapsedMs >= 3600000) && { fontSize: 16 }]}>{runClock(snapshot.elapsedMs)}</Text><Text style={s.caption}>用时</Text></View>
+        <View style={s.metric}><Text testID="run-average-pace" numberOfLines={1} adjustsFontSizeToFit style={[s.metricValue, width < 360 && { fontSize: 16 }]}>{paceLabel(averagePace)}</Text><Text style={s.caption}>{measurement.source === 'steps' ? '估算平均配速 /km' : '平均配速 /km'}</Text></View>
+      </View>
+      <View style={s.mode}><AppGlyph name="run" size={20} color={c.text} /><Pressable accessibilityRole="button" accessibilityLabel="设置跑步目标" disabled={active} onPress={() => setGoalOpen(true)}><Text style={s.modeLabel}>{active ? indoor && snapshot.options?.stepTracking ? '估算当前配速' : '当前配速' : runGoals[goalIndex].label + ' ▾'}</Text></Pressable>{active ? <Text testID="run-current-pace" style={s.currentPace}>{paceLabel(currentPace)}<Text style={s.caption}> /km</Text></Text> : null}<Text style={s.modeHint}>{indoor ? measurement.source === 'steps' ? '计步估算 · 可手动校正' : '距离可手动填写' : active ? measurement.partial ? '部分路段 · 配速暂缺' : measurement.source === 'unmeasured' ? '距离尚未测得' : '定位记录距离' : '可直接开始计时'}</Text></View>
+      {snapshot.autoPaused ? <Text style={s.endHint}>已自动暂停 · 重新跑动后自动继续，也可手动继续</Text> : null}
+      {run.error || snapshot.interrupted || (!indoor && run.location.detail) ? <View style={s.issue} accessibilityRole="alert"><Text style={s.issueText}>{run.error || (snapshot.interrupted ? '上次记录已恢复为暂停，不计入 App 中断期间的时间。' : run.location.detail)}</Text>{!indoor ? <Pressable accessibilityRole="button" accessibilityLabel={run.location.settings && Platform.OS !== 'web' ? '打开系统定位设置' : '重试跑步定位'} onPress={retryLocation} style={s.settings}><Text style={s.settingsText}>{run.location.settings && Platform.OS !== 'web' ? '定位设置' : '重试定位'}</Text></Pressable> : null}</View> : null}
+    </View>
+    <View style={s.dock} testID="run-control-dock">
+      {!active ? <Pressable accessibilityRole="button" accessibilityLabel="开始跑步" disabled={run.busy || !run.ready} onPress={() => setCountdown(3)} style={({ pressed }) => [s.primary, s.start, pressed && s.pressed, (run.busy || !run.ready) && s.disabled]}>{run.busy ? <ActivityIndicator color={c.onLime} /> : <><Text style={s.play}>▶</Text><Text style={s.primaryText}>开始跑步</Text></>}</Pressable> : <View style={s.runControls}>
+        <Pressable accessibilityRole="button" accessibilityLabel={pendingSave ? '重试保存跑步' : paused ? '继续跑步' : '暂停跑步'} disabled={run.busy} onPress={() => { void (pendingSave ? run.save() : paused ? run.resume() : run.pause()); }} style={({ pressed }) => [s.primary, pressed && s.pressed, run.busy && s.disabled]}>{run.busy ? <ActivityIndicator color={c.onLime} /> : <><AppGlyph name={recording ? 'pause' : pendingSave ? 'check' : 'run'} color={c.onLime} size={22} /><Text style={s.primaryText}>{pendingSave ? '重试保存' : paused ? '继续' : '暂停'}</Text></>}</Pressable>
+        {!pendingSave ? <Pressable accessibilityRole="button" accessibilityLabel="结束并保存跑步" disabled={run.busy} onPress={finish} style={({ pressed }) => [s.end, pressed && s.pressed, run.busy && s.disabled]}><AppGlyph name="stop" size={20} color={c.text} /><Text style={s.endText}>结束</Text></Pressable> : null}
+      </View>}
+      {Platform.OS === 'web' ? <Text style={s.endHint}>浏览器仅支持前台记录；后台跑步请使用 Android 安装包</Text> : null}
+    </View>
+    <RunFocus visible={focus && active} goal={runGoals[goalIndex]} onClose={() => setFocus(false)} onFinish={finish} />
+    <RunOptionsPanel visible={optionsOpen} onClose={() => setOptionsOpen(false)} />
+    <Modal visible={goalOpen} transparent animationType="fade" onRequestClose={() => setGoalOpen(false)}><View style={s.formOverlay}><View style={s.distanceForm}><Text style={s.title}>本次跑步目标</Text>{runGoals.map((goal, index) => <Pressable key={goal.label} accessibilityRole="radio" accessibilityState={{ checked: goalIndex === index }} onPress={() => { setGoalIndex(index); setGoalOpen(false); }} style={s.goalChoice}><Text style={[s.historyText, goalIndex === index && { color: c.lime }]}>{goal.label}{goalIndex === index ? ' ✓' : ''}</Text></Pressable>)}<Text style={s.caption}>达成目标后可以继续跑，不会自动结束记录。</Text><Pressable accessibilityRole="button" accessibilityLabel="取消设置跑步目标" onPress={() => setGoalOpen(false)} style={s.close}><Text style={s.historyText}>取消</Text></Pressable></View></View></Modal>
+    <Modal visible={countdown !== null} transparent onRequestClose={() => setCountdown(null)}><View style={s.countdown}><Text style={s.title}>准备开跑</Text><Text testID="run-countdown" style={s.countdownValue}>{countdown}</Text><Pressable accessibilityRole="button" accessibilityLabel="取消开始跑步" onPress={() => setCountdown(null)} style={s.close}><Text style={s.settingsText}>取消</Text></Pressable></View></Modal>
+    <Modal visible={!!receipt} animationType="slide" onRequestClose={() => setReceiptId(null)}><View style={s.historyRoot}><View style={s.historyHeading}><Text style={s.title}>跑步已保存</Text><Pressable accessibilityRole="button" accessibilityLabel="关闭跑步总结" onPress={() => setReceiptId(null)} style={s.close}><Text style={s.closeText}>×</Text></Pressable></View><ScrollView contentContainerStyle={s.historyContent}>{receipt ? <RunRecordDetail session={receipt} /> : null}</ScrollView></View></Modal>
+    <Modal visible={distanceOpen} transparent animationType="fade" onRequestClose={() => setDistanceOpen(false)}><KeyboardAvoidingView style={s.formOverlay} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}><ScrollView contentContainerStyle={s.formContent} keyboardShouldPersistTaps="always" keyboardDismissMode="none"><View style={s.distanceForm}><Text style={s.title}>保存室内跑</Text><Text style={s.caption}>{measurement.source === 'steps' ? `计步估算 ${distanceText} 公里。填写跑步机距离可覆盖估算，留空保留估算。` : '计时已暂停。可填写跑步机显示的公里数，也可留空只保存用时。'}</Text><TextInput accessibilityLabel="室内跑距离（公里，可选）" placeholder="例如 3.50" placeholderTextColor={c.muted} keyboardType="decimal-pad" value={manualDistance} onChangeText={value => { setManualDistance(value); setDistanceError(''); }} style={s.distanceInput} />{distanceError ? <Text accessibilityRole="alert" style={[s.issueText, { flex: 0 }]}>{distanceError}</Text> : null}<Pressable accessibilityRole="button" accessibilityLabel="保存室内跑" onPress={saveIndoor} style={[s.primary, { flex: 0 }]}><Text style={s.primaryText}>保存记录</Text></Pressable><Pressable accessibilityRole="button" accessibilityLabel="返回跑步" onPress={() => setDistanceOpen(false)} style={s.close}><Text style={s.historyText}>返回跑步</Text></Pressable></View></ScrollView></KeyboardAvoidingView></Modal>
+    <Modal visible={historyOpen} animationType="slide" onRequestClose={() => { setSelectedRecord(null); setHistoryOpen(false); }}><View style={s.historyRoot}><View style={s.historyHeading}><Text style={s.title}>跑步记录</Text><Pressable accessibilityRole="button" accessibilityLabel="关闭跑步记录" onPress={() => { setSelectedRecord(null); setHistoryOpen(false); }} style={s.close}><Text style={s.closeText}>×</Text></Pressable></View><ScrollView contentContainerStyle={s.historyContent}>
+      {historyError ? <Text accessibilityRole="alert" style={s.deleteText}>{historyError}</Text> : null}
+      {!records.length ? <Text style={s.caption}>还没有跑步记录，完成一次跑步后会显示在这里。</Text> : records.map(record => {
+        const expanded = selectedRecord === record.id, metrics = runRecordMeasurement(record);
+        return <View key={record.id} style={s.record}><Pressable accessibilityRole="button" accessibilityLabel={(expanded ? '收起' : '展开') + '跑步记录' + record.id} onPress={() => setSelectedRecord(expanded ? null : record.id)} style={s.recordHeading}><View><Text style={s.recordDate}>{new Date(record.startedAt).toLocaleDateString('zh-CN')} · {record.runMode === 'indoor' ? '室内跑' : '户外跑'}</Text><Text style={s.caption}>{runClock(record.durationSeconds * 1000)} · {paceLabel(metrics.pace)} /km</Text><Text style={s.caption}>{metrics.label}</Text></View><Text style={s.recordDistance}>{metrics.km === undefined ? '—' : metrics.km.toFixed(2)}<Text style={s.caption}> km</Text></Text></Pressable>
+          {expanded ? <><View style={{ padding: 14 }}><RunRecordDetail session={record} /></View><Pressable accessibilityRole="button" accessibilityLabel={'删除跑步记录' + record.id} onPress={() => discardRecord(record)} style={s.delete}><Text style={s.deleteText}>删除这条记录</Text></Pressable></> : null}
+        </View>;
+      })}</ScrollView></View></Modal>
+  </View>;
 }
-
-function RunMetric({ icon, label, value, testID }: { icon: GlyphName; label: string; value: string; testID?: string }) {
-  return <View style={styles.metric}><AppGlyph name={icon} color={palette.lime} size={20} /><View style={styles.metricCopy}><Text style={styles.metricLabel}>{label}</Text><Text testID={testID} style={styles.metricValue}>{value}</Text></View></View>;
-}
-const styles = StyleSheet.create({
-  content: { ...progressPageLayout.content, paddingBottom: 110 },
-  header: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 14 },
-  back: { width: 44, height: 44, borderRadius: 22, backgroundColor: palette.card, alignItems: 'center', justifyContent: 'center' },
-  title: { ...progressPageLayout.title, color: palette.text },
-  heading: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 8, marginTop: 4, marginBottom: 12 },
-  sectionTitle: { ...progressPageLayout.sectionTitle, color: palette.text },
-  signal: { flexDirection: 'row', alignItems: 'center', gap: 6 }, signalDot: { width: 7, height: 7, borderRadius: 4, backgroundColor: palette.faint }, signalText: { color: palette.muted, fontSize: 11 },
-  map: { aspectRatio: 1.38, borderRadius: 16, borderWidth: 1, borderColor: palette.border, overflow: 'hidden', backgroundColor: palette.card },
-  distanceRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginTop: 18 },
-  distance: { color: palette.text, fontSize: 52, lineHeight: 62, fontWeight: '900', letterSpacing: -1.4, fontVariant: ['tabular-nums'] },
-  unit: { fontSize: 18, letterSpacing: 0, fontWeight: '700', color: palette.muted },
-  stats: { flexDirection: 'row', gap: 14, marginVertical: 16 }, metric: { flex: 1, minWidth: 0, flexDirection: 'row', alignItems: 'center', gap: 8 }, metricCopy: { flex: 1, minWidth: 0 }, metricLabel: { color: palette.muted, fontSize: 11 }, metricValue: { color: palette.text, fontSize: 22, fontWeight: '800', marginTop: 5, fontVariant: ['tabular-nums'] }, divider: { width: 1, backgroundColor: palette.border },
-  target: { backgroundColor: palette.card, paddingHorizontal: 14, paddingTop: 2, paddingBottom: 14, borderRadius: 16, borderWidth: 1, borderColor: palette.border, gap: 2 }, targetHead: { minHeight: 44, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 8 }, goalSummary: { flexDirection: 'row', alignItems: 'center', gap: 5 }, targetValue: { color: palette.text, fontSize: 11, fontWeight: '700' }, note: { color: palette.muted, fontSize: 12 },
-  controls: { flexDirection: 'row', gap: 10, marginTop: 12 }, primary: { flex: 1, minHeight: 48, backgroundColor: palette.lime, borderRadius: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 }, primaryText: { color: palette.onLime, fontSize: 13, fontWeight: '800' }, secondary: { flex: 1, minHeight: 48, borderWidth: 1, borderColor: palette.oliveBorder, backgroundColor: palette.background, borderRadius: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 }, secondaryText: { color: palette.text, fontSize: 13, fontWeight: '800' }, disabled: { opacity: .45 },
-  backdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,.72)', padding: 16, justifyContent: 'center', alignItems: 'center' }, goalSheet: { width: '100%', maxWidth: 440, maxHeight: '100%', flexShrink: 1, borderRadius: 20, borderWidth: 1, borderColor: palette.border, backgroundColor: palette.card, overflow: 'hidden' }, goalScroll: { flexGrow: 0 }, goalBody: { padding: 16 }, goalHeader: { flexDirection: 'row', alignItems: 'center', gap: 8 }, modalTitle: { ...progressPageLayout.title, color: palette.text, flex: 1 }, close: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center', transform: [{ rotate: '45deg' }] }, goalKinds: { flexDirection: 'row', gap: 8, marginTop: 12 }, kindChoice: { flex: 1, minHeight: 44, borderRadius: 12, backgroundColor: palette.raised, borderWidth: 1, borderColor: palette.border, alignItems: 'center', justifyContent: 'center' }, kindChoiceActive: { backgroundColor: palette.olive, borderColor: palette.oliveBorder }, kindText: { color: palette.muted, fontSize: 12, fontWeight: '700' }, goalInputRow: { flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 14 }, goalInput: { flex: 1, minWidth: 0, minHeight: 52, borderWidth: 1, borderColor: palette.border, borderRadius: 12, backgroundColor: palette.raised, color: palette.text, fontSize: 24, fontWeight: '800', paddingHorizontal: 12 }, goalUnit: { color: palette.muted, fontSize: 13 }, presets: { flexDirection: 'row', gap: 6, flexWrap: 'wrap', marginTop: 10 }, preset: { minWidth: 44, minHeight: 44, flexGrow: 1, paddingHorizontal: 8, borderRadius: 10, borderWidth: 1, borderColor: palette.border, alignItems: 'center', justifyContent: 'center', backgroundColor: palette.raised }, goalHint: { color: palette.muted, fontSize: 11, lineHeight: 18, marginTop: 14 }, goalError: { color: palette.danger, fontSize: 12, lineHeight: 19, marginTop: 10 }, saveGoal: { flex: 0, marginTop: 16 }, clearGoal: { minHeight: 44, alignItems: 'center', justifyContent: 'center', marginTop: 8 },
+const s = StyleSheet.create({
+  headActions: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  focusEntry: { minHeight: 32, paddingHorizontal: 16, justifyContent: 'center', alignItems: 'flex-end' }, goalChoice: { minHeight: 44, justifyContent: 'center', borderBottomWidth: 1, borderBottomColor: c.border }, countdown: { flex: 1, backgroundColor: '#0D1114F5', alignItems: 'center', justifyContent: 'center', gap: 30 }, countdownValue: { color: c.lime, fontSize: 110, fontWeight: '900' },
+  root: { flex: 1, minHeight: 0, backgroundColor: c.background, width: '100%', maxWidth: 440, alignSelf: 'center', paddingBottom: 80 },
+  modeSwitch: { flexDirection: 'row', gap: 3 }, modeChoice: { paddingHorizontal: 10, minHeight: 34, justifyContent: 'center', borderRadius: 9 }, modeSelected: { backgroundColor: '#283423' }, modeChoiceText: { fontSize: 12, color: c.muted },
+  indoorArea: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 10, backgroundColor: '#17221E' }, indoorTitle: { fontSize: 18, fontWeight: '800', color: c.text }, indoorHint: { fontSize: 12, color: c.muted },
+  formOverlay: { flex: 1, padding: 24, backgroundColor: '#000000AA' }, formContent: { flexGrow: 1, justifyContent: 'center' }, distanceForm: { alignSelf: 'center', width: '100%', maxWidth: 400, backgroundColor: c.card, padding: 22, borderRadius: 20, gap: 14 }, distanceInput: { color: c.text, fontSize: 24, padding: 14, borderRadius: 10, borderWidth: 1, borderColor: c.border },
+  head: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 16, minHeight: 43, borderTopWidth: 1, borderTopColor: '#27302E' }, headLabel: { flexDirection: 'row', alignItems: 'center', gap: 8 }, title: { fontSize: 18, lineHeight: 26, fontWeight: '800', color: c.text }, liveDot: { width: 10, height: 10, borderRadius: 5, backgroundColor: c.lime }, history: { minHeight: 40, flexDirection: 'row', alignItems: 'center', gap: 7 }, historyText: { color: c.text, fontSize: 12 },
+  mapArea: { flex: 1, minHeight: 180, overflow: 'hidden' }, readout: { paddingHorizontal: 16 }, stats: { flexDirection: 'row', alignItems: 'center', paddingVertical: 12, minHeight: 94 }, distance: { flexDirection: 'row', alignItems: 'baseline', flex: 1.6, minWidth: 0, marginRight: 9, gap: 3 }, distanceValue: { fontSize: 49, lineHeight: 58, fontWeight: '900', color: '#F6F8EF', letterSpacing: -1.4, fontVariant: ['tabular-nums'], flexShrink: 1 }, distanceUnit: { color: c.text, fontSize: 10, lineHeight: 15, width: 24, flexShrink: 0 }, metric: { flex: 1, minWidth: 0, paddingLeft: 10, gap: 4, borderLeftWidth: 1, borderLeftColor: '#3D4845' }, metricValue: { fontSize: 19, lineHeight: 25, fontWeight: '800', color: c.text, fontVariant: ['tabular-nums'] }, caption: { fontSize: 10, lineHeight: 16, color: c.muted },
+  mode: { flexDirection: 'row', alignItems: 'center', gap: 8, minHeight: 42, borderTopWidth: 1, borderBottomWidth: 1, borderColor: '#27322F' }, modeLabel: { color: c.text, fontSize: 13, fontWeight: '700' }, currentPace: { color: c.lime, fontSize: 18, fontWeight: '800', fontVariant: ['tabular-nums'] }, modeHint: { marginLeft: 'auto', color: c.muted, fontSize: 10 },
+  dock: { paddingTop: 12, paddingHorizontal: 16, paddingBottom: 8 }, primary: { flex: 1, minHeight: 54, backgroundColor: c.lime, borderRadius: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10 }, start: { marginRight: 66, flex: 0 }, primaryText: { color: c.onLime, fontSize: 19, lineHeight: 26, fontWeight: '800' }, play: { color: c.onLime, fontSize: 22 }, runControls: { flexDirection: 'row', gap: 12 }, end: { width: '35%', minHeight: 54, borderRadius: 14, borderWidth: 1, borderColor: '#71807D', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 9 }, endText: { color: c.text, fontSize: 16, fontWeight: '700' }, endHint: { color: c.muted, fontSize: 9, lineHeight: 16, textAlign: 'right', marginTop: 5 }, pressed: { opacity: 0.7 }, disabled: { opacity: 0.5 },
+  issue: { paddingVertical: 7, flexDirection: 'row', alignItems: 'center', gap: 8 }, issueText: { flex: 1, color: '#D8BD82', fontSize: 11, lineHeight: 16 }, settings: { padding: 5 }, settingsText: { color: c.lime, fontSize: 11 },
+  historyRoot: { flex: 1, backgroundColor: c.background, paddingTop: 35 }, historyHeading: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20 }, close: { minWidth: 44, minHeight: 44, justifyContent: 'center', alignItems: 'center' }, closeText: { color: c.muted, fontSize: 29 }, historyContent: { padding: 20, gap: 12 }, record: { borderWidth: 1, borderColor: c.border, borderRadius: 14, overflow: 'hidden', backgroundColor: c.card }, recordHeading: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 14, gap: 10 }, recordDate: { fontSize: 13, lineHeight: 24, fontWeight: '700', color: c.text }, recordDistance: { color: c.lime, fontSize: 23, fontWeight: '800' }, delete: { alignSelf: 'flex-end', padding: 13 }, deleteText: { fontSize: 11, color: '#E6A098' },
 });

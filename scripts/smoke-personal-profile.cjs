@@ -1,0 +1,21 @@
+const assert=require('node:assert/strict');const {chromium}=require(process.env.PLAYWRIGHT_PATH||'playwright');
+(async()=>{const browser=await chromium.launch({headless:true,channel:'chrome'});try{for(const width of [390,1280]){
+ const context=await browser.newContext({viewport:{width,height:900}}),page=await context.newPage(),errors=[];page.on('pageerror',e=>errors.push(e.message));
+ await page.goto('http://127.0.0.1:8081/');await page.getByText('请建立个人档案',{exact:true}).waitFor();await page.getByRole('button',{name:'稍后再说',exact:true}).click();
+ await page.getByRole('tab',{name:'切换到我的',exact:true}).click();await page.getByRole('button',{name:'建立个人档案',exact:true}).click();
+ assert.equal(await page.getByLabel('年龄',{exact:true}).inputValue(),'');
+ for(const [label,value] of [['称呼','测试用户'],['年龄','30'],['身高 cm','175'],['当前体重 kg','75'],['健身目标','增肌'],['核心就餐场景','食堂'],['就餐餐次偏好','两餐'],['肠胃耐受','牛奶不耐受'],['过敏','花生'],['工作','夜班']])await page.getByLabel(label,{exact:true}).fill(value);
+ await page.getByRole('radio',{name:'男性',exact:true}).click();await page.getByRole('radio',{name:'器械训练',exact:true}).click();await page.getByRole('button',{name:'保存个人档案',exact:true}).click();
+ await page.waitForFunction(()=>Boolean(localStorage.getItem('user_profile')));
+ const md=await page.evaluate(()=>localStorage.getItem('personal-memory/MEMORY.md'));for(const value of ['男性','175 cm','75 kg','食堂','两餐','牛奶不耐受','花生','夜班','增肌'])assert.ok(md.includes(value),value);
+ await page.reload();assert.equal(await page.getByText('请建立个人档案',{exact:true}).count(),0);await page.getByRole('tab',{name:'切换到我的',exact:true}).click();await page.getByRole('button',{name:'编辑个人档案',exact:true}).click();assert.equal(await page.getByLabel('工作',{exact:true}).inputValue(),'夜班');
+ const before=await page.evaluate(()=>JSON.parse(localStorage.getItem('user_profile')));
+ await page.evaluate(()=>localStorage.setItem('personal-memory/MEMORY.md',localStorage.getItem('personal-memory/MEMORY.md')+'\\n喜欢听 Uncover\\n'));
+ await page.getByLabel('工作',{exact:true}).fill('白班');await page.getByLabel('年龄',{exact:true}).fill('31');await page.getByRole('button',{name:'保存个人档案',exact:true}).click();
+ await page.getByLabel('工作',{exact:true}).waitFor({state:'hidden'});
+ const after=await page.evaluate(()=>JSON.parse(localStorage.getItem('user_profile')));
+ assert.equal(after.personalDetails.work,'白班');assert.equal(after.age,31);assert.equal(after.personalDetails.allergies,'花生');assert.deepEqual(after.weightHistory,before.weightHistory);assert.equal(after.goal,before.goal);assert.equal(after.frequency,before.frequency);
+ const updated=await page.evaluate(()=>localStorage.getItem('personal-memory/MEMORY.md'));assert.ok(updated.includes('- 工作：白班'));assert.ok(updated.includes('- 年龄：31'));assert.ok(updated.includes('喜欢听 Uncover'));
+ await page.reload();await page.getByRole('tab',{name:'切换到我的',exact:true}).click();await page.getByRole('button',{name:'编辑个人档案',exact:true}).click();assert.equal(await page.getByLabel('工作',{exact:true}).inputValue(),'白班');
+ assert.deepEqual(errors,[]);console.log('PASS create, edit, persistence and MEMORY.md',width);await context.close();
+ }}finally{await browser.close();}})().catch(e=>{console.error(e);process.exitCode=1;});

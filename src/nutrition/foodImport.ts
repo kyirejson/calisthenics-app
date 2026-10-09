@@ -42,12 +42,3 @@ export function normalizeFoodLabelDraft(input: unknown): FoodLabelDraft | null {
     allergens: [...new Set(input.allergens)] as Allergen[], warnings: [...input.warnings] as string[], origin,
     ...(input.packageGrams !== undefined ? { packageGrams: input.packageGrams as number | null } : {}) };
 }
-
-/** Missing or volumetric bases are blank: reviewing the form cannot silently turn mL into g. */
-export function labelDraftFormValues(draft: FoodLabelDraft) {
-  return { name: draft.name, state: draft.state, basis: draft.basisUnit === 'g' && draft.basisAmount === 100 ? '100g' as const : 'serving' as const,
-    basisGrams: draft.basisUnit === 'g' && draft.basisAmount !== null ? String(draft.basisAmount) : '',
-    energyUnit: draft.energyUnit, values: { calories: draft.calories === null ? '' : String(draft.calories),
-      protein: draft.protein === null ? '' : String(draft.protein), carbs: draft.carbs === null ? '' : String(draft.carbs),
-      fat: draft.fat === null ? '' : String(draft.fat), fiber: draft.fiber === null ? '' : String(draft.fiber) } };
-}

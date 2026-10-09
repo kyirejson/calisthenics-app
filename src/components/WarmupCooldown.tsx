@@ -1,7 +1,7 @@
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { appPalette, radius, progressPageLayout } from '../theme';
 import type { Exercise } from '../types';
-import { getWarmupActions } from '../data/trainingWarmup';
+import { getWarmupActions } from '../domain/training/trainingWarmup';
 import { ExerciseMedia } from './ExerciseResource';
 import { EquipmentPhoto } from './EquipmentPhoto';
 

@@ -5,25 +5,24 @@ import { TabBar, type TabKey } from './src/components/TabBar';
 import { ConfirmHost } from './src/components/ConfirmHost';
 import { StorageRecovery } from './src/components/StorageRecovery';
 import { AppStoreProvider, useAppStore } from './src/store/AppStore';
-import { DataScreen } from './src/screens/DataScreen';
+import { DataScreen, type DataViewPreferences } from './src/screens/DataScreen';
 import { ExerciseDetailScreen } from './src/screens/ExerciseDetailScreen';
 import { EquipmentDetailScreen } from './src/screens/EquipmentDetailScreen';
 import { NutritionScreen } from './src/screens/NutritionScreen';
-import { OnboardingScreen } from './src/screens/OnboardingScreen';
+import { FirstUseHome } from './src/components/FirstUseHome';
 import { ProfileScreen } from './src/screens/ProfileScreen';
-import { ProgressScreen } from './src/screens/ProgressScreen';
-import { RunScreen } from './src/screens/RunScreen';
+import { ProgressScreen, type ProgressViewPreferences } from './src/screens/ProgressScreen';
 import { TodayScreen } from './src/screens/TodayScreen';
 import { TrainingScreen } from './src/screens/TrainingScreen';
 import { colors, progressPageLayout } from './src/theme';
 import { AppUpdatesProvider, useAppUpdates } from './src/components/AppUpdates';
+import { DeepseekChatHost } from './src/integrations/DeepseekChatHost';
 import type { Route } from './src/types';
-import { confirmAction } from './src/utils/confirm';
-import { PersonalAgentHost, usePersonalAgent } from './src/agent/PersonalAgentHost';
+import { RunRecorderHost } from './src/running/RunRecorderHost';
 
 export default function App() {
   useWebDocumentSetup();
-  return <AppStoreProvider><StatusBar style="dark" /><AppUpdatesProvider><PersonalAgentHost><AppShell /></PersonalAgentHost></AppUpdatesProvider><ConfirmHost /></AppStoreProvider>;
+  return <AppStoreProvider><StatusBar style="dark" /><AppUpdatesProvider><RunRecorderHost><DeepseekChatHost><AppShell /></DeepseekChatHost></RunRecorderHost></AppUpdatesProvider><ConfirmHost /></AppStoreProvider>;
 }
 
 // web 端文档级修正：body 背景跟随屏幕主色（防深色屏露出白边）、
@@ -40,15 +39,19 @@ function useWebDocumentSetup() {
 }
 
 function AppShell() {
-  const { ready, profile, storageIssues } = useAppStore();
+  const { ready, profile, storageIssues } = useAppStore(state => ({ ready: state.ready, profile: state.profile, storageIssues: state.storageIssues }));
   const { setSafeScreen } = useAppUpdates();
   const [tab, setTab] = useState<TabKey>('today');
+  // Date browsing survives an exercise-detail round trip; null follows the live day.
+  const [todayViewDate, setTodayViewDate] = useState<Date | null>(null);
   const [route, setRoute] = useState<Route>({ name: 'tabs' });
-  const { setAgentScene } = usePersonalAgent();
-  useEffect(() => {
-    if (route.name === 'tabs' && tab === 'today') return; // Today owns its training/diet/running sub-route.
-    setAgentScene(route.name === 'tabs' ? ({ progress: '进阶动作库', data: '训练数据', profile: '个人档案' } as const)[tab as Exclude<TabKey, 'today'>] : route.name === 'training' ? '正在训练' : route.name === 'exercise' ? '动作详情' : route.name === 'run' ? '正在跑步' : '饮食记录');
-  }, [route.name, tab, setAgentScene]);
+  const [savedTrainingId, setSavedTrainingId] = useState<string | undefined>();
+  const [dataView, setDataView] = useState<DataViewPreferences>({ series: 'push', level: null, metric: 'total', range: 90 });
+  // Owned above routes: opening an exercise must not discard the browsing selection.
+  const [progressView, setProgressView] = useState<ProgressViewPreferences>({ group: '六艺基础', series: 'push', query: '', searchOpen: false, scrollOffset: 0 });
+  const updateProgressView = useCallback((patch: Partial<ProgressViewPreferences>) => {
+    setProgressView(previous => ({ ...previous, ...patch }));
+  }, []);
 
   const returnToTabs = useCallback(() => setRoute({ name: 'tabs' }), []);
   const returnFromActiveSession = useCallback(() => {
@@ -58,13 +61,6 @@ function AppShell() {
     }
     returnToTabs();
   }, [returnToTabs, route]);
-  const leaveActiveSession = useCallback(() => {
-    confirmAction('结束本次记录？', '尚未保存的训练内容会丢失。', returnFromActiveSession, {
-      cancelLabel: '继续训练',
-      confirmLabel: '结束并返回',
-      destructive: true,
-    });
-  }, [returnFromActiveSession]);
 
   useLayoutEffect(() => {
     setSafeScreen(ready && Boolean(profile) && route.name === 'tabs' && !Object.keys(storageIssues).length);
@@ -83,10 +79,6 @@ function AppShell() {
       }
       // TrainingScreen owns its exit guard and saves checked sets before leaving.
       if (route.name === 'training') return false;
-      if (route.name === 'run') {
-        leaveActiveSession();
-        return true;
-      }
       if (route.name !== 'tabs') {
         returnToTabs();
         return true;
@@ -102,7 +94,7 @@ function AppShell() {
       return true;
     });
     return () => subscription.remove();
-  }, [leaveActiveSession, profile, ready, returnToTabs, route.name, tab]);
+  }, [profile, ready, returnToTabs, route.name, tab]);
 
   useEffect(() => {
     // web 端滚动回弹会露出 body 背景；让 body 始终跟随当前屏的主色，避免深色屏底部出现白条。
@@ -112,21 +104,20 @@ function AppShell() {
   }, [profile, route.name, tab]);
 
   if (!ready) return <View style={styles.loading}><ActivityIndicator color={colors.ink} size="large" /></View>;
-  if (!profile) return <><StatusBar style="light" />{Object.keys(storageIssues).length ? <StorageRecovery full /> : <OnboardingScreen />}</>;
+  if (!profile) return <><StatusBar style="light" />{Object.keys(storageIssues).length ? <StorageRecovery full /> : <FirstUseHome />}</>;
 
   if (route.name === 'exercise') return <><StatusBar style="light" />{route.exerciseId.startsWith('equipment_') ? <EquipmentDetailScreen exerciseId={route.exerciseId} onBack={returnToTabs} /> : <ExerciseDetailScreen exerciseId={route.exerciseId} onBack={returnToTabs} onStart={(exerciseId) => setRoute({ name: 'training', workoutId: `single_${exerciseId}`, exerciseId })} />}</>;
-  if (route.name === 'training') return <><StatusBar style="light" /><TrainingScreen workoutId={route.workoutId} exerciseId={route.exerciseId} setMultiplier={route.setMultiplier} rirTarget={route.rirTarget} equipmentPlan={route.equipmentPlan} onBack={returnFromActiveSession} onComplete={() => { setTab('today'); returnToTabs(); }} /></>;
-  if (route.name === 'run') return <><StatusBar style="light" /><RunScreen onBack={leaveActiveSession} onComplete={() => { setTab('today'); returnToTabs(); }} /></>;
+  if (route.name === 'training') return <><StatusBar style="light" /><TrainingScreen workoutId={route.workoutId} exerciseId={route.exerciseId} setMultiplier={route.setMultiplier} rirTarget={route.rirTarget} equipmentPlan={route.equipmentPlan} onBack={returnFromActiveSession} onComplete={sessionId => { setSavedTrainingId(sessionId); setTab('data'); returnToTabs(); }} /></>;
   if (route.name === 'nutrition') return <><StatusBar style="light" /><NutritionScreen onBack={returnToTabs} /></>;
 
   return <View style={[styles.root, { backgroundColor: progressPageLayout.background }]}>
     <StatusBar style="light" />
     <StorageRecovery />
-    {tab === 'today' ? <TodayScreen onStart={(workoutId, setMultiplier, rirTarget, equipmentPlan) => setRoute({ name: 'training', workoutId, setMultiplier, rirTarget, equipmentPlan })} onRun={() => setRoute({ name: 'run' })} onNutrition={() => setRoute({ name: 'nutrition' })} onOpenExercise={(exerciseId) => setRoute({ name: 'exercise', exerciseId })} /> : null}
-    {tab === 'progress' ? <ProgressScreen onOpen={(exerciseId) => setRoute({ name: 'exercise', exerciseId })} /> : null}
-    {tab === 'data' ? <DataScreen onOpenExercise={(exerciseId) => setRoute({ name: 'exercise', exerciseId })} /> : null}
-    {tab === 'profile' ? <ProfileScreen onNutrition={() => setRoute({ name: 'nutrition' })} onOpenExercise={(exerciseId) => setRoute({ name: 'exercise', exerciseId })} /> : null}
-    <TabBar active={tab} onChange={setTab} />
+    {tab === 'today' ? <TodayScreen viewDate={todayViewDate} onViewDateChange={setTodayViewDate} onStart={(workoutId, setMultiplier, rirTarget, equipmentPlan) => setRoute({ name: 'training', workoutId, setMultiplier, rirTarget, equipmentPlan })} onOpenExercise={(exerciseId) => setRoute({ name: 'exercise', exerciseId })} /> : null}
+    {tab === 'progress' ? <ProgressScreen viewPreferences={progressView} onViewPreferences={updateProgressView} onOpen={(exerciseId) => setRoute({ name: 'exercise', exerciseId })} /> : null}
+    {tab === 'data' ? <DataScreen savedSessionId={savedTrainingId} viewPreferences={dataView} onViewPreferences={setDataView} onOpenExercise={(exerciseId) => setRoute({ name: 'exercise', exerciseId })} /> : null}
+    {tab === 'profile' ? <ProfileScreen /> : null}
+    <TabBar active={tab} onChange={setTab} appearance={tab === 'today' ? 'editorial' : 'default'} />
   </View>;
 }
 

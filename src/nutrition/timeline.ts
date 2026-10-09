@@ -1,5 +1,5 @@
 import type { Profile, TrainingSession } from '../types';
-import { localWeightDate, summarizeWeightTrend } from '../data/weightTrend';
+import { localWeightDate, summarizeWeightTrend } from '../domain/weight/weightTrend';
 import { calculateTargets, normalizeNutritionPreferences, sumNutrients } from './engine';
 import { meaningfulTrainingSessions } from './training';
 import { photoUsesOnlyLabels } from './vision';
@@ -108,7 +108,7 @@ export function summarizeNutritionWeek(journal: NutritionJournal, profile: Profi
   const referenceCalories = status === 'ready' ? Math.round(comparable.reduce((sum, day) => sum + day.target!.targets.calories, 0) / comparable.length) : null;
   const referenceProtein = status === 'ready' ? Math.round(comparable.reduce((sum, day) => sum + day.target!.targets.protein, 0) / comparable.length) : null;
   const insights: string[] = [];
-  if (status === 'paused') insights.push('自动目标暂停，复盘只展示记录，不据此调整热量。请在营养助手中核对健康情况与饮食偏好。');
+  if (status === 'paused') insights.push('自动目标暂停，复盘只展示记录，不据此调整热量。请核对健康情况与饮食偏好。');
   else if (status === 'goal_changed') insights.push('本周存在不同目标或饮食方式，不混算达标率，也不据此改低或改高能量目标。');
   else if (status === 'insufficient') insights.push(`有 ${complete.length} 天明确记完，${comparable.length} 天同时保存了目标。至少积累 4 天可比较记录，再讨论摄入趋势；漏记不算少吃。`);
   else {

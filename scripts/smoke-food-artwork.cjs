@@ -2,9 +2,7 @@
 const assert = require('node:assert/strict'), fs = require('node:fs'), path = require('node:path'), os = require('node:os'), ts = require('typescript');
 const { chromium } = require(process.env.PLAYWRIGHT_PATH || 'playwright');
 const { waitForNutritionPage } = require('./nutrition-smoke-utils.cjs');
-require.extensions['.ts'] = (module, file) => module._compile(ts.transpileModule(fs.readFileSync(file, 'utf8'), {
-  compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 },
-}).outputText, file);
+require('./lib/register-typescript.cjs')({ compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 }, extensions: ['.ts'] });
 const { emptyNutritionJournal, defaultNutritionPreferences, createCustomFoodFromLabel } = require('../src/nutrition/engine.ts');
 const { withCustomFood, withIntakeEntry } = require('../src/nutrition/journal.ts');
 const now = '2026-09-29T01:30:00.000Z', day = '2026-09-29';

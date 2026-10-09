@@ -1,0 +1,491 @@
+{
+  "version": 1,
+  "id": "prisoner",
+  "name": "囚徒健身全集",
+  "documents": [
+    {
+      "path": "00_囚徒健身·知识地图与动作速查.md",
+      "title": "囚徒健身全集 · 知识地图与动作速查导航",
+      "kind": "reference",
+      "sha256": "7f91cd79dfd70d6612cb5aa41858da5e5d5ac9e549040b3459d8348c17b44e99",
+      "sourceSha256": "62cf3d5dd6edb80e2edf525f5a7fc7d84ae58eb0b5b7e4e23b3d10a43ef33049"
+    },
+    {
+      "path": "01_囚徒健身1_失传的技艺(六艺十式)/00_前言与预备.md",
+      "title": "声明",
+      "kind": "reference",
+      "sha256": "bfbaad9d4a3de91b70b2f1ba3e33a09bd10f1d105a5de3fe4a9cf49c8644be81",
+      "sourceSha256": "96fbb24c495182f279db2311fdeeb53387737da8d250efedde993705d64e385d"
+    },
+    {
+      "path": "01_囚徒健身1_失传的技艺(六艺十式)/01_第一章_力量之旅_启程.md",
+      "title": "01_第一章_力量之旅_启程",
+      "kind": "reference",
+      "sha256": "0d7d9c9b322accb71d3c7a801b51a78bcebd303f7b6894623a2329693580e303",
+      "sourceSha256": "1b2f31534fa75199490c420abc065ef9e71382f41e0aa8022df7dd311824c678"
+    },
+    {
+      "path": "01_囚徒健身1_失传的技艺(六艺十式)/02_第二章_失传的技艺_老派体操.md",
+      "title": "02_第二章_失传的技艺_老派体操",
+      "kind": "reference",
+      "sha256": "e3e6ec267c8cc8e4ed1427bb4669ee6f7a34d2599f8c173de958620d7f890da6",
+      "sourceSha256": "82880b78380bf34ab2dc403fa45aaeffd53a7c0fb85c0da5f98ea50ad7bd8247"
+    },
+    {
+      "path": "01_囚徒健身1_失传的技艺(六艺十式)/03_第三章_自身体重锻炼与现代健身方法_囚徒宣言.md",
+      "title": "03_第三章_自身体重锻炼与现代健身方法_囚徒宣言",
+      "kind": "reference",
+      "sha256": "7b633050342d946a076d8d128b4c590521f170ef74c962960770788c0e43fa96",
+      "sourceSha256": "3c4e335e3013b448c75cdf6a8db96adea416cf86ff62268c0b9554cd1ae0461c"
+    },
+    {
+      "path": "01_囚徒健身1_失传的技艺(六艺十式)/04_第四章_关于本书_囚徒健身.md",
+      "title": "04_第四章_关于本书_囚徒健身",
+      "kind": "reference",
+      "sha256": "73c7e7821fa290fd7a476a37de1a6f6d66a97d9ec25804d4eeafc1029e156a9f",
+      "sourceSha256": "ec7ed2f09a88a1e8d9876654b44412f2b2fd714bc15a13413ba1114c8c7b69d0"
+    },
+    {
+      "path": "01_囚徒健身1_失传的技艺(六艺十式)/05_第五章_俯卧撑(六艺之一).md",
+      "title": "第二部分 六艺",
+      "kind": "reference",
+      "sha256": "9e114624678e64d70d7c824d4dbb96d06fde7dbaccee7e31f123bdc951528fc6",
+      "sourceSha256": "6362e5e6e8db303a4e805bdb4c61039159399e088b3eb8c9e07ff8ab86658841"
+    },
+    {
+      "path": "01_囚徒健身1_失传的技艺(六艺十式)/06_第六章_深蹲(六艺之二).md",
+      "title": "06_第六章_深蹲(六艺之二)",
+      "kind": "reference",
+      "sha256": "e9e5afd331291626fed691f334cb70dbf116d300b8f0b5f3e44480886609875b",
+      "sourceSha256": "bcc56238921493dce9f8cdfe3ef5eafcf2dccb3527245214b7a2826bcf272a37"
+    },
+    {
+      "path": "01_囚徒健身1_失传的技艺(六艺十式)/07_第七章_引体向上(六艺之三).md",
+      "title": "07_第七章_引体向上(六艺之三)",
+      "kind": "reference",
+      "sha256": "af3024b749e3457f76880031309c1db2af90dd442de4bf12531f67ee35d8b8bd",
+      "sourceSha256": "db4ea99c64cd9821cb2172363ee7842d883105ea809274bf985b44fe97ca1fd7"
+    },
+    {
+      "path": "01_囚徒健身1_失传的技艺(六艺十式)/08_第八章_举腿(六艺之四).md",
+      "title": "08_第八章_举腿(六艺之四)",
+      "kind": "reference",
+      "sha256": "c7b63b3e532acaa796c120208d2823c8ec7b0521b2650721a288f9211323db15",
+      "sourceSha256": "e09a50670e89d928719324304d4f19736419fa5b420c83ea88890e75b5c31289"
+    },
+    {
+      "path": "01_囚徒健身1_失传的技艺(六艺十式)/09_第九章_桥(六艺之五).md",
+      "title": "09_第九章_桥(六艺之五)",
+      "kind": "reference",
+      "sha256": "8bcc902ca439915e4b2c798cc0fb515f453807deb7a565a601c1f4a25e48c1c4",
+      "sourceSha256": "9ac10f39a7eef82c1962f717a03f562f97d8c8e870f6e966f35f5366d41308ce"
+    },
+    {
+      "path": "01_囚徒健身1_失传的技艺(六艺十式)/10_第十章_倒立撑(六艺之六).md",
+      "title": "10_第十章_倒立撑(六艺之六)",
+      "kind": "reference",
+      "sha256": "debc2209c1088009d9a27d65083bb11cf44a5c8cabaf6e63b479dea7a66e4f2e",
+      "sourceSha256": "ee9733721e47c7a832b71f066dc52aafc558b7d7a09bd23d4f6a251435873508"
+    },
+    {
+      "path": "01_囚徒健身1_失传的技艺(六艺十式)/11_第十一章_金科玉律_身体智慧.md",
+      "title": "第三部分 自我指导",
+      "kind": "reference",
+      "sha256": "14e545791a181524df0020746c53c37da3ff204a43b82cf28b0f9575a2e05dd4",
+      "sourceSha256": "f25e0e0269ce32cdcdf08d416f9a2244128e8857651177ccf98e77ecbab0e090"
+    },
+    {
+      "path": "01_囚徒健身1_失传的技艺(六艺十式)/12_第十二章_训练计划_日程.md",
+      "title": "12_第十二章_训练计划_日程",
+      "kind": "reference",
+      "sha256": "73a7f2d2d88c028a41aea15ee8fc22342c6b7ca4f2212aa5ae2a8b58aa722774",
+      "sourceSha256": "da9443a12152047aa152fac06ccaa26644eca0edec1c9e5b6ee12c5cd5b89e1f"
+    },
+    {
+      "path": "01_囚徒健身1_失传的技艺(六艺十式)/13_致谢.md",
+      "title": "致谢",
+      "kind": "reference",
+      "sha256": "c2964735cd4be0d9cd94d0fd7f1c4cad569e141942fbac84d73a1c5c902aa5d4",
+      "sourceSha256": "7243bc350fd239e26f3ec97dd756e04607ee27358390673e6184f43784d6b939"
+    },
+    {
+      "path": "02_囚徒健身2_古老的智慧(关节与弱点)/00_序言与自序.md",
+      "title": "声明",
+      "kind": "reference",
+      "sha256": "01628243a2ba2389f6410f4519f4d0890a635278887f7771ef52e381c4a7b61b",
+      "sourceSha256": "6d52e66da2282f2dfd08a18c62fff248434151dc26d5130b47b42d2f84abe606"
+    },
+    {
+      "path": "02_囚徒健身2_古老的智慧(关节与弱点)/01_第一章_介绍_把自己关进牢房.md",
+      "title": "01_第一章_介绍_把自己关进牢房",
+      "kind": "reference",
+      "sha256": "d90a18d0099bb6b4ca68706fa77f7865e4d6ae9aff078b72cb67d1e341cf0bbb",
+      "sourceSha256": "b1c8ea075bef8f3a7642bc473c703107d8d4ac889157d429ff78e806fc2fad0b"
+    },
+    {
+      "path": "02_囚徒健身2_古老的智慧(关节与弱点)/02_第二章_终极力量_钢铁般的双手与前臂.md",
+      "title": "-第一部分- 支援肌肉",
+      "kind": "reference",
+      "sha256": "aec2233934be49631f2fb92723a6b4ed6fc4518739ccc1f6a1f663a98f414dd3",
+      "sourceSha256": "03c398f11b5015b36a3349efade9b790edbacfd0d861b790d70a74e51edd2c7c"
+    },
+    {
+      "path": "02_囚徒健身2_古老的智慧(关节与弱点)/03_第三章_悬吊八式_打造虎钳般的双手.md",
+      "title": "03_第三章_悬吊八式_打造虎钳般的双手",
+      "kind": "reference",
+      "sha256": "54ef70f29bb3592331b1d03448f11ae52ee1f4a276e86857db47a9bc24897396",
+      "sourceSha256": "274c6333b23513087ecefa70ff2c7e71450d37c4d6d68d56305dee72dfbb1e8e"
+    },
+    {
+      "path": "02_囚徒健身2_古老的智慧(关节与弱点)/04_第四章_高级抓握集训.md",
+      "title": "04_第四章_高级抓握集训",
+      "kind": "reference",
+      "sha256": "51f2eee3cecdb61bf210f326eb4be52b25089375e8651764790fc246834ee728",
+      "sourceSha256": "a3da8c9e871fb641c3e6c7152093beef0eca7b7245f99ca03a159cf35bdfe17b"
+    },
+    {
+      "path": "02_囚徒健身2_古老的智慧(关节与弱点)/05_第五章_指尖俯卧撑.md",
+      "title": "05_第五章_指尖俯卧撑",
+      "kind": "reference",
+      "sha256": "a9721a644af66ef60013b84bce8ec3b7a3d3e662b75e2ac604837c5829b4584c",
+      "sourceSha256": "86e061249620eb497abd1d6de3d8c99bd67830cc608c67c47d1f6f974cdd8cfc"
+    },
+    {
+      "path": "02_囚徒健身2_古老的智慧(关节与弱点)/06_第六章_火炮一样的前臂.md",
+      "title": "06_第六章_火炮一样的前臂",
+      "kind": "reference",
+      "sha256": "606d975eca20fd48e96a04d7eb277bb63baaa2bf1c0b46fe0caadf8c9f5ba4cc",
+      "sourceSha256": "a599cb7e4605a6bb32cdbf78ddf6da04d5b2dc38522adc6de876ffcfba8028c7"
+    },
+    {
+      "path": "02_囚徒健身2_古老的智慧(关节与弱点)/07_第七章_侧身肌肉链锻炼_顺风旗.md",
+      "title": "07_第七章_侧身肌肉链锻炼_顺风旗",
+      "kind": "reference",
+      "sha256": "15c1bb63368986b21e123b846e9104b5e744e08e308c1f86cb763479a88cae97",
+      "sourceSha256": "a9100dbb8494cd30a8fc365f83f21d77f4b120ed53a1c67102f02cf5b9cc5e48"
+    },
+    {
+      "path": "02_囚徒健身2_古老的智慧(关节与弱点)/08_第八章_基础八式_抓旗.md",
+      "title": "08_第八章_基础八式_抓旗",
+      "kind": "reference",
+      "sha256": "ead79f4dd9ab17f1e910b60e0e226a5601b41f2586c795122c5eeab526f45aa5",
+      "sourceSha256": "db5b36cca240e0514046d3ae32b6561aacadd4b05fc5199645c264c03e6473dc"
+    },
+    {
+      "path": "02_囚徒健身2_古老的智慧(关节与弱点)/09_第九章_进阶八式_扬旗.md",
+      "title": "09_第九章_进阶八式_扬旗",
+      "kind": "reference",
+      "sha256": "64a37a0e663bdb380ef07d7026f90586ffc238d0ccf2cb9e60ff2afd72f9c1cf",
+      "sourceSha256": "197b24c5660b975c06ae55336f3cf173f07224ed48547d7e7b5b928a0813304f"
+    },
+    {
+      "path": "02_囚徒健身2_古老的智慧(关节与弱点)/10_第十章_防弹衣_斗牛犬一样的脖子.md",
+      "title": "10_第十章_防弹衣_斗牛犬一样的脖子",
+      "kind": "reference",
+      "sha256": "539123b828c2771c1b74616eb06b9b527788a51758192ff25ad5879ce7633aca",
+      "sourceSha256": "d4b9985dbc42567b500479de540d9486dea5e7e107ac6a7d546e0bf579ef76b2"
+    },
+    {
+      "path": "02_囚徒健身2_古老的智慧(关节与弱点)/11_第十一章_终极小腿.md",
+      "title": "11_第十一章_终极小腿",
+      "kind": "reference",
+      "sha256": "e9d486d9bd8caf4992350c23cbb031532122a82e15a752b3168fd56e53d411e3",
+      "sourceSha256": "33ebc19f4c5484a3503ce9d952cf492123ce7721128feba2036cfff37f60ce7e"
+    },
+    {
+      "path": "02_囚徒健身2_古老的智慧(关节与弱点)/12_第十二章_失传的关节训练技艺_紧张柔韧性.md",
+      "title": "-第二部分- 刀枪不入的关节",
+      "kind": "reference",
+      "sha256": "697fe637d22fc07be86505a52b74acf8b10e44af2d4f4169a2f058a4b5a8c0ef",
+      "sourceSha256": "63e996dfd98a638820bb173cea66b25cdc8ce861c865bee412da7393a4583586"
+    },
+    {
+      "path": "02_囚徒健身2_古老的智慧(关节与弱点)/13_第十三章_拉伸_狱中之见.md",
+      "title": "13_第十三章_拉伸_狱中之见",
+      "kind": "reference",
+      "sha256": "08ace1fb1e54ed1ff5540c2bad0a381149a7ac027b5a4476fc79a34a20082528",
+      "sourceSha256": "cf9ee45d152aa47420764cd33f9bee546569021fb2d7075b5545197028509e3e"
+    },
+    {
+      "path": "02_囚徒健身2_古老的智慧(关节与弱点)/14_第十四章_战胜僵硬与伤病的秘密武器_三诀.md",
+      "title": "14_第十四章_战胜僵硬与伤病的秘密武器_三诀",
+      "kind": "reference",
+      "sha256": "a1c933e44a2772d051f3fd2878c70efa1dbb9b6a4aaa701d7f4634c175a0f992",
+      "sourceSha256": "99ec7c81d5fd9a48a7ccf9ac1754924ca0b9a218e605e459deadb2a0d03b5532"
+    },
+    {
+      "path": "02_囚徒健身2_古老的智慧(关节与弱点)/15_第十五章_终极康复和修复技巧_桥式.md",
+      "title": "15_第十五章_终极康复和修复技巧_桥式",
+      "kind": "reference",
+      "sha256": "ddc6f1e6c107db231351629f172ea4edeb9de0c08e1ae6e9aa203b9443d1779b",
+      "sourceSha256": "5b10cfc7ef7568e75b4aa5532e414b8647123ef104154edcc872d8fa4164b36e"
+    },
+    {
+      "path": "02_囚徒健身2_古老的智慧(关节与弱点)/16_第十六章_直角式.md",
+      "title": "16_第十六章_直角式",
+      "kind": "reference",
+      "sha256": "761390ab42a53b5a11cd4a7b21019d1c79853df154b253b97217aa70dab2081c",
+      "sourceSha256": "ffab6ffec0b91e0b2ed2cff000c62dad02516296f967676def13106c704efb72"
+    },
+    {
+      "path": "02_囚徒健身2_古老的智慧(关节与弱点)/17_第十七章_扭转式.md",
+      "title": "17_第十七章_扭转式",
+      "kind": "reference",
+      "sha256": "d683769e06f8abdb0027977e8d0f3448aab43d136bd70d4464f278039f06e1e4",
+      "sourceSha256": "a5fc45706ecee5acc40f498e61d99d9f3ed1f792dedcf511a084321e027a3eed"
+    },
+    {
+      "path": "02_囚徒健身2_古老的智慧(关节与弱点)/18_第十八章_起居有时.md",
+      "title": "-第三部分- 狱中箴言",
+      "kind": "reference",
+      "sha256": "3dae40c64e71a60b029fd3255f3eacd59333af7cc9e576cdbdf6c3dd017f30c0",
+      "sourceSha256": "06281dff04daecd95d5b66179fb0debcefa2b677323af07d08940aad5854b9f5"
+    },
+    {
+      "path": "02_囚徒健身2_古老的智慧(关节与弱点)/19_第十九章_狱中饮食.md",
+      "title": "19_第十九章_狱中饮食",
+      "kind": "reference",
+      "sha256": "ce46fbb389e5ca1763acd407c3706709e683d81364ff13238376635ba6407df1",
+      "sourceSha256": "fe6e30245845f78e16484bc579d0dda20cb1d50e05d3514062485f7539bcd19e"
+    },
+    {
+      "path": "02_囚徒健身2_古老的智慧(关节与弱点)/20_第二十章_疗伤八法.md",
+      "title": "20_第二十章_疗伤八法",
+      "kind": "reference",
+      "sha256": "4f8bc2ae92197e1861da44bdb3b63740cb1041bf5ac0af1e5482d8877eedf482",
+      "sourceSha256": "c355ef0c1f1651c9c08afcb4c08b4ebbde3d33cfedb326ea6c449f61406e5dc1"
+    },
+    {
+      "path": "02_囚徒健身2_古老的智慧(关节与弱点)/21_第二十一章_心灵.md",
+      "title": "21_第二十一章_心灵",
+      "kind": "reference",
+      "sha256": "f5f791d572ce843597d694068df02c22615027fc67c8a8446b861e0dac44edc2",
+      "sourceSha256": "caa72c7534d0b0e663a7da66d68c32289135b7bdcd0b2c211b3f577cfe6bbea8"
+    },
+    {
+      "path": "02_囚徒健身2_古老的智慧(关节与弱点)/22_第二十二章_监狱里的健身房.md",
+      "title": "-额外章节-",
+      "kind": "reference",
+      "sha256": "8def22a7c698c08ff570ae7f67f58c3895eb52ca38896e7645fca73c2f0f55d5",
+      "sourceSha256": "033e335f747a9f975463bc5b7ea7c43039f8a9df2f39a78fb12d37ede506bebd"
+    },
+    {
+      "path": "02_囚徒健身2_古老的智慧(关节与弱点)/23_致谢.md",
+      "title": "致谢",
+      "kind": "reference",
+      "sha256": "39bc6d318668e884823c469aa127aaed51961973984ad4dd04564dcfd4b3bb2d",
+      "sourceSha256": "21356b8f4adeaa70152ef56e59084ebd3c6eee782338fca085455a3fc61b9834"
+    },
+    {
+      "path": "03_囚徒健身3_爆发力(六功)/00_前言与声明.md",
+      "title": "版权信息",
+      "kind": "reference",
+      "sha256": "f9d4372c82917ea58eaf470db5b0f1a0f8c706b546fc3ebad6ac2d3aca094f46",
+      "sourceSha256": "4f382456841c73e0645bd5c7df445c57529b9bf434fc35c157d03eeadadaedd0"
+    },
+    {
+      "path": "03_囚徒健身3_爆发力(六功)/01_第一章_对速度的需求_提速！.md",
+      "title": "第一部分 爆发力、实用速度和敏捷性",
+      "kind": "reference",
+      "sha256": "08dd7a3dd1f9c619bedebfb642404fb1ab150bec19001d62922023ae5e95b437",
+      "sourceSha256": "b4132accb37333e52e70e557db2ae89e02718e556a1b5af6ea78dc8480e073ec"
+    },
+    {
+      "path": "03_囚徒健身3_爆发力(六功)/02_第二章_五大关键原则_爆发力训练.md",
+      "title": "02_第二章_五大关键原则_爆发力训练",
+      "kind": "reference",
+      "sha256": "30b0eae5a40ad670ca09d089eebabb080f4c6d3b3d58a12fc58f716079e4bb28",
+      "sourceSha256": "4c90b36fed31b030a589b6bb187c746627d03afaabd66d70adb16b530df8c77c"
+    },
+    {
+      "path": "03_囚徒健身3_爆发力(六功)/03_第三章_核心概念与解答_如何使用本书.md",
+      "title": "03_第三章_核心概念与解答_如何使用本书",
+      "kind": "reference",
+      "sha256": "e59c0a91a536bb3e97fcc0209f162bacccdfca6126d0e6ce7ff0028fc20a7d80",
+      "sourceSha256": "7a592b502ed97ad430ab1123c93a1ce156b7aefd40b3c2e92ab345ee026a855a"
+    },
+    {
+      "path": "03_囚徒健身3_爆发力(六功)/04_第四章_高级弹簧腿_爆发跳跃(六功之一).md",
+      "title": "第二部分 六 功",
+      "kind": "reference",
+      "sha256": "290d8c402a00a6da27d29fb2e3e79ad492613f2702579ffcba550d17e1e25efb",
+      "sourceSha256": "649abd3e5e822dce3c0daed12fa92a52ab3c8fd63b1fb7678a62709c6279264a"
+    },
+    {
+      "path": "03_囚徒健身3_爆发力(六功)/05_第五章_将力量变为爆发力_爆发俯卧撑(六功之二).md",
+      "title": "05_第五章_将力量变为爆发力_爆发俯卧撑(六功之二)",
+      "kind": "reference",
+      "sha256": "6779dad0c0be5bda0b4cfb83fe0e768a592b6fc2cc89466fe5dc052f0415e6a8",
+      "sourceSha256": "59b10f38616ac77fac86966031af02650a6cadf0002bd968d380da0c20807dfe"
+    },
+    {
+      "path": "03_囚徒健身3_爆发力(六功)/06_第六章_功夫小子的身体速度_打挺(六功之三).md",
+      "title": "06_第六章_功夫小子的身体速度_打挺(六功之三)",
+      "kind": "reference",
+      "sha256": "94eb2a53577c722242ac5503425a215f59263af0a1973bd1f536b509b3e8f83d",
+      "sourceSha256": "fbd54f003712e543abe4b3a35caaa7b123498f5b53071eb4d31d0411b6c67284"
+    },
+    {
+      "path": "03_囚徒健身3_爆发力(六功)/07_第七章_闪电般的运动技能_前翻(六功之四).md",
+      "title": "07_第七章_闪电般的运动技能_前翻(六功之四)",
+      "kind": "reference",
+      "sha256": "3d781a5f107439cf3e180adbb0ae3da60d26c022a536b0568b130e7d52ea9581",
+      "sourceSha256": "177d40608dca11bb6a3ae48a9db3a0034f940a6c22fb2f4ff9c36c8058719f3a"
+    },
+    {
+      "path": "03_囚徒健身3_爆发力(六功)/08_第八章_终极敏捷性_后翻(六功之五).md",
+      "title": "08_第八章_终极敏捷性_后翻(六功之五)",
+      "kind": "reference",
+      "sha256": "0c433cffff96f7ca17a79faec846e87810d80c95fdfb8e38416e4d2f7fa3ff47",
+      "sourceSha256": "0416216c7234a97e41df2e583efa48a5c62842ffce59bca56f027f6ffa21c18a"
+    },
+    {
+      "path": "03_囚徒健身3_爆发力(六功)/09_第九章_最佳爆发力_上杠(六功之六).md",
+      "title": "09_第九章_最佳爆发力_上杠(六功之六)",
+      "kind": "reference",
+      "sha256": "7224bd23a9d27716a287bf553c001f3cc5a4c947c3f5fa6e8d39de5be17ed801",
+      "sourceSha256": "23a5d3347e36f019ef8e9cca75f712489b6b66b6f122dbf278c7fb585b9a5004"
+    },
+    {
+      "path": "03_囚徒健身3_爆发力(六功)/10_第十章_PARC要素_升级.md",
+      "title": "第三部分 计划：理论和策略",
+      "kind": "reference",
+      "sha256": "978b57b94d96919de57901dfc7eb5bffa8558a9e377c900988d88174c19402f7",
+      "sourceSha256": "8cc8a5e06dda872d5b35190dbd00750b08e2b4252c1a517b8123e3fe918843c7"
+    },
+    {
+      "path": "03_囚徒健身3_爆发力(六功)/11_第十一章_平行的训练之道_爆发力和技巧.md",
+      "title": "11_第十一章_平行的训练之道_爆发力和技巧",
+      "kind": "reference",
+      "sha256": "b83c32f8ede4e939e593c64b97290a029165fa62ee187bdd4b62da46db404710",
+      "sourceSha256": "f2defcc058e6eafba6e3ddf68e3bd91e01031c6cf5778000d0ede3135df9ed2a"
+    },
+    {
+      "path": "03_囚徒健身3_爆发力(六功)/12_第十二章_三规和六矩_打造爆发力.md",
+      "title": "12_第十二章_三规和六矩_打造爆发力",
+      "kind": "reference",
+      "sha256": "bb2507f77f640d95fe10537da46e9d1bbbce6f6eee8ec1d8886902df7a3561a7",
+      "sourceSha256": "dbb84d87f8c4fbe8819dd5312651c1ae5201e5cae9466b6a80f8f41a9e1d2f60"
+    },
+    {
+      "path": "03_囚徒健身3_爆发力(六功)/13_第十三章_限时训练和巩固训练_发展技巧.md",
+      "title": "13_第十三章_限时训练和巩固训练_发展技巧",
+      "kind": "reference",
+      "sha256": "6218a924845f11011c0a1149b7b496d888c7d22d383f5d4eb08db984a83a1c04",
+      "sourceSha256": "9c6e6640e0a7b9c2aeb80846e8bef94a86872a6c51489703364cac757f3d424b"
+    },
+    {
+      "path": "03_囚徒健身3_爆发力(六功)/14_第十四章_训练模板_计划范本.md",
+      "title": "14_第十四章_训练模板_计划范本",
+      "kind": "reference",
+      "sha256": "9ff7906211f01d890b45695dc14a25f2a597cbea57eb428901eb1faf23ec73ba",
+      "sourceSha256": "257a51f97ba3a0e4893b4b6bcc917ec75150743ee4b04875c7341c80d8b475f6"
+    },
+    {
+      "path": "03_囚徒健身3_爆发力(六功)/15_额外章节一_高阶速度训练.md",
+      "title": "额外章节",
+      "kind": "reference",
+      "sha256": "e8c4de8c7d23b954306d76982e9d9ea67065fb1dec6c69a8851f68952ac7ac5a",
+      "sourceSha256": "d6183752a8f7801ead1641a80361dab608baeec8fc412672ee8c31eaf2522841"
+    },
+    {
+      "path": "03_囚徒健身3_爆发力(六功)/16_额外章节二_仿生敏捷训练.md",
+      "title": "16_额外章节二_仿生敏捷训练",
+      "kind": "reference",
+      "sha256": "07c8495113c56cf1b64e5823dba176662c36672f2b6fbfe17db0cc8689e9647f",
+      "sourceSha256": "fdafb7c7fd4280b1bbacfc4ffad9e4ca18215dafa2524e1efc44ccf7cc757861"
+    },
+    {
+      "path": "03_囚徒健身3_爆发力(六功)/17_六功升级表.md",
+      "title": "六功升级表",
+      "kind": "reference",
+      "sha256": "ad1b0035e9e8c112654e6cfd8e795648573c4bfa7a6f901ccac3848d32c05427",
+      "sourceSha256": "a6239b4e274155b0df81f1bb3a88829782eecca209024e7af07bd589e6b94a20"
+    },
+    {
+      "path": "03_囚徒健身3_爆发力(六功)/18_致谢.md",
+      "title": "致谢",
+      "kind": "reference",
+      "sha256": "25e011d4862b92be5a595de204da05e658d42ef42f323fd438568c866b77c7a9",
+      "sourceSha256": "c745e3bee26e176bc073f8fd68abc6e812805952b00c7dcc0ee847493d426c09"
+    },
+    {
+      "path": "04_囚徒健身4_自重增肌与计划/00_前言.md",
+      "title": "前 言",
+      "kind": "reference",
+      "sha256": "40d7eba5444262a23efa57d91ea40caa2d09fb3b81b963bcafd164e3a5536870",
+      "sourceSha256": "fda82e573c4df36a0fa015c01f2985e58d5d66ea22ce5249d70375ec890fb4e6"
+    },
+    {
+      "path": "04_囚徒健身4_自重增肌与计划/01_第一章_自重增肌_自重型肌肉？没问题！.md",
+      "title": "第一章 自重型肌肉？没问题！ 自重增肌",
+      "kind": "reference",
+      "sha256": "ec5cef83541ae55c8dff4ae3a90005ef7af455f73bbeda4631279dcb2323f35a",
+      "sourceSha256": "1a23dcf3a633faddec7246e3dbf14fc941f0f6da30ce797a314aaeefc5826faa"
+    },
+    {
+      "path": "04_囚徒健身4_自重增肌与计划/02_第二章_自重增肌十诫.md",
+      "title": "第二章 发展肌肉的哲学 自重增肌十诫",
+      "kind": "reference",
+      "sha256": "1dd393bbb71b11a5f1e19ec17990345eaf4ab12f762fd3face281598bd79fab9",
+      "sourceSha256": "e811350240088c3780c2820633095f6e7dec9d51d26bd5412259bd747148f3cd"
+    },
+    {
+      "path": "04_囚徒健身4_自重增肌与计划/03_第三章_打造身体的各个部位.md",
+      "title": "第三章 “教练”威德的增肌策略 打造身体的各个部位",
+      "kind": "reference",
+      "sha256": "88300413b3db91b6270c9357f5ebaeacda03f4bdd7764e20d050736e7f59b76f",
+      "sourceSha256": "282c248249fe94f9d5e17602e4dfdfbb466c621e22cf6ea2095b03f1207c5f4d"
+    },
+    {
+      "path": "04_囚徒健身4_自重增肌与计划/04_第四章_训练计划的制订.md",
+      "title": "第四章 好了，现在给我一份训练计划吧！ 训练计划的制订",
+      "kind": "reference",
+      "sha256": "242f8d8ce8b220bba0916bf28e6f18d2a7b9f951d9b699d33cc95f9680fe2116",
+      "sourceSha256": "3f909a299c9dff994a34e44619c06a282694e3c19a01701d4aacdbf560be8661"
+    },
+    {
+      "path": "04_囚徒健身4_自重增肌与计划/05_第五章_解惑时间_常见问题.md",
+      "title": "第五章 关于肌肉增长的常见问题 解惑时间",
+      "kind": "reference",
+      "sha256": "92b754e2311db1562f11571f2a035ef9d8542e6df8694457de62f45ef4576f9e",
+      "sourceSha256": "b5e3ffbadbb6a6f241e702e0296dfb8b8a5ac22ae6c462b6cd35afce29b11b12"
+    },
+    {
+      "path": "04_囚徒健身4_自重增肌与计划/06_第六章_增肌的另一面_控重变强十诫.md",
+      "title": "第六章 如何尽量变得强壮而不增加体重 增肌的另一面",
+      "kind": "reference",
+      "sha256": "43fd50938cb5756a3a61c60b0113a96bd0fd9a38fad18a7959ffe54ff28ee162",
+      "sourceSha256": "93a69e618f175edf6eb2c871db9979c6c018f4ed5310b63568ba30956eca257a"
+    },
+    {
+      "path": "04_囚徒健身4_自重增肌与计划/07_第七章_自然造肉法_给激素系统增压.md",
+      "title": "第七章 给你的激素系统增压！ 自然造肉法",
+      "kind": "reference",
+      "sha256": "e8a6b713e063bf3e9e7d9946472e76e8c0b9474348c1e7d04089ac8aca28fdd5",
+      "sourceSha256": "4df148cc9d8a452e97015483e0d1e7ef2c74cd2d2c1b1d8e1840f987dac9a3ff"
+    },
+    {
+      "path": "04_囚徒健身4_自重增肌与计划/08_额外章节一_挑战20磅_一年增加20磅肌肉.md",
+      "title": "额外章节一 仅依靠自重训练，一年增加20磅肌肉 挑战20磅",
+      "kind": "reference",
+      "sha256": "84b2f600df74bbdac931edb596136a418e29057d933b3e432eb22864617b9413",
+      "sourceSha256": "867322b807fae5da2b5813c023e5933d91ae706cc8582b7049d278bc620f12d1"
+    },
+    {
+      "path": "04_囚徒健身4_自重增肌与计划/09_额外章节二_十二金刚_替代性自重练习.md",
+      "title": "额外章节二 十二项替代性自重练习 十二金刚",
+      "kind": "reference",
+      "sha256": "44de3741f654f8eb866f041adfbe7c8325d9397dbd59db8ffb85de4f668ba614",
+      "sourceSha256": "d73de5960d3003ab15bc521521a94c997b2da8c774c0cfc7a3dafeabacd8506a"
+    },
+    {
+      "path": "04_囚徒健身4_自重增肌与计划/10_致谢.md",
+      "title": "致 谢",
+      "kind": "reference",
+      "sha256": "c3281b37f5271d3b0d15f3d9f7587c7b3a37cb49d926ba2d4461664b960ebe5c",
+      "sourceSha256": "bdf7e155ee403671267ee8438f28bec5da96eaa0bb032b6429ab41404bdeb287"
+    }
+  ],
+  "unresolvedLinks": []
+}

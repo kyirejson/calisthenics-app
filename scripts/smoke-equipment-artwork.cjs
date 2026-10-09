@@ -4,7 +4,7 @@ const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
 const ts = require('typescript');
-require.extensions['.ts'] = (m, f) => m._compile(ts.transpileModule(fs.readFileSync(f, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText, f);
+require('./lib/register-typescript.cjs')({ compilerOptions: { module: ts.ModuleKind.CommonJS }, extensions: ['.ts'] });
 const { equipmentMovements } = require('../src/data/equipmentMovements.ts');
 const { chromium } = require(process.env.PLAYWRIGHT_PATH || 'playwright');
 const artworkIds = new Set(JSON.parse(fs.readFileSync(path.resolve(__dirname, '../assets/equipment-demos/provenance.json'), 'utf8')).entries.map(item => item.id));

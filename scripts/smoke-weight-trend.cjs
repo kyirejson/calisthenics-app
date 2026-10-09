@@ -6,11 +6,9 @@ const path = require('node:path');
 const ts = require('typescript');
 const { chromium } = require(process.env.PLAYWRIGHT_PATH || 'playwright');
 const { waitForNutritionPage } = require('./nutrition-smoke-utils.cjs');
-require.extensions['.ts'] = (module, file) => module._compile(ts.transpileModule(fs.readFileSync(file, 'utf8'), {
-  compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 },
-}).outputText, file);
+require('./lib/register-typescript.cjs')({ compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 }, extensions: ['.ts'] });
 const { emptyNutritionJournal, defaultNutritionPreferences } = require('../src/nutrition/engine.ts');
-const { weightTrendWindow } = require('../src/data/weightTrend.ts');
+const { weightTrendWindow } = require('../src/domain/weight/weightTrend.ts');
 const day = '2026-09-28', anchor = day + 'T10:30:00.000Z';
 const history = [
   { date: '2026-08-02', kg: 78 }, { date: '2026-09-01', kg: 76.5 },
@@ -75,7 +73,7 @@ async function expectWindow(page, records, days) {
         const page = await context.newPage(); page.setDefaultTimeout(12000);
         page.on('pageerror', error => errors.push(error.message));
         const enter = async () => { await page.getByRole('tab', { name: '切换到饮食', exact: true }).click(); await waitForNutritionPage(page); };
-        const shot = async name => { await page.getByText('计算与知识依据', { exact: true }).scrollIntoViewIfNeeded(); await page.screenshot({ path: path.join(output, name + '-' + width + '.png'), animations: 'disabled' }); };
+        const shot = async name => { await page.getByTestId('weight-trend-chart').scrollIntoViewIfNeeded(); await page.screenshot({ path: path.join(output, name + '-' + width + '.png'), animations: 'disabled' }); };
         await page.goto('http://127.0.0.1:8081/', { waitUntil: 'domcontentloaded', timeout: 60000 }); await enter();
         assert.equal(await page.getByText('快捷记餐', { exact: true }).count(), 0);
         assert.equal(await page.getByTestId('nutrition-next-meal').count(), 0);

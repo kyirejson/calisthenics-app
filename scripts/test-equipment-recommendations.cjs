@@ -3,12 +3,12 @@ const fs = require('node:fs');
 const path = require('node:path');
 const { test } = require('node:test');
 const ts = require('typescript');
-require.extensions['.ts'] = (module, filename) => module._compile(ts.transpileModule(fs.readFileSync(filename, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText, filename);
+require('./lib/register-typescript.cjs')({ compilerOptions: { module: ts.ModuleKind.CommonJS }, extensions: ['.ts'] });
 const { equipmentMovements } = require('../src/data/equipmentMovements.ts');
 const { equipmentAdditions } = require('../src/data/equipmentAdditions.ts');
 const { equipmentGuides } = require('../src/data/equipmentGuidance.ts');
 const { equipmentRecommendations, equipmentRankingExplanation, equipmentFunctionalUses, recommendationTiers } = require('../src/data/equipmentRecommendations.ts');
-const { equipmentFocus, equipmentMuscleRegions, filterEquipmentMovements, initialEquipmentFilters } = require('../src/data/equipmentLibrary.ts');
+const { equipmentFocus, equipmentMuscleRegions, filterEquipmentMovements, initialEquipmentFilters } = require('../src/domain/training/equipment/equipmentLibrary.ts');
 const get = id => equipmentMovements.find(item => item.id === id);
 
 test('all baseline ratings exactly match the 82-row report, not a popularity/difficulty ranking', () => {
@@ -88,5 +88,5 @@ test('modern details use independent guidance and removed book import cannot reg
   assert.match(detail, /EquipmentMovementGuide/);
   assert.match(fs.readFileSync(path.resolve(__dirname, '../src/components/EquipmentMovementGuide.tsx'), 'utf8'), /equipment-modern-guide/);
   assert.equal(fs.existsSync(path.join(__dirname, 'prepare-equipment-resources.cjs')), false);
-  assert.doesNotMatch(fs.readFileSync(path.resolve(__dirname, '../src/data/equipmentLibrary.ts'), 'utf8'), /bookAnchor/);
+  assert.doesNotMatch(fs.readFileSync(path.resolve(__dirname, '../src/domain/training/equipment/equipmentLibrary.ts'), 'utf8'), /bookAnchor/);
 });

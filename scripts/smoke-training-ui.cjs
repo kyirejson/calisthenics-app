@@ -1,0 +1,76 @@
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const vm = require('node:vm');
+const { chromium } = require(process.env.PLAYWRIGHT_PATH || 'D:/UncoverBuildTools/browser-tests/node_modules/playwright');
+const fixture = fs.readFileSync(require.resolve('./smoke-fitness-flows.cjs'), 'utf8');
+const profile = vm.runInNewContext('(' + fixture.match(/const profile = ([\s\S]*?);\r?\n/)[1] + ')');
+profile.experience = 'elite'; profile.frequency = 6;
+(async () => {
+  const browser = await chromium.launch({ headless: true, executablePath: process.env.CHROME_PATH || 'C:/Program Files/Google/Chrome/Application/chrome.exe' });
+  try {
+    for (const width of [360, 390, 739]) {
+      const context = await browser.newContext({ viewport: { width, height: 844 }, timezoneId: 'Asia/Shanghai', reducedMotion: 'reduce' });
+      const page = await context.newPage(); const errors = [];
+      page.on('pageerror', error => errors.push(error.message));
+      await page.addInitScript(profile => {
+        localStorage.setItem('profile-invitation-seen', '1');
+        localStorage.setItem('user_profile', JSON.stringify(profile));
+        localStorage.setItem('sessions', '[]');
+      }, profile);
+      await page.goto(process.env.APP_URL || 'http://127.0.0.1:8081/');
+      await page.getByTestId('today-training-content').waitFor();
+      assert.equal(await page.getByRole('button', { name: '选择训练目标', exact: true }).count(), 0);
+      for (const text of ['本周训练进度', '查看动作与注意事项']) assert.equal(await page.getByText(text, { exact: true }).count(), 0);
+      await page.getByRole('button', { name: '调整训练计划', exact: true }).click();
+      const stageOptions = page.getByRole('radio');
+      assert.equal(await stageOptions.count(), 5);
+      const firstStage = page.getByRole('radio', { name: '阶段 I · 初试身手 · 每周 2 练', exact: true });
+      await firstStage.click();
+      assert.equal(await firstStage.getAttribute('aria-checked'), 'true');
+      assert.equal(await page.getByText('首课预览 ·', { exact: true }).count(), 0);
+      await page.screenshot({ path: `D:/UncoverBuildTools/temp/training-stages-refined-${width}.png` });
+      await page.getByRole('button', { name: '取消调整训练计划', exact: true }).click();
+      assert.equal(await page.evaluate(() => JSON.parse(localStorage.getItem('user_profile')).experience), 'elite', 'Cancelling never applies a draft');
+      await page.getByRole('button', { name: '开始今日训练  →', exact: true }).click();
+      await page.getByTestId('training-set-progress').waitFor();
+      await page.getByTestId('training-primary').click();
+      assert.match(await page.getByTestId('training-set-progress').innerText(), /^1\s*\//);
+      const dock = page.getByTestId('training-primary');
+      const before = await dock.boundingBox();
+      await page.getByRole('button', { name: '暂停', exact: true }).click();
+      await page.getByText('已暂停', { exact: true }).waitFor();
+      await page.getByRole('button', { name: '继续', exact: true }).click();
+      await page.getByRole('button', { name: '结束休息', exact: true }).click();
+      await page.getByTestId('training-scroll').evaluate(element => { element.scrollTop = element.scrollHeight; });
+      const after = await dock.boundingBox();
+      assert.ok(Math.abs(before.y - after.y) < 20, 'Primary stays visible when the exercise content scrolls');
+      assert.ok(after.x >= 0 && after.x + after.width <= width && after.y + after.height < 844);
+      assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth), false);
+      const sessions = await page.evaluate(() => JSON.parse(localStorage.getItem('sessions')));
+      assert.equal(sessions.length, 1); assert.equal(sessions[0].exercises[0].sets.length, 1);
+      await page.getByTestId('training-scroll').evaluate(element => { element.scrollTop = 0; });
+      await page.screenshot({ path: `D:/UncoverBuildTools/temp/training-session-refined-${width}.png` });
+      assert.deepEqual(errors, []);
+      console.log(`PASS ${width}px: five stages, draft selection/cancel, real set save, rest controls, fixed dock and no overflow`);
+      await context.close();
+    }
+    const context = await browser.newContext({ viewport: { width: 390, height: 844 }, timezoneId: 'Asia/Shanghai' });
+    const page = await context.newPage();
+    await page.addInitScript(profile => { localStorage.setItem('profile-invitation-seen', '1'); localStorage.setItem('user_profile', JSON.stringify(profile)); }, profile);
+    await page.goto(process.env.APP_URL || 'http://127.0.0.1:8081/');
+    await page.getByRole('button', { name: '调整训练计划', exact: true }).click();
+    await page.getByRole('radio', { name: '阶段 I · 初试身手 · 每周 2 练', exact: true }).click();
+    await page.getByRole('button', { name: '展开首课预览', exact: true }).click();
+    await page.getByText(/^首课预览 ·/).waitFor();
+    await page.getByRole('button', { name: '应用计划', exact: true }).click();
+    await page.getByText('计划已生成', { exact: true }).waitFor();
+    const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('user_profile')));
+    assert.equal(saved.experience, 'beginner'); assert.equal(saved.frequency, 2);
+    await page.getByRole('button', { name: '查看日程', exact: true }).click();
+    await page.getByRole('tab', { name: '切换到我的', exact: true }).click();
+    await page.getByRole('button', { name: '训练专题', exact: true }).click();
+    await page.getByTestId('profile-goal-sheet').waitFor();
+    console.log('PASS applying a stage saves its frequency; target selection remains in My Profile');
+    await context.close();
+  } finally { await browser.close(); }
+})().catch(error => { console.error(error); process.exitCode = 1; });

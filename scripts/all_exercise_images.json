@@ -1,0 +1,1763 @@
+[
+  {
+    "id": "push_01",
+    "name": "墙壁俯卧撑",
+    "category": "push",
+    "step": 1,
+    "source": "original",
+    "imgFile": "original-images\\image00550.jpeg"
+  },
+  {
+    "id": "push_02",
+    "name": "上斜俯卧撑",
+    "category": "push",
+    "step": 2,
+    "source": "original",
+    "imgFile": "original-images\\image00552.jpeg"
+  },
+  {
+    "id": "push_03",
+    "name": "膝盖俯卧撑",
+    "category": "push",
+    "step": 3,
+    "source": "original",
+    "imgFile": "original-images\\image00554.jpeg"
+  },
+  {
+    "id": "push_04",
+    "name": "半俯卧撑",
+    "category": "push",
+    "step": 4,
+    "source": "original",
+    "imgFile": "original-images\\image00556.jpeg"
+  },
+  {
+    "id": "push_05",
+    "name": "标准俯卧撑",
+    "category": "push",
+    "step": 5,
+    "source": "original",
+    "imgFile": "original-images\\image00558.jpeg"
+  },
+  {
+    "id": "push_06",
+    "name": "窄距俯卧撑",
+    "category": "push",
+    "step": 6,
+    "source": "original",
+    "imgFile": "original-images\\image00560.jpeg"
+  },
+  {
+    "id": "push_07",
+    "name": "偏重俯卧撑",
+    "category": "push",
+    "step": 7,
+    "source": "original",
+    "imgFile": "original-images\\image00562.jpeg"
+  },
+  {
+    "id": "push_08",
+    "name": "单臂半俯卧撑",
+    "category": "push",
+    "step": 8,
+    "source": "original",
+    "imgFile": "original-images\\image00564.jpeg"
+  },
+  {
+    "id": "push_09",
+    "name": "杠杆俯卧撑",
+    "category": "push",
+    "step": 9,
+    "source": "original",
+    "imgFile": "original-images\\image00566.jpeg"
+  },
+  {
+    "id": "push_10",
+    "name": "单臂俯卧撑",
+    "category": "push",
+    "step": 10,
+    "source": "original",
+    "imgFile": "original-images\\image00569.jpeg"
+  },
+  {
+    "id": "push_demon_01",
+    "name": "单臂击掌俯卧撑",
+    "category": "push",
+    "step": 11,
+    "isDemon": true,
+    "source": "remote",
+    "imgFile": "https://cdn.jsdelivr.net/gh/kyirejson/calisthenics-assets@main/images/push_demon_01.jpeg"
+  },
+  {
+    "id": "push_demon_02",
+    "name": "蜥蜴俯卧撑",
+    "category": "push",
+    "step": 12,
+    "isDemon": true,
+    "source": "remote",
+    "imgFile": "https://cdn.jsdelivr.net/gh/kyirejson/calisthenics-assets@main/images/push_demon_02.jpeg"
+  },
+  {
+    "id": "push_demon_03",
+    "name": "老派负重单臂俯卧撑",
+    "category": "push",
+    "step": 13,
+    "isDemon": true,
+    "source": "remote",
+    "imgFile": "https://cdn.jsdelivr.net/gh/kyirejson/calisthenics-assets@main/images/push_demon_03.jpeg"
+  },
+  {
+    "id": "push_demon_04",
+    "name": "超人俯卧撑",
+    "category": "push",
+    "step": 14,
+    "isDemon": true,
+    "source": "remote",
+    "imgFile": "https://cdn.jsdelivr.net/gh/kyirejson/calisthenics-assets@main/images/push_demon_04.jpeg"
+  },
+  {
+    "id": "push_demon_05",
+    "name": "单臂双杠屈臂撑",
+    "category": "push",
+    "step": 15,
+    "isDemon": true,
+    "source": "remote",
+    "imgFile": "https://cdn.jsdelivr.net/gh/kyirejson/calisthenics-assets@main/images/push_demon_05.jpeg"
+  },
+  {
+    "id": "push_demon_06",
+    "name": "行走俯卧撑",
+    "category": "push",
+    "step": 16,
+    "isDemon": true,
+    "source": "remote",
+    "imgFile": "https://cdn.jsdelivr.net/gh/kyirejson/calisthenics-assets@main/images/push_demon_06.jpeg"
+  },
+  {
+    "id": "squat_01",
+    "name": "肩倒立深蹲",
+    "category": "squat",
+    "step": 1,
+    "source": "original",
+    "imgFile": "original-images\\image00577.jpeg"
+  },
+  {
+    "id": "squat_02",
+    "name": "折刀深蹲",
+    "category": "squat",
+    "step": 2,
+    "source": "original",
+    "imgFile": "original-images\\image00579.jpeg"
+  },
+  {
+    "id": "squat_03",
+    "name": "支撑深蹲",
+    "category": "squat",
+    "step": 3,
+    "source": "original",
+    "imgFile": "original-images\\image00581.jpeg"
+  },
+  {
+    "id": "squat_04",
+    "name": "半深蹲",
+    "category": "squat",
+    "step": 4,
+    "source": "original",
+    "imgFile": "original-images\\image00583.jpeg"
+  },
+  {
+    "id": "squat_05",
+    "name": "标准深蹲",
+    "category": "squat",
+    "step": 5,
+    "source": "original",
+    "imgFile": "original-images\\image00585.jpeg"
+  },
+  {
+    "id": "squat_06",
+    "name": "窄距深蹲",
+    "category": "squat",
+    "step": 6,
+    "source": "original",
+    "imgFile": "original-images\\image00587.jpeg"
+  },
+  {
+    "id": "squat_07",
+    "name": "偏重深蹲",
+    "category": "squat",
+    "step": 7,
+    "source": "original",
+    "imgFile": "original-images\\image00589.jpeg"
+  },
+  {
+    "id": "squat_08",
+    "name": "单腿半深蹲",
+    "category": "squat",
+    "step": 8,
+    "source": "original",
+    "imgFile": "original-images\\image00591.jpeg"
+  },
+  {
+    "id": "squat_09",
+    "name": "单腿辅助深蹲",
+    "category": "squat",
+    "step": 9,
+    "source": "original",
+    "imgFile": "original-images\\image00593.jpeg"
+  },
+  {
+    "id": "squat_10",
+    "name": "单腿深蹲",
+    "category": "squat",
+    "step": 10,
+    "source": "original",
+    "imgFile": "original-images\\image00595.jpeg"
+  },
+  {
+    "id": "squat_demon_01",
+    "name": "单腿跳箱深蹲",
+    "category": "squat",
+    "step": 11,
+    "isDemon": true,
+    "source": "remote",
+    "imgFile": "https://cdn.jsdelivr.net/gh/kyirejson/calisthenics-assets@main/images/squat_demon_01.jpeg"
+  },
+  {
+    "id": "squat_demon_02",
+    "name": "老派负重单腿蹲",
+    "category": "squat",
+    "step": 12,
+    "isDemon": true,
+    "source": "remote",
+    "imgFile": "https://cdn.jsdelivr.net/gh/kyirejson/calisthenics-assets@main/images/squat_demon_02.jpeg"
+  },
+  {
+    "id": "squat_demon_03",
+    "name": "虾式深蹲",
+    "category": "squat",
+    "step": 13,
+    "isDemon": true,
+    "source": "remote",
+    "imgFile": "https://cdn.jsdelivr.net/gh/kyirejson/calisthenics-assets@main/images/squat_demon_03.jpeg"
+  },
+  {
+    "id": "squat_demon_04",
+    "name": "单腿立定跳远",
+    "category": "squat",
+    "step": 14,
+    "isDemon": true,
+    "source": "remote",
+    "imgFile": "https://cdn.jsdelivr.net/gh/kyirejson/calisthenics-assets@main/images/squat_demon_04.jpeg"
+  },
+  {
+    "id": "squat_demon_05",
+    "name": "西西弗斯柔式深蹲",
+    "category": "squat",
+    "step": 15,
+    "isDemon": true,
+    "source": "remote",
+    "imgFile": "https://cdn.jsdelivr.net/gh/kyirejson/calisthenics-assets@main/images/squat_demon_05.jpeg"
+  },
+  {
+    "id": "squat_demon_06",
+    "name": "团身跳",
+    "category": "squat",
+    "step": 16,
+    "isDemon": true,
+    "source": "remote",
+    "imgFile": "https://cdn.jsdelivr.net/gh/kyirejson/calisthenics-assets@main/images/squat_demon_06.jpeg"
+  },
+  {
+    "id": "pull_01",
+    "name": "垂直引体",
+    "category": "pull",
+    "step": 1,
+    "source": "original",
+    "imgFile": "original-images\\image00606.jpeg"
+  },
+  {
+    "id": "pull_02",
+    "name": "水平引体向上",
+    "category": "pull",
+    "step": 2,
+    "source": "original",
+    "imgFile": "original-images\\image00608.jpeg"
+  },
+  {
+    "id": "pull_03",
+    "name": "折刀引体向上",
+    "category": "pull",
+    "step": 3,
+    "source": "original",
+    "imgFile": "original-images\\image00610.jpeg"
+  },
+  {
+    "id": "pull_04",
+    "name": "半引体向上",
+    "category": "pull",
+    "step": 4,
+    "source": "original",
+    "imgFile": "original-images\\image00612.jpeg"
+  },
+  {
+    "id": "pull_05",
+    "name": "标准引体向上",
+    "category": "pull",
+    "step": 5,
+    "source": "original",
+    "imgFile": "original-images\\image00614.jpeg"
+  },
+  {
+    "id": "pull_06",
+    "name": "窄距引体向上",
+    "category": "pull",
+    "step": 6,
+    "source": "original",
+    "imgFile": "original-images\\image00616.jpeg"
+  },
+  {
+    "id": "pull_07",
+    "name": "偏重引体向上",
+    "category": "pull",
+    "step": 7,
+    "source": "original",
+    "imgFile": "original-images\\image00618.jpeg"
+  },
+  {
+    "id": "pull_08",
+    "name": "单臂半引体向上",
+    "category": "pull",
+    "step": 8,
+    "source": "original",
+    "imgFile": "original-images\\image00620.jpeg"
+  },
+  {
+    "id": "pull_09",
+    "name": "单臂辅助引体向上",
+    "category": "pull",
+    "step": 9,
+    "source": "original",
+    "imgFile": "original-images\\image00622.jpeg"
+  },
+  {
+    "id": "pull_10",
+    "name": "单臂引体向上",
+    "category": "pull",
+    "step": 10,
+    "source": "original",
+    "imgFile": "original-images\\image00624.jpeg"
+  },
+  {
+    "id": "pull_demon_01",
+    "name": "哨兵引体向上",
+    "category": "pull",
+    "step": 11,
+    "isDemon": true,
+    "source": "remote",
+    "imgFile": "https://cdn.jsdelivr.net/gh/kyirejson/calisthenics-assets@main/images/pull_demon_01.jpeg"
+  },
+  {
+    "id": "pull_demon_02",
+    "name": "仰卧直臂悬垂",
+    "category": "pull",
+    "step": 12,
+    "isDemon": true,
+    "source": "remote",
+    "imgFile": "https://cdn.jsdelivr.net/gh/kyirejson/calisthenics-assets@main/images/pull_demon_02.jpeg"
+  },
+  {
+    "id": "pull_demon_03",
+    "name": "吊环铁十字",
+    "category": "pull",
+    "step": 13,
+    "isDemon": true,
+    "source": "remote",
+    "imgFile": "https://cdn.jsdelivr.net/gh/kyirejson/calisthenics-assets@main/images/pull_demon_03.jpeg"
+  },
+  {
+    "id": "pull_demon_04",
+    "name": "吊环马耳他十字",
+    "category": "pull",
+    "step": 14,
+    "isDemon": true,
+    "source": "remote",
+    "imgFile": "https://cdn.jsdelivr.net/gh/kyirejson/calisthenics-assets@main/images/pull_demon_04.jpeg"
+  },
+  {
+    "id": "pull_demon_05",
+    "name": "无腿单臂攀绳",
+    "category": "pull",
+    "step": 15,
+    "isDemon": true,
+    "source": "remote",
+    "imgFile": "https://cdn.jsdelivr.net/gh/kyirejson/calisthenics-assets@main/images/pull_demon_05.jpeg"
+  },
+  {
+    "id": "pull_demon_06",
+    "name": "连续单杠翻身",
+    "category": "pull",
+    "step": 16,
+    "isDemon": true,
+    "source": "remote",
+    "imgFile": "https://cdn.jsdelivr.net/gh/kyirejson/calisthenics-assets@main/images/pull_demon_06.jpeg"
+  },
+  {
+    "id": "legRaise_01",
+    "name": "坐姿屈膝",
+    "category": "legRaise",
+    "step": 1,
+    "source": "original",
+    "imgFile": "original-images\\image00632.jpeg"
+  },
+  {
+    "id": "legRaise_02",
+    "name": "平卧抬膝",
+    "category": "legRaise",
+    "step": 2,
+    "source": "original",
+    "imgFile": "original-images\\image00634.jpeg"
+  },
+  {
+    "id": "legRaise_03",
+    "name": "平卧屈举腿",
+    "category": "legRaise",
+    "step": 3,
+    "source": "original",
+    "imgFile": "original-images\\image00636.jpeg"
+  },
+  {
+    "id": "legRaise_04",
+    "name": "平卧蛙举腿",
+    "category": "legRaise",
+    "step": 4,
+    "source": "original",
+    "imgFile": "original-images\\image00638.jpeg"
+  },
+  {
+    "id": "legRaise_05",
+    "name": "平卧直举腿",
+    "category": "legRaise",
+    "step": 5,
+    "source": "original",
+    "imgFile": "original-images\\image00641.jpeg"
+  },
+  {
+    "id": "legRaise_06",
+    "name": "悬垂屈膝",
+    "category": "legRaise",
+    "step": 6,
+    "source": "original",
+    "imgFile": "original-images\\image00643.jpeg"
+  },
+  {
+    "id": "legRaise_07",
+    "name": "悬垂屈举腿",
+    "category": "legRaise",
+    "step": 7,
+    "source": "original",
+    "imgFile": "original-images\\image00645.jpeg"
+  },
+  {
+    "id": "legRaise_08",
+    "name": "悬垂蛙举腿",
+    "category": "legRaise",
+    "step": 8,
+    "source": "original",
+    "imgFile": "original-images\\image00647.jpeg"
+  },
+  {
+    "id": "legRaise_09",
+    "name": "悬垂半举腿",
+    "category": "legRaise",
+    "step": 9,
+    "source": "original",
+    "imgFile": "original-images\\image00650.jpeg"
+  },
+  {
+    "id": "legRaise_10",
+    "name": "悬垂直举腿",
+    "category": "legRaise",
+    "step": 10,
+    "source": "original",
+    "imgFile": "original-images\\image00652.jpeg"
+  },
+  {
+    "id": "legRaise_demon_01",
+    "name": "悬垂 V 字举腿",
+    "category": "legRaise",
+    "step": 11,
+    "isDemon": true,
+    "source": "remote",
+    "imgFile": "https://cdn.jsdelivr.net/gh/kyirejson/calisthenics-assets@main/images/legRaise_demon_01.jpeg"
+  },
+  {
+    "id": "legRaise_demon_02",
+    "name": "地面直角撑",
+    "category": "legRaise",
+    "step": 12,
+    "isDemon": true,
+    "source": "remote",
+    "imgFile": "https://cdn.jsdelivr.net/gh/kyirejson/calisthenics-assets@main/images/legRaise_demon_02.jpeg"
+  },
+  {
+    "id": "legRaise_demon_03",
+    "name": "俄式反折高位撑",
+    "category": "legRaise",
+    "step": 13,
+    "isDemon": true,
+    "source": "remote",
+    "imgFile": "https://cdn.jsdelivr.net/gh/kyirejson/calisthenics-assets@main/images/legRaise_demon_03.jpeg"
+  },
+  {
+    "id": "legRaise_demon_04",
+    "name": "极端罗马椅悬空折叠",
+    "category": "legRaise",
+    "step": 14,
+    "isDemon": true,
+    "source": "remote",
+    "imgFile": "https://cdn.jsdelivr.net/gh/kyirejson/calisthenics-assets@main/images/legRaise_demon_04.jpeg"
+  },
+  {
+    "id": "legRaise_demon_05",
+    "name": "悬垂直举腿50次耐力挑战",
+    "category": "legRaise",
+    "step": 15,
+    "isDemon": true,
+    "source": "remote",
+    "imgFile": "https://cdn.jsdelivr.net/gh/kyirejson/calisthenics-assets@main/images/legRaise_demon_05.jpeg"
+  },
+  {
+    "id": "bridge_01",
+    "name": "短桥",
+    "category": "bridge",
+    "step": 1,
+    "source": "original",
+    "imgFile": "original-images\\image00659.jpeg"
+  },
+  {
+    "id": "bridge_02",
+    "name": "直桥",
+    "category": "bridge",
+    "step": 2,
+    "source": "original",
+    "imgFile": "original-images\\image00661.jpeg"
+  },
+  {
+    "id": "bridge_03",
+    "name": "高低桥",
+    "category": "bridge",
+    "step": 3,
+    "source": "original",
+    "imgFile": "original-images\\image00663.jpeg"
+  },
+  {
+    "id": "bridge_04",
+    "name": "顶桥",
+    "category": "bridge",
+    "step": 4,
+    "source": "original",
+    "imgFile": "original-images\\image00665.jpeg"
+  },
+  {
+    "id": "bridge_05",
+    "name": "半桥",
+    "category": "bridge",
+    "step": 5,
+    "source": "original",
+    "imgFile": "original-images\\image00667.jpeg"
+  },
+  {
+    "id": "bridge_06",
+    "name": "标准桥",
+    "category": "bridge",
+    "step": 6,
+    "source": "original",
+    "imgFile": "original-images\\image00669.jpeg"
+  },
+  {
+    "id": "bridge_07",
+    "name": "下行桥",
+    "category": "bridge",
+    "step": 7,
+    "source": "original",
+    "imgFile": "original-images\\image00671.jpeg"
+  },
+  {
+    "id": "bridge_08",
+    "name": "上行桥",
+    "category": "bridge",
+    "step": 8,
+    "source": "original",
+    "imgFile": "original-images\\image00674.jpeg"
+  },
+  {
+    "id": "bridge_09",
+    "name": "合桥",
+    "category": "bridge",
+    "step": 9,
+    "source": "original",
+    "imgFile": "original-images\\image00677.jpeg"
+  },
+  {
+    "id": "bridge_10",
+    "name": "铁板桥",
+    "category": "bridge",
+    "step": 10,
+    "source": "original",
+    "imgFile": "original-images\\image00680.jpeg"
+  },
+  {
+    "id": "bridge_demon_01",
+    "name": "高位台阶跌落反推铁板桥",
+    "category": "bridge",
+    "step": 11,
+    "isDemon": true,
+    "source": "remote",
+    "imgFile": "https://cdn.jsdelivr.net/gh/kyirejson/calisthenics-assets@main/images/bridge_demon_01.jpeg"
+  },
+  {
+    "id": "bridge_demon_02",
+    "name": "倒立与铁桥动力转换",
+    "category": "bridge",
+    "step": 12,
+    "isDemon": true,
+    "source": "remote",
+    "imgFile": "https://cdn.jsdelivr.net/gh/kyirejson/calisthenics-assets@main/images/bridge_demon_02.jpeg"
+  },
+  {
+    "id": "bridge_demon_03",
+    "name": "瑜伽蝎子式桥",
+    "category": "bridge",
+    "step": 13,
+    "isDemon": true,
+    "source": "remote",
+    "imgFile": "https://cdn.jsdelivr.net/gh/kyirejson/calisthenics-assets@main/images/bridge_demon_03.jpeg"
+  },
+  {
+    "id": "bridge_demon_04",
+    "name": "蜥蜴铁桥",
+    "category": "bridge",
+    "step": 14,
+    "isDemon": true,
+    "source": "remote",
+    "imgFile": "https://cdn.jsdelivr.net/gh/kyirejson/calisthenics-assets@main/images/bridge_demon_04.jpeg"
+  },
+  {
+    "id": "bridge_demon_05",
+    "name": "老派负重铁板桥",
+    "category": "bridge",
+    "step": 15,
+    "isDemon": true,
+    "source": "remote",
+    "imgFile": "https://cdn.jsdelivr.net/gh/kyirejson/calisthenics-assets@main/images/bridge_demon_05.jpeg"
+  },
+  {
+    "id": "hspu_01",
+    "name": "靠墙顶立",
+    "category": "hspu",
+    "step": 1,
+    "source": "original",
+    "imgFile": "original-images\\image00691.jpeg"
+  },
+  {
+    "id": "hspu_02",
+    "name": "乌鸦式",
+    "category": "hspu",
+    "step": 2,
+    "source": "original",
+    "imgFile": "original-images\\image00693.jpeg"
+  },
+  {
+    "id": "hspu_03",
+    "name": "靠墙倒立",
+    "category": "hspu",
+    "step": 3,
+    "source": "original",
+    "imgFile": "original-images\\image00695.jpeg"
+  },
+  {
+    "id": "hspu_04",
+    "name": "半倒立撑",
+    "category": "hspu",
+    "step": 4,
+    "source": "original",
+    "imgFile": "original-images\\image00697.jpeg"
+  },
+  {
+    "id": "hspu_05",
+    "name": "标准倒立撑",
+    "category": "hspu",
+    "step": 5,
+    "source": "original",
+    "imgFile": "original-images\\image00699.jpeg"
+  },
+  {
+    "id": "hspu_06",
+    "name": "窄距倒立撑",
+    "category": "hspu",
+    "step": 6,
+    "source": "original",
+    "imgFile": "original-images\\image00701.jpeg"
+  },
+  {
+    "id": "hspu_07",
+    "name": "偏重倒立撑",
+    "category": "hspu",
+    "step": 7,
+    "source": "original",
+    "imgFile": "original-images\\image00703.jpeg"
+  },
+  {
+    "id": "hspu_08",
+    "name": "单臂半倒立撑",
+    "category": "hspu",
+    "step": 8,
+    "source": "original",
+    "imgFile": "original-images\\image00705.jpeg"
+  },
+  {
+    "id": "hspu_09",
+    "name": "杠杆倒立撑",
+    "category": "hspu",
+    "step": 9,
+    "source": "original",
+    "imgFile": "original-images\\image00707.jpeg"
+  },
+  {
+    "id": "hspu_10",
+    "name": "单臂倒立撑",
+    "category": "hspu",
+    "step": 10,
+    "source": "original",
+    "imgFile": "original-images\\image00709.jpeg"
+  },
+  {
+    "id": "hspu_demon_01",
+    "name": "自由平衡单臂倒立撑",
+    "category": "hspu",
+    "step": 11,
+    "isDemon": true,
+    "source": "remote",
+    "imgFile": "https://cdn.jsdelivr.net/gh/kyirejson/calisthenics-assets@main/images/hspu_demon_01.jpeg"
+  },
+  {
+    "id": "hspu_demon_02",
+    "name": "虎立倒立臂屈伸",
+    "category": "hspu",
+    "step": 12,
+    "isDemon": true,
+    "source": "remote",
+    "imgFile": "https://cdn.jsdelivr.net/gh/kyirejson/calisthenics-assets@main/images/hspu_demon_02.jpeg"
+  },
+  {
+    "id": "hspu_demon_03",
+    "name": "双手倒立行走上下台阶",
+    "category": "hspu",
+    "step": 13,
+    "isDemon": true,
+    "source": "remote",
+    "imgFile": "https://cdn.jsdelivr.net/gh/kyirejson/calisthenics-assets@main/images/hspu_demon_03.jpeg"
+  },
+  {
+    "id": "hspu_demon_04",
+    "name": "双杠超深自由倒立撑",
+    "category": "hspu",
+    "step": 14,
+    "isDemon": true,
+    "source": "remote",
+    "imgFile": "https://cdn.jsdelivr.net/gh/kyirejson/calisthenics-assets@main/images/hspu_demon_04.jpeg"
+  },
+  {
+    "id": "hspu_demon_05",
+    "name": "不平衡高低物体单臂倒立",
+    "category": "hspu",
+    "step": 15,
+    "isDemon": true,
+    "source": "remote",
+    "imgFile": "https://cdn.jsdelivr.net/gh/kyirejson/calisthenics-assets@main/images/hspu_demon_05.jpeg"
+  },
+  {
+    "id": "aux_hang",
+    "name": "双手悬垂",
+    "category": "auxiliary",
+    "step": 1,
+    "source": "original",
+    "imgFile": "original-images\\image00770.jpeg"
+  },
+  {
+    "id": "aux_towelHang",
+    "name": "毛巾悬垂",
+    "category": "auxiliary",
+    "step": 2,
+    "source": "original",
+    "imgFile": "original-images\\image00774.jpeg"
+  },
+  {
+    "id": "aux_calfRaise",
+    "name": "单腿提踵",
+    "category": "auxiliary",
+    "step": 1,
+    "source": "remote",
+    "imgFile": "https://cdn.jsdelivr.net/gh/kyirejson/calisthenics-assets@main/images/aux_calfRaise.jpeg"
+  },
+  {
+    "id": "flagClutch_01",
+    "name": "悬吊抓",
+    "category": "flag_clutch",
+    "step": 1,
+    "source": "original",
+    "imgFile": "original-images\\image00811.jpeg"
+  },
+  {
+    "id": "flagClutch_02",
+    "name": "单蜷腿斜身抓",
+    "category": "flag_clutch",
+    "step": 2,
+    "source": "original",
+    "imgFile": "original-images\\image00812.jpeg"
+  },
+  {
+    "id": "flagClutch_03",
+    "name": "双蜷腿斜身抓",
+    "category": "flag_clutch",
+    "step": 3,
+    "source": "original",
+    "imgFile": "original-images\\image00813.jpeg"
+  },
+  {
+    "id": "flagClutch_04",
+    "name": "斜身抓",
+    "category": "flag_clutch",
+    "step": 4,
+    "source": "original",
+    "imgFile": "original-images\\image00814.jpeg"
+  },
+  {
+    "id": "flagClutch_05",
+    "name": "双蜷腿水平抓",
+    "category": "flag_clutch",
+    "step": 5,
+    "source": "original",
+    "imgFile": "original-images\\image00815.jpeg"
+  },
+  {
+    "id": "flagClutch_06",
+    "name": "单蜷腿水平抓",
+    "category": "flag_clutch",
+    "step": 6,
+    "source": "original",
+    "imgFile": "original-images\\image00816.jpeg"
+  },
+  {
+    "id": "flagClutch_07",
+    "name": "屈腿抓旗",
+    "category": "flag_clutch",
+    "step": 7,
+    "source": "original",
+    "imgFile": "original-images\\image00817.jpeg"
+  },
+  {
+    "id": "flagClutch_08",
+    "name": "抓旗",
+    "category": "flag_clutch",
+    "step": 8,
+    "source": "original",
+    "imgFile": "original-images\\image00776.jpeg"
+  },
+  {
+    "id": "flagPress_01",
+    "name": "支撑推举",
+    "category": "flag_press",
+    "step": 1,
+    "source": "original",
+    "imgFile": "original-images\\image00836.jpeg"
+  },
+  {
+    "id": "flagPress_02",
+    "name": "推举悬吊",
+    "category": "flag_press",
+    "step": 2,
+    "source": "original",
+    "imgFile": "original-images\\image00837.jpeg"
+  },
+  {
+    "id": "flagPress_03",
+    "name": "蹬地推举",
+    "category": "flag_press",
+    "step": 3,
+    "source": "original",
+    "imgFile": "original-images\\image00838.jpeg"
+  },
+  {
+    "id": "flagPress_04",
+    "name": "蜷腿竖直推举",
+    "category": "flag_press",
+    "step": 4,
+    "source": "original",
+    "imgFile": "original-images\\image00839.jpeg"
+  },
+  {
+    "id": "flagPress_05",
+    "name": "竖直推举",
+    "category": "flag_press",
+    "step": 5,
+    "source": "original",
+    "imgFile": "original-images\\image00840.jpeg"
+  },
+  {
+    "id": "flagPress_06",
+    "name": "单蜷腿扬旗",
+    "category": "flag_press",
+    "step": 6,
+    "source": "original",
+    "imgFile": "original-images\\image00841.jpeg"
+  },
+  {
+    "id": "flagPress_07",
+    "name": "屈腿扬旗",
+    "category": "flag_press",
+    "step": 7,
+    "source": "original",
+    "imgFile": "original-images\\image00842.jpeg"
+  },
+  {
+    "id": "flagPress_08",
+    "name": "扬旗",
+    "category": "flag_press",
+    "step": 8,
+    "source": "original",
+    "imgFile": "original-images\\image00776.jpeg"
+  },
+  {
+    "id": "hang_01",
+    "name": "水平悬吊",
+    "category": "hang_grip",
+    "step": 1,
+    "source": "original",
+    "imgFile": "original-images\\image00769.jpeg"
+  },
+  {
+    "id": "hang_02",
+    "name": "横杆悬吊",
+    "category": "hang_grip",
+    "step": 2,
+    "source": "original",
+    "imgFile": "original-images\\image00770.jpeg"
+  },
+  {
+    "id": "hang_03",
+    "name": "偏重悬吊",
+    "category": "hang_grip",
+    "step": 3,
+    "source": "original",
+    "imgFile": "original-images\\image00771.jpeg"
+  },
+  {
+    "id": "hang_04",
+    "name": "单臂横杆悬吊",
+    "category": "hang_grip",
+    "step": 4,
+    "source": "original",
+    "imgFile": "original-images\\image00772.jpeg"
+  },
+  {
+    "id": "hang_05",
+    "name": "毛巾悬吊",
+    "category": "hang_grip",
+    "step": 5,
+    "source": "original",
+    "imgFile": "original-images\\image00773.jpeg"
+  },
+  {
+    "id": "hang_06",
+    "name": "双毛巾悬吊",
+    "category": "hang_grip",
+    "step": 6,
+    "source": "original",
+    "imgFile": "original-images\\image00774.jpeg"
+  },
+  {
+    "id": "hang_07",
+    "name": "偏重毛巾悬吊",
+    "category": "hang_grip",
+    "step": 7,
+    "source": "original",
+    "imgFile": "original-images\\image00775.jpeg"
+  },
+  {
+    "id": "hang_08",
+    "name": "虎钳悬吊",
+    "category": "hang_grip",
+    "step": 8,
+    "source": "original",
+    "imgFile": "original-images\\image00776.jpeg"
+  },
+  {
+    "id": "trifecta_bridge",
+    "name": "桥式",
+    "category": "trifecta",
+    "step": 1,
+    "source": "original",
+    "imgFile": "original-images\\image00917.jpeg"
+  },
+  {
+    "id": "trifecta_lHold",
+    "name": "直角式",
+    "category": "trifecta",
+    "step": 2,
+    "source": "original",
+    "imgFile": "original-images\\image00930.jpeg"
+  },
+  {
+    "id": "trifecta_twist",
+    "name": "扭转式",
+    "category": "trifecta",
+    "step": 3,
+    "source": "original",
+    "imgFile": "original-images\\image00935.jpeg"
+  },
+  {
+    "id": "neck_01",
+    "name": "反颈桥预备式",
+    "category": "neck",
+    "step": 1,
+    "source": "original",
+    "imgFile": "original-images\\image00851.jpeg"
+  },
+  {
+    "id": "neck_02",
+    "name": "反颈桥标准式",
+    "category": "neck",
+    "step": 2,
+    "source": "original",
+    "imgFile": "original-images\\image00851.jpeg"
+  },
+  {
+    "id": "neck_03",
+    "name": "正颈桥预备式",
+    "category": "neck",
+    "step": 3,
+    "source": "original",
+    "imgFile": "original-images\\image00855.jpeg"
+  },
+  {
+    "id": "neck_04",
+    "name": "正颈桥标准式",
+    "category": "neck",
+    "step": 4,
+    "source": "original",
+    "imgFile": "original-images\\image00855.jpeg"
+  },
+  {
+    "id": "aux_fingertipPushup",
+    "name": "十指俯卧撑",
+    "category": "auxiliary",
+    "step": 2,
+    "source": "original",
+    "imgFile": "original-images\\image00786.jpeg"
+  },
+  {
+    "id": "pJump_01",
+    "name": "直蹦",
+    "category": "power_jump",
+    "step": 1,
+    "source": "original",
+    "imgFile": "original-images\\image01026.jpeg"
+  },
+  {
+    "id": "pJump_02",
+    "name": "深蹲跳",
+    "category": "power_jump",
+    "step": 2,
+    "source": "original",
+    "imgFile": "original-images\\image01029.jpeg"
+  },
+  {
+    "id": "pJump_03",
+    "name": "直跳",
+    "category": "power_jump",
+    "step": 3,
+    "source": "original",
+    "imgFile": "original-images\\image01032.jpeg"
+  },
+  {
+    "id": "pJump_04",
+    "name": "助跑跳",
+    "category": "power_jump",
+    "step": 4,
+    "source": "original",
+    "imgFile": "original-images\\image01035.jpeg"
+  },
+  {
+    "id": "pJump_05",
+    "name": "踢臀跳",
+    "category": "power_jump",
+    "step": 5,
+    "source": "original",
+    "imgFile": "original-images\\image01040.jpeg"
+  },
+  {
+    "id": "pJump_06",
+    "name": "拍膝团身跳",
+    "category": "power_jump",
+    "step": 6,
+    "source": "original",
+    "imgFile": "original-images\\image01043.jpeg"
+  },
+  {
+    "id": "pJump_07",
+    "name": "团身跳",
+    "category": "power_jump",
+    "step": 7,
+    "source": "original",
+    "imgFile": "original-images\\image01046.jpeg"
+  },
+  {
+    "id": "pJump_08",
+    "name": "抱腿团身跳",
+    "category": "power_jump",
+    "step": 8,
+    "source": "original",
+    "imgFile": "original-images\\image01049.jpeg"
+  },
+  {
+    "id": "pJump_09",
+    "name": "穿针跳",
+    "category": "power_jump",
+    "step": 9,
+    "source": "original",
+    "imgFile": "original-images\\image01052.jpeg"
+  },
+  {
+    "id": "pJump_10",
+    "name": "自杀跳",
+    "category": "power_jump",
+    "step": 10,
+    "source": "original",
+    "imgFile": "original-images\\image01058.jpeg"
+  },
+  {
+    "id": "pPush_01",
+    "name": "上斜俯卧弹",
+    "category": "power_push",
+    "step": 1,
+    "source": "original",
+    "imgFile": "original-images\\image01092.jpeg"
+  },
+  {
+    "id": "pPush_02",
+    "name": "跪姿俯卧弹",
+    "category": "power_push",
+    "step": 2,
+    "source": "original",
+    "imgFile": "original-images\\image01095.jpeg"
+  },
+  {
+    "id": "pPush_03",
+    "name": "俯卧弹",
+    "category": "power_push",
+    "step": 3,
+    "source": "original",
+    "imgFile": "original-images\\image01101.jpeg"
+  },
+  {
+    "id": "pPush_04",
+    "name": "拍掌俯卧撑",
+    "category": "power_push",
+    "step": 4,
+    "source": "original",
+    "imgFile": "original-images\\image01104.jpeg"
+  },
+  {
+    "id": "pPush_05",
+    "name": "拍胸俯卧撑",
+    "category": "power_push",
+    "step": 5,
+    "source": "original",
+    "imgFile": "original-images\\image01107.jpeg"
+  },
+  {
+    "id": "pPush_06",
+    "name": "拍髋俯卧撑",
+    "category": "power_push",
+    "step": 6,
+    "source": "original",
+    "imgFile": "original-images\\image01110.jpeg"
+  },
+  {
+    "id": "pPush_07",
+    "name": "囚徒俯卧撑",
+    "category": "power_push",
+    "step": 7,
+    "source": "original",
+    "imgFile": "original-images\\image01113.jpeg"
+  },
+  {
+    "id": "pPush_08",
+    "name": "半飞人俯卧撑",
+    "category": "power_push",
+    "step": 8,
+    "source": "original",
+    "imgFile": "original-images\\image01116.jpeg"
+  },
+  {
+    "id": "pPush_09",
+    "name": "全身俯卧弹",
+    "category": "power_push",
+    "step": 9,
+    "source": "original",
+    "imgFile": "original-images\\image01119.jpeg"
+  },
+  {
+    "id": "pPush_10",
+    "name": "飞人俯卧撑",
+    "category": "power_push",
+    "step": 10,
+    "source": "original",
+    "imgFile": "original-images\\image01122.jpeg"
+  },
+  {
+    "id": "pKip_01",
+    "name": "卷体起坐",
+    "category": "kip_up",
+    "step": 1,
+    "source": "original",
+    "imgFile": "original-images\\image01147.jpeg"
+  },
+  {
+    "id": "pKip_02",
+    "name": "卷体蹲起",
+    "category": "kip_up",
+    "step": 2,
+    "source": "original",
+    "imgFile": "original-images\\image01152.jpeg"
+  },
+  {
+    "id": "pKip_03",
+    "name": "肩上弹",
+    "category": "kip_up",
+    "step": 3,
+    "source": "original",
+    "imgFile": "original-images\\image01158.jpeg"
+  },
+  {
+    "id": "pKip_04",
+    "name": "桥打挺",
+    "category": "kip_up",
+    "step": 4,
+    "source": "original",
+    "imgFile": "original-images\\image01164.jpeg"
+  },
+  {
+    "id": "pKip_05",
+    "name": "坐打挺",
+    "category": "kip_up",
+    "step": 5,
+    "source": "original",
+    "imgFile": "original-images\\image01170.jpeg"
+  },
+  {
+    "id": "pKip_06",
+    "name": "半打挺",
+    "category": "kip_up",
+    "step": 6,
+    "source": "original",
+    "imgFile": "original-images\\image01176.jpeg"
+  },
+  {
+    "id": "pKip_07",
+    "name": "经典打挺",
+    "category": "kip_up",
+    "step": 7,
+    "source": "original",
+    "imgFile": "original-images\\image01182.jpeg"
+  },
+  {
+    "id": "pKip_08",
+    "name": "直腿打挺",
+    "category": "kip_up",
+    "step": 8,
+    "source": "original",
+    "imgFile": "original-images\\image01188.jpeg"
+  },
+  {
+    "id": "pKip_09",
+    "name": "武术打挺",
+    "category": "kip_up",
+    "step": 9,
+    "source": "original",
+    "imgFile": "original-images\\image01194.jpeg"
+  },
+  {
+    "id": "pKip_10",
+    "name": "鲤鱼打挺",
+    "category": "kip_up",
+    "step": 10,
+    "source": "original",
+    "imgFile": "original-images\\image01200.jpeg"
+  },
+  {
+    "id": "pFFlip_01",
+    "name": "肩滚",
+    "category": "front_flip",
+    "step": 1,
+    "source": "original",
+    "imgFile": "original-images\\image01235.jpeg"
+  },
+  {
+    "id": "pFFlip_02",
+    "name": "手滚",
+    "category": "front_flip",
+    "step": 2,
+    "source": "original",
+    "imgFile": "original-images\\image01241.jpeg"
+  },
+  {
+    "id": "pFFlip_03",
+    "name": "跳跃滚",
+    "category": "front_flip",
+    "step": 3,
+    "source": "original",
+    "imgFile": "original-images\\image01247.jpeg"
+  },
+  {
+    "id": "pFFlip_04",
+    "name": "倒立滚",
+    "category": "front_flip",
+    "step": 4,
+    "source": "original",
+    "imgFile": "original-images\\image01253.jpeg"
+  },
+  {
+    "id": "pFFlip_05",
+    "name": "背落前手翻",
+    "category": "front_flip",
+    "step": 5,
+    "source": "original",
+    "imgFile": "original-images\\image01259.jpeg"
+  },
+  {
+    "id": "pFFlip_06",
+    "name": "前手翻",
+    "category": "front_flip",
+    "step": 6,
+    "source": "original",
+    "imgFile": "original-images\\image01265.jpeg"
+  },
+  {
+    "id": "pFFlip_07",
+    "name": "鱼跃前手翻",
+    "category": "front_flip",
+    "step": 7,
+    "source": "original",
+    "imgFile": "original-images\\image01271.jpeg"
+  },
+  {
+    "id": "pFFlip_08",
+    "name": "背落前空翻",
+    "category": "front_flip",
+    "step": 8,
+    "source": "original",
+    "imgFile": "original-images\\image01277.jpeg"
+  },
+  {
+    "id": "pFFlip_09",
+    "name": "助跑前空翻",
+    "category": "front_flip",
+    "step": 9,
+    "source": "original",
+    "imgFile": "original-images\\image01283.jpeg"
+  },
+  {
+    "id": "pFFlip_10",
+    "name": "站立前空翻",
+    "category": "front_flip",
+    "step": 10,
+    "source": "original",
+    "imgFile": "original-images\\image01289.jpeg"
+  },
+  {
+    "id": "pBFlip_01",
+    "name": "后向肩滚",
+    "category": "back_flip",
+    "step": 1,
+    "source": "original",
+    "imgFile": "original-images\\image01334.jpeg"
+  },
+  {
+    "id": "pBFlip_02",
+    "name": "后向手滚",
+    "category": "back_flip",
+    "step": 2,
+    "source": "original",
+    "imgFile": "original-images\\image01340.jpeg"
+  },
+  {
+    "id": "pBFlip_03",
+    "name": "桥踢翻",
+    "category": "back_flip",
+    "step": 3,
+    "source": "original",
+    "imgFile": "original-images\\image01346.jpeg"
+  },
+  {
+    "id": "pBFlip_04",
+    "name": "猴子侧翻转",
+    "category": "back_flip",
+    "step": 4,
+    "source": "original",
+    "imgFile": "original-images\\image01352.jpeg"
+  },
+  {
+    "id": "pBFlip_05",
+    "name": "猴子后翻转",
+    "category": "back_flip",
+    "step": 5,
+    "source": "original",
+    "imgFile": "original-images\\image01360.jpeg"
+  },
+  {
+    "id": "pBFlip_06",
+    "name": "猴子翻转",
+    "category": "back_flip",
+    "step": 6,
+    "source": "original",
+    "imgFile": "original-images\\image01368.jpeg"
+  },
+  {
+    "id": "pBFlip_07",
+    "name": "后手翻",
+    "category": "back_flip",
+    "step": 7,
+    "source": "original",
+    "imgFile": "original-images\\image01376.jpeg"
+  },
+  {
+    "id": "pBFlip_08",
+    "name": "单臂后手翻",
+    "category": "back_flip",
+    "step": 8,
+    "source": "original",
+    "imgFile": "original-images\\image01382.jpeg"
+  },
+  {
+    "id": "pBFlip_09",
+    "name": "四点后空翻",
+    "category": "back_flip",
+    "step": 9,
+    "source": "original",
+    "imgFile": "original-images\\image01388.jpeg"
+  },
+  {
+    "id": "pBFlip_10",
+    "name": "站立后空翻",
+    "category": "back_flip",
+    "step": 10,
+    "source": "original",
+    "imgFile": "original-images\\image01394.jpeg"
+  },
+  {
+    "id": "pPull_01",
+    "name": "摆动晃身",
+    "category": "power_pull",
+    "step": 1,
+    "source": "original",
+    "imgFile": "original-images\\image01432.jpeg"
+  },
+  {
+    "id": "pPull_02",
+    "name": "跳跃引体向上",
+    "category": "power_pull",
+    "step": 2,
+    "source": "original",
+    "imgFile": "original-images\\image01435.jpeg"
+  },
+  {
+    "id": "pPull_03",
+    "name": "晃身引体向上",
+    "category": "power_pull",
+    "step": 3,
+    "source": "original",
+    "imgFile": "original-images\\image01439.jpeg"
+  },
+  {
+    "id": "pPull_04",
+    "name": "引体向上跳",
+    "category": "power_pull",
+    "step": 4,
+    "source": "original",
+    "imgFile": "original-images\\image01444.jpeg"
+  },
+  {
+    "id": "pPull_05",
+    "name": "拍掌引体向上",
+    "category": "power_pull",
+    "step": 5,
+    "source": "original",
+    "imgFile": "original-images\\image01448.jpeg"
+  },
+  {
+    "id": "pPull_06",
+    "name": "引胸向上",
+    "category": "power_pull",
+    "step": 6,
+    "source": "original",
+    "imgFile": "original-images\\image01452.jpeg"
+  },
+  {
+    "id": "pPull_07",
+    "name": "引髋向上",
+    "category": "power_pull",
+    "step": 7,
+    "source": "original",
+    "imgFile": "original-images\\image01456.jpeg"
+  },
+  {
+    "id": "pPull_08",
+    "name": "跳跃上翻",
+    "category": "power_pull",
+    "step": 8,
+    "source": "original",
+    "imgFile": "original-images\\image01460.jpeg"
+  },
+  {
+    "id": "pPull_09",
+    "name": "单杠上翻",
+    "category": "power_pull",
+    "step": 9,
+    "source": "original",
+    "imgFile": "original-images\\image01464.jpeg"
+  },
+  {
+    "id": "pPull_10",
+    "name": "双立臂",
+    "category": "power_pull",
+    "step": 10,
+    "source": "original",
+    "imgFile": "original-images\\image01468.jpeg"
+  },
+  {
+    "id": "fl_01",
+    "name": "收腿前水平",
+    "category": "front_lever",
+    "step": 1,
+    "source": "skill",
+    "imgFile": "skills-images\\fl_01.jpeg"
+  },
+  {
+    "id": "fl_02",
+    "name": "高级收腿前水平",
+    "category": "front_lever",
+    "step": 2,
+    "source": "skill",
+    "imgFile": "skills-images\\fl_02.jpeg"
+  },
+  {
+    "id": "fl_03",
+    "name": "单腿前水平",
+    "category": "front_lever",
+    "step": 3,
+    "source": "skill",
+    "imgFile": "skills-images\\fl_03.jpeg"
+  },
+  {
+    "id": "fl_04",
+    "name": "分腿前水平",
+    "category": "front_lever",
+    "step": 4,
+    "source": "skill",
+    "imgFile": "skills-images\\fl_04.jpeg"
+  },
+  {
+    "id": "fl_05",
+    "name": "完全前水平",
+    "category": "front_lever",
+    "step": 5,
+    "source": "skill",
+    "imgFile": "skills-images\\fl_05.jpeg"
+  },
+  {
+    "id": "pl_01",
+    "name": "俯撑前倾",
+    "category": "planche",
+    "step": 1,
+    "source": "skill",
+    "imgFile": "skills-images\\pl_01.jpeg"
+  },
+  {
+    "id": "pl_02",
+    "name": "收腿俯撑",
+    "category": "planche",
+    "step": 2,
+    "source": "skill",
+    "imgFile": "skills-images\\pl_02.jpeg"
+  },
+  {
+    "id": "pl_03",
+    "name": "高级收腿俯撑",
+    "category": "planche",
+    "step": 3,
+    "source": "skill",
+    "imgFile": "skills-images\\pl_03.jpeg"
+  },
+  {
+    "id": "pl_04",
+    "name": "分腿俯撑",
+    "category": "planche",
+    "step": 4,
+    "source": "skill",
+    "imgFile": "skills-images\\pl_04.jpeg"
+  },
+  {
+    "id": "pl_05",
+    "name": "完全俯撑",
+    "category": "planche",
+    "step": 5,
+    "source": "skill",
+    "imgFile": "skills-images\\pl_05.jpeg"
+  },
+  {
+    "id": "bl_01",
+    "name": "德式悬挂",
+    "category": "back_lever",
+    "step": 1,
+    "source": "skill",
+    "imgFile": "skills-images\\bl_01.jpeg"
+  },
+  {
+    "id": "bl_02",
+    "name": "收腿后水平",
+    "category": "back_lever",
+    "step": 2,
+    "source": "skill",
+    "imgFile": "skills-images\\bl_02.jpeg"
+  },
+  {
+    "id": "bl_03",
+    "name": "分腿后水平",
+    "category": "back_lever",
+    "step": 3,
+    "source": "skill",
+    "imgFile": "skills-images\\bl_03.jpeg"
+  },
+  {
+    "id": "bl_04",
+    "name": "完全后水平",
+    "category": "back_lever",
+    "step": 4,
+    "source": "skill",
+    "imgFile": "skills-images\\bl_04.jpeg"
+  },
+  {
+    "id": "mu_01",
+    "name": "高位引体",
+    "category": "muscle_up",
+    "step": 1,
+    "source": "skill",
+    "imgFile": "skills-images\\mu_01.jpeg"
+  },
+  {
+    "id": "mu_02",
+    "name": "直杠臂屈伸",
+    "category": "muscle_up",
+    "step": 2,
+    "source": "skill",
+    "imgFile": "skills-images\\mu_02.jpeg"
+  },
+  {
+    "id": "mu_03",
+    "name": "负功双力臂",
+    "category": "muscle_up",
+    "step": 3,
+    "source": "skill",
+    "imgFile": "skills-images\\mu_03.jpeg"
+  },
+  {
+    "id": "mu_04",
+    "name": "借力双力臂",
+    "category": "muscle_up",
+    "step": 4,
+    "source": "skill",
+    "imgFile": "skills-images\\mu_04.jpeg"
+  },
+  {
+    "id": "mu_05",
+    "name": "严格双力臂",
+    "category": "muscle_up",
+    "step": 5,
+    "source": "skill",
+    "imgFile": "skills-images\\mu_05.jpeg"
+  },
+  {
+    "id": "ls_01",
+    "name": "收腿L支撑",
+    "category": "l_sit",
+    "step": 1,
+    "source": "skill",
+    "imgFile": "skills-images\\ls_01.jpeg"
+  },
+  {
+    "id": "ls_02",
+    "name": "单腿L支撑",
+    "category": "l_sit",
+    "step": 2,
+    "source": "skill",
+    "imgFile": "skills-images\\ls_02.jpeg"
+  },
+  {
+    "id": "ls_03",
+    "name": "完全L支撑",
+    "category": "l_sit",
+    "step": 3,
+    "source": "skill",
+    "imgFile": "skills-images\\ls_03.jpeg"
+  },
+  {
+    "id": "ls_04",
+    "name": "分腿V支撑",
+    "category": "l_sit",
+    "step": 4,
+    "source": "skill",
+    "imgFile": "skills-images\\ls_04.jpeg"
+  },
+  {
+    "id": "ls_05",
+    "name": "完全V支撑",
+    "category": "l_sit",
+    "step": 5,
+    "source": "skill",
+    "imgFile": "skills-images\\ls_05.jpeg"
+  },
+  {
+    "id": "hf_01",
+    "name": "垂直旗帜",
+    "category": "human_flag",
+    "step": 1,
+    "source": "skill",
+    "imgFile": "skills-images\\hf_01.jpeg"
+  },
+  {
+    "id": "hf_02",
+    "name": "收腿人体旗帜",
+    "category": "human_flag",
+    "step": 2,
+    "source": "skill",
+    "imgFile": "skills-images\\hf_02.jpeg"
+  },
+  {
+    "id": "hf_03",
+    "name": "分腿人体旗帜",
+    "category": "human_flag",
+    "step": 3,
+    "source": "skill",
+    "imgFile": "skills-images\\hf_03.jpeg"
+  },
+  {
+    "id": "hf_04",
+    "name": "完全人体旗帜",
+    "category": "human_flag",
+    "step": 4,
+    "source": "skill",
+    "imgFile": "skills-images\\hf_04.jpeg"
+  }
+]

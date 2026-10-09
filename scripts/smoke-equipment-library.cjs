@@ -2,8 +2,8 @@
 const fs = require('node:fs'), path = require('node:path'), os = require('node:os');
 const assert = require('node:assert/strict');
 const ts = require('typescript');
-require.extensions['.ts'] = (m, f) => m._compile(ts.transpileModule(fs.readFileSync(f, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText, f);
-const { equipmentMuscleRegions, filterEquipmentMovements, getInitialEquipmentRegion } = require('../src/data/equipmentLibrary.ts');
+require('./lib/register-typescript.cjs')({ compilerOptions: { module: ts.ModuleKind.CommonJS }, extensions: ['.ts'] });
+const { equipmentMuscleRegions, filterEquipmentMovements, getInitialEquipmentRegion } = require('../src/domain/training/equipment/equipmentLibrary.ts');
 const { chromium } = require(process.env.PLAYWRIGHT_PATH || 'playwright');
 const groups = { chest: '胸部', shoulders: '肩部', back: '背部', legs: '腿部', core: '核心', arms: '手臂' };
 const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'uncover-equipment-muscle-ui-'));

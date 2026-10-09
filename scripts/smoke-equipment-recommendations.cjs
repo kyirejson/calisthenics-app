@@ -1,11 +1,11 @@
 // Isolated browser fixtures only; do not modify a user's profile or call a nutrition provider.
 const assert = require('node:assert/strict'), fs = require('node:fs'), os = require('node:os'), path = require('node:path');
 const ts = require('typescript');
-require.extensions['.ts'] = (m, f) => m._compile(ts.transpileModule(fs.readFileSync(f, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText, f);
+require('./lib/register-typescript.cjs')({ compilerOptions: { module: ts.ModuleKind.CommonJS }, extensions: ['.ts'] });
 const { equipmentMovements } = require('../src/data/equipmentMovements.ts');
 const { equipmentAdditions } = require('../src/data/equipmentAdditions.ts');
 const { recommendationTiers } = require('../src/data/equipmentRecommendations.ts');
-const { filterEquipmentMovements, initialEquipmentFilters } = require('../src/data/equipmentLibrary.ts');
+const { filterEquipmentMovements, initialEquipmentFilters } = require('../src/domain/training/equipment/equipmentLibrary.ts');
 const { chromium } = require(process.env.PLAYWRIGHT_PATH || 'playwright');
 const output = fs.mkdtempSync(path.join(os.tmpdir(), 'uncover-equipment-tiers-'));
 const cards = page => page.getByRole('button', { name: /^查看.*器械动作指导$/ });

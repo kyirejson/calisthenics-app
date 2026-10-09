@@ -1,5 +1,7 @@
 # 营养服务部署
 
+> 历史部署记录（当前功能已退场）。以下是旧版本当时的操作和验证，不是现行部署指南；服务端源码、Blueprint 和旧索引链已移除，当前 App 使用用户 API Key 与本机多资料库。不要执行下面的旧命令或按旧 URL 判断当前服务状态。当前架构见 [ARCHITECTURE.md](ARCHITECTURE.md)，知识库见 [local-knowledge-vault.md](local-knowledge-vault.md)。保留本文用于追溯，不重新部署或上传索引。
+
 已部署 `https://uncover-nutrition-api.onrender.com`。2026-09-30 已验证真实问答记餐草案、食材识别、标签抄录与条码查询；不等同于多用户生产安全和真机验收完成。
 
 2026-10-02 已更新至服务 1.5.0/Harness V2，实际营养模型问答通过。囚徒知识库已通过 Secret File 配置并验证加载 1,368 个检索片段，原书问答返回书名及行号出处。施瓦辛格来源已移除。

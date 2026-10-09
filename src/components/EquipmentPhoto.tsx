@@ -2,13 +2,13 @@ import { useEffect, useState } from 'react';
 import { Image, Modal, Pressable, SafeAreaView, StyleSheet, Text, View } from 'react-native';
 import { equipmentArtwork } from '../data/equipmentArtwork';
 import { getEquipmentMovement } from '../data/equipment';
-import { equipmentFocus, equipmentMuscleRegions } from '../data/equipmentLibrary';
+import { equipmentFocus, equipmentMuscleRegions } from '../domain/training/equipment/equipmentLibrary';
 import { EquipmentMuscleDiagram } from './EquipmentMuscleDiagram';
 import { appPalette as p } from '../theme';
 import { useReducedMotion } from './useProgressMotion';
 
 /** Generated equipment demos never share the privately imported book-image path. */
-export function EquipmentPhoto({ exerciseId, name, compact = false, thumbnailWidth = 100 }: { exerciseId: string; name: string; compact?: boolean; thumbnailWidth?: number }) {
+export function EquipmentPhoto({ exerciseId, name, compact = false, thumbnailWidth = 100, maxHeight }: { exerciseId: string; name: string; compact?: boolean; thumbnailWidth?: number; maxHeight?: number }) {
   const artwork = equipmentArtwork[exerciseId];
   const reducedMotion = useReducedMotion();
   const [expanded, setExpanded] = useState(false);
@@ -24,8 +24,8 @@ export function EquipmentPhoto({ exerciseId, name, compact = false, thumbnailWid
   }
   const picture = <Image accessible source={compact ? artwork.thumbnail : artwork.source} accessibilityLabel={name + '彩色人物动作示范：' + artwork.variant} style={s.image} resizeMode="contain" onError={() => setFailed(true)} />;
   if (compact) return <View testID={'equipment-thumbnail-' + exerciseId} style={[s.thumbnail, { width: thumbnailWidth }]}>{picture}</View>;
-  return <View style={s.gallery}>
-    <Pressable accessibilityRole="button" accessibilityLabel={'放大' + name + '动作示范图'} onPress={() => setExpanded(true)} style={[s.picture, { aspectRatio: artwork.width / artwork.height }]}>
+  return <View style={[s.gallery, maxHeight !== undefined && { marginTop: 0, marginBottom: 14 }]}>
+    <Pressable accessibilityRole="button" accessibilityLabel={'放大' + name + '动作示范图'} onPress={() => setExpanded(true)} style={[s.picture, maxHeight !== undefined ? { height: maxHeight } : { aspectRatio: artwork.width / artwork.height }]}>
       {picture}<View style={s.expand}><Text style={s.expandText}>⤢</Text></View>
     </Pressable>
     <View style={s.caption}><Text style={s.variant}>{artwork.variant}</Text><Text style={s.provenance}>写实示范 · 非实拍</Text></View>

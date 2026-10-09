@@ -1,13 +1,12 @@
 const assert = require('node:assert/strict');
-const fs = require('node:fs');
+
 const path = require('node:path');
 const { test } = require('node:test');
 const ts = require('typescript');
-require.extensions['.ts'] = (module, file) => module._compile(ts.transpileModule(fs.readFileSync(file, 'utf8'), {
-  compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 },
-}).outputText, file);
-const { summarizeMealSlots, resolveRecipeArtwork } = require('../src/nutrition/presentation.ts');
-const { RECIPES } = require('../src/nutrition/catalog.ts');
+require('./lib/register-typescript.cjs')({ compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 }, extensions: ['.ts'] });
+const { summarizeMealSlots } = require('../src/nutrition/presentation.ts');
+const { FOODS, getFood } = require('./fixtures/user-food.cjs');
+const { FOOD_DATA_VERSION } = require('../src/nutrition/foodData.ts');
 const { sumNutrients } = require('../src/nutrition/engine.ts');
 
 const entry = (id, slot, extra = {}) => ({
@@ -40,35 +39,4 @@ test('photo estimates remain visible in a mixed meal group and names are not dup
   assert.deepEqual(row.names, ['米饭']);
   assert.equal(row.containsPhoto, true);
   assert.equal(row.entries.length, 2);
-});
-test('all four recipe illustrations match the entire ingredient set', () => {
-  for (const id of ['soy-banana-oats', 'chicken-mushroom-pasta', 'chickpea-cucumber-snack', 'tilapia-bok-choy-rice']) {
-    const recipe = RECIPES.find(item => item.id === id);
-    assert.ok(recipe, id);
-    assert.equal(resolveRecipeArtwork(recipe.ingredients), id);
-    assert.equal(resolveRecipeArtwork([...recipe.ingredients].reverse().map(p => ({ ...p, grams: p.grams * 2 }))), id);
-  }
-});
-test('a changed, missing, custom or substituted ingredient never gets another recipe photo', () => {
-  const recipe = RECIPES.find(item => item.id === 'soy-banana-oats');
-  for (const portions of [[], recipe.ingredients.slice(1), [...recipe.ingredients, { foodId: 'milk-2pct', grams: 100 }],
-    recipe.ingredients.map(p => p.foodId === 'soy-milk' ? { foodId: 'milk-2pct', grams: p.grams } : p),
-    [...recipe.ingredients, { foodId: 'custom-food', grams: 10 }], [...recipe.ingredients, { foodId: 'canola-oil', grams: 2 }]]) {
-    assert.equal(resolveRecipeArtwork(portions), undefined);
-  }
-});
-test('oil is allowed only in the two cooked dishes and invalid portions do not produce photos', () => {
-  const recipe = RECIPES.find(item => item.id === 'tilapia-bok-choy-rice');
-  assert.equal(resolveRecipeArtwork(recipe.ingredients.filter(p => p.foodId !== 'canola-oil')), recipe.id);
-  for (const grams of [0, -1, NaN, Infinity]) {
-    assert.equal(resolveRecipeArtwork(recipe.ingredients.map((p, i) => i === 0 ? { ...p, grams } : p)), undefined);
-  }
-});
-test('recipe assets are separate, high-resolution square PNGs, not paired screenshots', () => {
-  for (const name of ['soy-banana-oats', 'chicken-mushroom-pasta', 'chickpea-cucumber-snack', 'tilapia-bok-choy-rice']) {
-    const image = fs.readFileSync(path.join(__dirname, '../assets/nutrition-recipes', name + '-v1.png'));
-    assert.equal(image.subarray(1, 4).toString('ascii'), 'PNG');
-    assert.ok(image.readUInt32BE(16) >= 512);
-    assert.equal(image.readUInt32BE(16), image.readUInt32BE(20));
-  }
 });

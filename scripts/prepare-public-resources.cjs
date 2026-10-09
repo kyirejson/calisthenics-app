@@ -25,3 +25,9 @@ for (const [directory, symbol] of [['supplemental-images', 'supplementalImageMap
 }
 fs.writeFileSync(path.join(privateDir, 'supplementalImageMaps.ts'), maps.join('\n') + '\n');
 console.log('Public resource fallbacks ready; existing book resources preserved.');
+require('./prepare-chat-pdf.cjs');
+const knowledgeDir = path.join(root, 'src/knowledge/private');
+fs.mkdirSync(knowledgeDir, { recursive: true });
+for(const [name,body] of Object.entries({
+ 'bundle.ts': "export { default } from '../referenceBundle';\n",
+}))if(!fs.existsSync(path.join(knowledgeDir,name)))fs.writeFileSync(path.join(knowledgeDir,name),body);

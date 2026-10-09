@@ -1,7 +1,7 @@
 import { useId } from 'react';
 import Svg, { Defs, G, LinearGradient, Path, Stop } from 'react-native-svg';
 import type { EquipmentGroup } from '../data/equipment';
-import type { MuscleZone } from '../data/equipmentLibrary';
+import type { MuscleZone } from '../domain/training/equipment/equipmentLibrary';
 
 type Part = { zone: MuscleZone; d: string };
 const front: Part[] = [

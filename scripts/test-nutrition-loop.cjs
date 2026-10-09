@@ -1,20 +1,18 @@
 const assert = require('node:assert/strict');
-const fs = require('node:fs');
+
 const { test } = require('node:test');
 const ts = require('typescript');
-require.extensions['.ts'] = (module, filename) => module._compile(ts.transpileModule(fs.readFileSync(filename, 'utf8'), {
-  compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 },
-}).outputText, filename);
-const { localWeightDate } = require('../src/data/weightTrend.ts');
-const { getWorkoutExercises } = require('../src/data/catalog.ts');
-const { getPlanDay, PRISONER_PLAN_ID } = require('../src/data/trainingPlans.ts');
-const { estimateStrengthSession } = require('../src/data/trainingPrescription.ts');
-const { FOODS, RECIPES, getFood } = require('../src/nutrition/catalog.ts');
+require('./lib/register-typescript.cjs')({ compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 }, extensions: ['.ts'] });
+const { localWeightDate } = require('../src/domain/weight/weightTrend.ts');
+const { getWorkoutExercises } = require('../src/domain/training/catalog.ts');
+const { getPlanDay, PRISONER_PLAN_ID } = require('../src/domain/training/trainingPlans.ts');
+const { estimateStrengthSession } = require('../src/domain/training/trainingPrescription.ts');
+const { FOODS, getFood } = require('./fixtures/user-food.cjs');
+const { FOOD_DATA_VERSION } = require('../src/nutrition/foodData.ts');
 const engine = require('../src/nutrition/engine.ts');
 const journalTools = require('../src/nutrition/journal.ts');
 const timeline = require('../src/nutrition/timeline.ts');
 const trainingTools = require('../src/nutrition/training.ts');
-const actions = require('../src/nutrition/adjustments.ts');
 const state = require('../src/nutrition/state.ts');
 const { dateAtNoon, offsetDate } = require('../src/nutrition/validation.ts');
 const now = '2026-09-28T04:00:00.000Z';
@@ -26,7 +24,7 @@ const training = { type: 'strength', title: '测试力量课', plannedMinutes: 4
 const clone = value => JSON.parse(JSON.stringify(value));
 function base(patch = {}) { return { ...engine.emptyNutritionJournal(), preferences: { ...engine.defaultNutritionPreferences(profile), screeningCompletedAt: now, ...patch } }; }
 function entry(id, slot = 'breakfast', grams = 150, onDate = date) {
-  return { id, date: onDate, slot, name: '米饭', source: 'manual', portions: [{ foodId: 'rice-cooked', grams }] };
+  return { id, date: onDate, slot, name: '米饭', source: 'manual', customFoods: FOODS, portions: [{ foodId: FOODS[0].id, grams }] };
 }
 function session(patch = {}) {
   return { id: 'strength', workoutId: 'prisonerA', workoutName: '测试课', startedAt: now, completedAt: now,
@@ -38,17 +36,11 @@ function capture(journal, onDate = date, body = profile) {
 function fullDay(journal, onDate, id, grams = 150) {
   return timeline.withMealLoggingConfirmation(journalTools.withIntakeEntry(journal, entry(id, 'lunch', grams, onDate), dateAtNoon(onDate).toISOString()), onDate, 'day', true, now);
 }
-function readyDraft(journal, request = { type: 'swap_meal', slot: 'dinner', focus: 'balanced' }, body = profile) {
-  const result = actions.prepareMealAdjustment(body, journal, training, date, request, now);
-  assert.equal(result.status, 'ready', result.message);
-  return result.draft;
-}
 
 test('old journal gains empty history and completeness without fabricating either', () => {
   const legacy = { version: 1, preferences: base().preferences, entries: [], mealRevisions: {} };
   const normalized = engine.normalizeNutritionJournal(legacy);
   assert.deepEqual(normalized.days, {});
-  assert.deepEqual(normalized.mealOverrides, {});
   assert.equal(normalized.trainingTime, 'unspecified');
 });
 
@@ -83,18 +75,6 @@ test('padded and legacy training dates count checked sets once without calorie c
   assert.equal(result.completedMinutes, 40);
   assert.equal(result.status, 'partial');
   assert.equal(Object.hasOwn(result, 'calories'), false);
-});
-
-test('training-time presets change meal content but not daily energy or macro targets', () => {
-  const morning = { ...base(), trainingTime: 'morning' };
-  const evening = { ...base(), trainingTime: 'evening' };
-  const a = actions.buildNutritionMenu(profile, morning, training, date);
-  const b = actions.buildNutritionMenu(profile, evening, training, date);
-  assert.deepEqual(a.targets, b.targets);
-  assert.notDeepEqual(a.meals, b.meals);
-  for (const menu of [a, b]) assert.deepEqual(menu.totals, engine.sumNutrients(menu.meals.map(meal => engine.calculatePortions(meal.ingredients))));
-  const rest = { ...training, type: 'recovery', status: 'rest' };
-  assert.deepEqual(actions.buildNutritionMenu(profile, morning, rest, date).meals, actions.buildNutritionMenu(profile, evening, rest, date).meals);
 });
 
 test('today target capture is idempotent and never manufactures a past target', () => {
@@ -214,113 +194,17 @@ test('confirmed zero-intake days are distinct from missing data, not silently di
 test('a new underweight measurement pauses targets even before recalibrating the old profile', () => {
   const body = { ...profile, weightHistory: [{ date: localWeightDate(new Date()), kg: 45 }] };
   assert.equal(engine.calculateTargets(body, base().preferences).status, 'blocked');
-  assert.equal(actions.prepareMealAdjustment(body, base(), training, date, { type: 'swap_meal', slot: 'dinner', focus: 'balanced' }, now).status, 'paused');
   const future = { ...profile, weightHistory: [{ date: '2099-01-01', kg: 45 }] };
   assert.equal(engine.calculateTargets(future, base().preferences).status, 'ready');
-});
-
-test('next-meal recommendations remain usable with optional logs without inventing an intake deficit', () => {
-  const result = actions.prepareMealAdjustment(profile, base(), training, date, { type: 'rebalance_meal', slot: 'dinner', focus: 'balanced' }, now);
-  assert.equal(result.status, 'ready');
-  assert.equal(result.draft.projectionLabel, '推荐菜单合计');
-  assert.match(result.draft.explanation, /未记录餐次保留未知/);
-  assert.match(result.draft.notes.join(' '), /不据空白记录计算全天摄入缺口/);
-});
-
-test('preview and explicit application change only the unconsumed selected meal', () => {
-  const original = base();
-  const before = clone(original);
-  const menu = actions.buildNutritionMenu(profile, original, training, date);
-  const draft = readyDraft(original);
-  assert.deepEqual(original, before);
-  const updated = actions.withAppliedMealDraft(original, profile, training, draft, now);
-  const after = actions.buildNutritionMenu(profile, updated, training, date);
-  assert.deepEqual(after.targets, menu.targets);
-  assert.deepEqual(after.meals.filter(meal => meal.slot !== 'dinner'), menu.meals.filter(meal => meal.slot !== 'dinner'));
-  assert.deepEqual(updated.entries, original.entries);
-  assert.deepEqual(after.meals.find(meal => meal.slot === 'dinner'), draft.meal);
-  assert.deepEqual(engine.normalizeNutritionJournal(clone(updated)).mealOverrides, updated.mealOverrides);
-});
-
-test('adaptation responds to intake while keeping one-meal energy changes moderate', () => {
-  function scenario(grams) {
-    let journal = journalTools.withIntakeEntry(base(), entry('breakfast', 'breakfast', grams), now);
-    journal = journalTools.withIntakeEntry(journal, entry('lunch', 'lunch', grams), now);
-    for (const slot of ['breakfast', 'lunch', 'snack']) journal = timeline.withMealLoggingConfirmation(journal, date, slot, true, now);
-    return { journal, draft: readyDraft(journal, { type: 'rebalance_meal', slot: 'dinner', focus: 'balanced' }) };
-  }
-  const low = scenario(100), high = scenario(1000);
-  assert.notDeepEqual(low.draft.meal, high.draft.meal);
-  for (const { draft } of [low, high]) {
-    assert.ok(draft.meal.nutrients.calories >= draft.original.nutrients.calories * 0.8);
-    assert.ok(draft.meal.nutrients.calories <= draft.original.nutrients.calories * 1.2);
-    assert.equal(draft.projectionLabel, '已记＋余下推荐');
-  }
-  assert.ok(high.draft.notes.some(note => note.includes('正常吃')));
 });
 
 test('consumed or explicitly finished slots cannot be overwritten by agent actions', () => {
   const request = { type: 'swap_meal', slot: 'dinner', focus: 'balanced' };
   const recorded = journalTools.withIntakeEntry(base(), entry('dinner', 'dinner'), now);
-  assert.equal(actions.prepareMealAdjustment(profile, recorded, training, date, request, now).status, 'no_candidate');
   const finished = timeline.withMealLoggingConfirmation(base(), date, 'dinner', true, now);
-  assert.equal(actions.prepareMealAdjustment(profile, finished, training, date, request, now).status, 'no_candidate');
-});
-
-test('pending drafts reject changed logs, goals, training and local-day rollover', () => {
-  const journal = base();
-  const draft = readyDraft(journal);
-  assert.throws(() => actions.withAppliedMealDraft(journalTools.withIntakeEntry(journal, entry('new'), now), profile, training, draft, now), /变化/);
-  const changedGoal = journalTools.withNutritionPreferences(journal, { ...journal.preferences, objective: 'muscle_gain' });
-  assert.throws(() => actions.withAppliedMealDraft(changedGoal, profile, training, draft, now), /变化/);
-  assert.throws(() => actions.withAppliedMealDraft(journal, profile, { ...training, completedSets: 1 }, draft, now), /变化/);
-  assert.throws(() => actions.withAppliedMealDraft(journal, profile, training, draft, dateAtNoon(offsetDate(date, 1)).toISOString()), /今天/);
-});
-
-test('forged quantities, recipe IDs and novel model actions are never applied', () => {
-  const journal = base();
-  const draft = readyDraft(journal);
-  const forged = clone(draft); forged.meal.ingredients[0].grams = 9999;
-  assert.throws(() => actions.withAppliedMealDraft(journal, profile, training, forged, now));
-  assert.equal(state.normalizeAgentAction({ type: 'delete_records', slot: 'dinner', focus: 'balanced' }), null);
-  assert.equal(state.normalizeAgentAction({ type: 'swap_meal', slot: 'dinner', focus: 'balanced', calories: 1200 }), null);
-});
-
-test('every action keeps allergen, vegetarian, time and budget constraints', () => {
-  const journal = base({ pattern: 'vegetarian', allergens: ['milk', 'egg', 'wheat', 'tree_nut'], maxCookingMinutes: 15, budget: 'economy' });
-  for (const focus of ['balanced', 'quick', 'protein']) {
-    const result = actions.prepareMealAdjustment(profile, journal, training, date, { type: 'swap_meal', slot: 'dinner', focus }, now);
-    if (result.status !== 'ready') { assert.equal(result.status, 'no_candidate'); continue; }
-    const recipe = RECIPES.find(item => item.id === result.draft.meal.recipeId);
-    assert.ok(recipe.vegetarian && recipe.minutes <= 15 && recipe.budget === 'economy');
-    assert.ok(result.draft.meal.ingredients.every(portion => !getFood(portion.foodId).allergens.some(allergen => journal.preferences.allergens.includes(allergen))));
-  }
 });
 
 test('risk, underage and unsupported diet patterns stop all automatic action tools', () => {
   for (const [body, journal] of [[{ ...profile, age: 17 }, base()], [profile, base({ riskFlags: ['pregnancy'] })], [profile, base({ pattern: 'keto' })]]) {
-    for (const type of ['swap_meal', 'rebalance_meal']) assert.equal(actions.prepareMealAdjustment(body, journal, training, date, { type, slot: 'dinner', focus: 'protein' }, now).status, 'paused');
   }
-});
-
-test('changing another meal revision leaves an applied slot intact and reset restores baseline', () => {
-  const original = base();
-  const draft = readyDraft(original);
-  let journal = actions.withAppliedMealDraft(original, profile, training, draft, now);
-  journal = journalTools.withMealRevision(journal, date, 'breakfast', 2);
-  assert.deepEqual(actions.buildNutritionMenu(profile, journal, training, date).meals.find(meal => meal.slot === 'dinner'), draft.meal);
-  journal = journalTools.withoutMealOverride(journal, date, 'dinner');
-  assert.deepEqual(actions.buildNutritionMenu(profile, journal, training, date).meals.find(meal => meal.slot === 'dinner'), actions.buildNutritionMenu(profile, original, training, date).meals.find(meal => meal.slot === 'dinner'));
-});
-
-test('invalid imported meal overlays and incomplete day flags fail closed', () => {
-  const original = base();
-  const draft = readyDraft(original);
-  const valid = actions.withAppliedMealDraft(original, profile, training, draft, now);
-  const bad = clone(valid);
-  bad.mealOverrides[date + ':dinner'].meal.nutrients.calories = 1;
-  bad.days[date] = { targetHistory: [], confirmedSlots: ['breakfast'], completedAt: now };
-  const normalized = engine.normalizeNutritionJournal(bad);
-  assert.deepEqual(normalized.mealOverrides, {});
-  assert.equal(normalized.days[date].completedAt, null);
 });

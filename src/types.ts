@@ -6,8 +6,7 @@ export type EquipmentSplit = 'bro' | 'ppl' | 'upper_lower';
 export type EquipmentSpec = 'mini' | 'light' | 'standard' | 'pro' | 'ultra';
 
 export type Profile = {
-  /** Derived read-only projection from the agent journal; never a second persisted plan. */
-  agentTrainingOverlay?: import('./agent/trainingOverlay').TrainingOverlay;
+  personalDetails?: import('./memory/profileMemory').PersonalDetails;
   name: string;
   sex: 'male' | 'female' | 'unspecified';
   age: number;
@@ -108,10 +107,24 @@ export type TrainingSession = {
   totalReps: number;
   kind?: 'strength' | 'running';
   distanceKm?: number;
+  runMode?: 'outdoor' | 'indoor';
+  distanceSource?: 'location' | 'manual' | 'steps' | 'unmeasured';
+  runStepCount?: number;
+  runStepLengthM?: number;
+  runDistancePartial?: boolean;
   calories?: number;
   route?: Array<{ latitude: number; longitude: number }>;
+  // Separate segments do not connect pauses or lost GPS into an invented route.
+  runSegments?: Array<Array<{ latitude: number; longitude: number }>>;
+  runSplits?: Array<{ km: number; seconds: number }>;
   quality?: 'solid' | 'hard' | 'pain';
   completion?: 'complete' | 'partial';
+  inProgress?: boolean;
+  resumeState?: {
+    items: import('./domain/training/trainingPrescription').PrescribedExercise[];
+    sets: Record<string, { reps: string; load?: string; rir?: string; completed: boolean; completedAt?: string }[]>;
+    warmupDone: boolean;
+  };
   trainingDate?: string;
   planSnapshot?: EquipmentPlanRecord;
   interactionEvents?: TrainingInteractionEvent[];
@@ -122,7 +135,7 @@ export type EquipmentPlanRecord = {
   schemaVersion: 2 | 3 | 4; revision: string; workoutId: string;
   // Read-only compatibility with old timed-session history; new records omit these.
   spec?: EquipmentSpec; budgetSeconds?: number;
-  estimate: import('./data/equipmentTimeline').EquipmentEstimate;
+  estimate: import('./domain/training/equipment/equipmentTimeline').EquipmentEstimate;
   targets: Array<{ id: string; sets: number; range?: [number, number]; restSeconds: number; rir?: number; perSide?: boolean; loadBasis?: 'machine' | 'total' | 'per_hand' | 'bodyweight' }>;
 };
 
@@ -131,12 +144,10 @@ export type DailyWorkoutEdits = Record<string, { date: string; workoutId: string
 export type Settings = {
   vibration: boolean;
   restSeconds: number;
-  runningGoal?: import('./data/runGoals').RunningGoal;
 };
 
 export type Route =
   | { name: 'tabs' }
   | { name: 'exercise'; exerciseId: string }
-  | { name: 'training'; workoutId: string; exerciseId?: string; setMultiplier?: number; rirTarget?: number; equipmentPlan?: import('./data/equipmentTraining').EquipmentSessionPlan }
-  | { name: 'run' }
+  | { name: 'training'; workoutId: string; exerciseId?: string; setMultiplier?: number; rirTarget?: number; equipmentPlan?: import('./domain/training/equipment/equipmentTraining').EquipmentSessionPlan }
   | { name: 'nutrition' };

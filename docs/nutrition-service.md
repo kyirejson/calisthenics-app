@@ -1,5 +1,7 @@
 # 本地营养 AI 服务
 
+> 历史实现记录（不是当前入口）。本文描述已移除的服务、拍照/标签识别和旧书籍索引；当前代码没有这些部署入口，`knowledge:build/check` 已改为现行 App 多库 Markdown 流程。不要使用本文的旧命令恢复退场功能。当前文档见 [ARCHITECTURE.md](ARCHITECTURE.md) 与 [local-knowledge-vault.md](local-knowledge-vault.md)。保留历史正文，未修改任何用户研究资料。
+
 服务支持本机开发和 Render 环境。Node 内置 HTTP/fetch 实现，无额外运行依赖。线上是否运行当前代码，需要在部署后另行验证。照片辅助识别和一般营养问答使用 DeepSeek；确定性的目标、菜单与已吃合计仍由客户端计算。
 
 2026-09-29 新增 `POST /v1/nutrition/read-label`（抄录包装标签，最多1800输出tokens）与 `POST /v1/nutrition/lookup-barcode`（Open Food Facts只读查询，不调用LLM）。协议、许可、计量与确认规则见 [食品库扩充说明](food-library-expansion-2026-09-29.md)。沿用本文的本机访问控制与上线边界。

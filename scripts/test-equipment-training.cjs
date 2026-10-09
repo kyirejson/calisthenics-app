@@ -1,17 +1,17 @@
 const assert = require('node:assert/strict');
 const { test } = require('node:test');
-const fs = require('node:fs'), ts = require('typescript');
-require.extensions['.ts'] = (m, f) => m._compile(ts.transpileModule(fs.readFileSync(f, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText, f);
-const training = require('../src/data/equipmentTraining.ts');
-const { equipmentPlanReview } = require('../src/data/equipmentPlanReview.ts');
-const { equipmentExecution } = require('../src/data/equipmentExecution.ts');
+const ts = require('typescript');
+require('./lib/register-typescript.cjs')({ compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 }, extensions: ['.ts'] });
+const training = require('../src/domain/training/equipment/equipmentTraining.ts');
+const { equipmentPlanReview } = require('../src/domain/training/equipment/equipmentPlanReview.ts');
+const { equipmentExecution } = require('../src/domain/training/equipment/equipmentExecution.ts');
 const { equipmentMovements } = require('../src/data/equipment.ts');
-const { getWeekSchedule, getPlanDay } = require('../src/data/trainingPlans.ts');
-const { getWorkoutExercises } = require('../src/data/catalog.ts');
-const { estimateEquipmentSession } = require('../src/data/equipmentTimeline.ts');
-const { getWarmupActions } = require('../src/data/trainingWarmup.ts');
-const { cleanSession, normalizeTrainingSessions } = require('../src/data/sessionRecords.ts');
-const { compareWithPrevious } = require('../src/data/trainingHistory.ts');
+const { getWeekSchedule, getPlanDay } = require('../src/domain/training/trainingPlans.ts');
+const { getWorkoutExercises } = require('../src/domain/training/catalog.ts');
+const { estimateEquipmentSession } = require('../src/domain/training/equipment/equipmentTimeline.ts');
+const { getWarmupActions } = require('../src/domain/training/trainingWarmup.ts');
+const { cleanSession, normalizeTrainingSessions } = require('../src/domain/training/sessionRecords.ts');
+const { compareWithPrevious } = require('../src/domain/training/trainingHistory.ts');
 const start = new Date(2026, 9, 1, 12);
 const profile = { name: 'QA', age: 30, sex: 'male', height: 175, weight: 75, goal: 'equipment', frequency: 6, equipmentSplit: 'ppl', experience: 'advanced', levels: {}, planStartedAt: start.toISOString(), planId: training.EQUIPMENT_PLAN_ID };
 test('split boundaries remove only unsupported split structures, preserving low-frequency consolidation', () => {
@@ -65,7 +65,7 @@ test('all split/frequency options allocate the same declarative weekly movement 
     const sums = {};
     for (const item of items) sums[item.id] = (sums[item.id] || 0) + item.targetSets;
     if (reference) assert.deepEqual(sums, reference); else reference = sums;
-    const expected = require('../src/data/equipmentDosePolicy.ts').equipmentWeeklyUnits.flatMap(unit => unit.doses);
+    const expected = require('../src/domain/training/equipment/equipmentDosePolicy.ts').equipmentWeeklyUnits.flatMap(unit => unit.doses);
     assert.equal(Object.values(sums).reduce((a, b) => a + b, 0), expected.reduce((sum, dose) => sum + dose.sets, 0));
   }
 });

@@ -6,9 +6,7 @@ const path = require('node:path');
 const ts = require('typescript');
 const { chromium } = require(process.env.PLAYWRIGHT_PATH || 'playwright');
 const { waitForNutritionPage } = require('./nutrition-smoke-utils.cjs');
-require.extensions['.ts'] = (module, file) => module._compile(ts.transpileModule(fs.readFileSync(file, 'utf8'), {
-  compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 },
-}).outputText, file);
+require('./lib/register-typescript.cjs')({ compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 }, extensions: ['.ts'] });
 const { emptyNutritionJournal, defaultNutritionPreferences } = require('../src/nutrition/engine.ts');
 const { withIntakeEntry } = require('../src/nutrition/journal.ts');
 const output = fs.mkdtempSync(path.join(os.tmpdir(), 'uncover-fitness-ui-'));
@@ -22,8 +20,8 @@ journal.preferences = { ...defaultNutritionPreferences(profile), screeningComple
 journal = withIntakeEntry(journal, { id: 'ui-breakfast', date: '2026-09-28', slot: 'breakfast', name: '燕麦牛奶与鸡蛋',
   source: 'manual', portions: [{ foodId: 'oats-dry', grams: 50 }, { foodId: 'milk-2pct', grams: 250 }] });
 const canvas = async (locator) => locator.evaluate(root => {
-  const inner = [root, ...root.querySelectorAll('div')].find(element => getComputedStyle(element).maxWidth === '440px' && getComputedStyle(element).paddingLeft === '16px');
-  if (!inner) throw new Error('Shared 440 / 16 canvas missing');
+  const inner = [root, ...root.querySelectorAll('div')].find(element => getComputedStyle(element).maxWidth === '440px' && ['16px', '20px'].includes(getComputedStyle(element).paddingLeft));
+  if (!inner) throw new Error('Shared 440px canvas missing');
   const style = getComputedStyle(inner), box = inner.getBoundingClientRect();
   return { width: box.width, x: box.x, inset: Number.parseFloat(style.paddingLeft) };
 });
@@ -60,7 +58,7 @@ const waitForPane = (page, testID) => page.waitForFunction(testID => {
         const profileBefore = await page.evaluate(() => JSON.parse(localStorage.getItem('user_profile')));
         const measurements = { training: await canvas(page.getByTestId('today-training-content')) };
         await noOverflow(page);
-        assert.equal(await page.getByText('今日', { exact: true }).first().evaluate(el => parseFloat(getComputedStyle(el).fontSize)), 22);
+        assert.equal(await page.getByText('今日', { exact: true }).first().evaluate(el => parseFloat(getComputedStyle(el).fontSize)), width < 350 ? 38 : 42);
         await page.waitForFunction(() => [...document.images].some(img => img.complete && img.naturalWidth === 628 && img.src.includes('image00559')));
         await page.screenshot({ path: path.join(output, `today-training-${width}.png`), animations: 'disabled' });
 
@@ -73,35 +71,32 @@ const waitForPane = (page, testID) => page.waitForFunction(testID => {
         await page.getByRole('button', { name: '搜索 / 自定义', exact: true }).click();
         await page.getByRole('button', { name: '关闭实际摄入编辑器', exact: true }).click();
 
-        await page.getByRole('tab', { name: '切换到跑步' }).click();
-        await waitForPane(page, 'today-running-page');
-        await page.getByTestId('running-distance').waitFor();
-        measurements.running = await canvas(page.getByTestId('running-content'));
-        assert.equal(await page.getByTestId('running-distance').innerText(), '0.00 km', 'No invented run distance');
-        await noOverflow(page); await page.screenshot({ path: path.join(output, `today-running-${width}.png`), animations: 'disabled' });
-
         await page.getByRole('tab', { name: '切换到训练' }).click();
         await waitForPane(page, 'today-training-page');
         await page.getByRole('button', { name: '开始今日训练  →', exact: true }).click();
         await page.getByTestId('training-screen-title').waitFor();
         measurements.session = await canvas(page.getByTestId('training-scroll'));
-        assert.equal(await page.getByTestId('training-screen-title').evaluate(el => parseFloat(getComputedStyle(el).fontSize)), 22);
-        assert.equal(await page.getByTestId('training-rest-time').evaluate(el => parseFloat(getComputedStyle(el).fontSize)), 56);
+        assert.equal(await page.getByTestId('training-screen-title').evaluate(el => parseFloat(getComputedStyle(el).fontSize)), 18);
         await noOverflow(page); await page.screenshot({ path: path.join(output, `training-active-${width}.png`), animations: 'disabled' });
         assert.equal(await page.evaluate(() => JSON.parse(localStorage.getItem('sessions')).length), 0, 'Opening training does not record a workout');
+        await page.getByRole('button', { name: '查看和修改训练组记录', exact: true }).click();
         const before = await page.getByRole('checkbox').count();
         await page.getByText('＋ 加一组', { exact: true }).click(); assert.equal(await page.getByRole('checkbox').count(), before + 1);
-        await page.getByLabel('第1组次', { exact: true }).fill('9');
+        await page.getByLabel('修改第1组次', { exact: true }).fill('9');
         await page.getByRole('checkbox', { name: '第1组完成', exact: true }).check();
         await page.waitForFunction(() => JSON.parse(localStorage.getItem('sessions')).length === 1);
         const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('sessions'))[0]);
         assert.equal(saved.exercises.length, 1); assert.equal(saved.exercises[0].sets.length, 1); assert.equal(saved.exercises[0].sets[0].reps, 9);
         assert.equal(saved.totalReps, 9);
+        await page.getByRole('button', { name: '关闭训练记录面板', exact: true }).click();
         const readRest = async () => (await page.getByTestId('training-rest-time').innerText()).split(':').reduce((minutes, seconds) => Number(minutes) * 60 + Number(seconds));
         const restBefore = await readRest();
-        await page.getByText('＋30 秒', { exact: true }).click();
+        await page.getByText('+30 秒', { exact: true }).click();
         assert.ok(await readRest() >= restBefore + 27, 'Extend the actual prescribed rest by 30 seconds');
+        await page.getByRole('button', { name: '结束休息', exact: true }).click();
+        await page.getByRole('button', { name: '查看和修改训练组记录', exact: true }).click();
         await page.getByRole('checkbox', { name: '第1组完成', exact: true }).uncheck();
+        await page.getByRole('button', { name: '关闭训练记录面板', exact: true }).click();
         await page.waitForFunction(() => JSON.parse(localStorage.getItem('sessions')).length === 0);
         await page.getByRole('button', { name: '查看当前动作指导', exact: true }).click();
         await page.getByRole('tab', { name: '资料原文与配图', exact: true }).click();
@@ -112,7 +107,7 @@ const waitForPane = (page, testID) => page.waitForFunction(testID => {
         await page.getByTestId('today-training-content').waitFor();
         assert.deepEqual(await page.evaluate(() => JSON.parse(localStorage.getItem('user_profile'))), profileBefore, 'UI checks do not change chosen stages or plan after normal migration');
 
-        for (const [key, measurement] of Object.entries(measurements)) { assert.equal(measurement.width, Math.min(width, 440), key); assert.equal(measurement.inset, 16, key); assert.equal(measurement.x, measurements.training.x, key); }
+        for (const [key, measurement] of Object.entries(measurements)) { assert.equal(measurement.width, Math.min(width, 440), key); assert.equal(measurement.inset, key === 'session' ? 20 : 16, key); assert.equal(measurement.x, measurements.training.x, key); }
         console.log(JSON.stringify({ viewport: width, ...measurements }));
       } finally { await context.close(); }
     }

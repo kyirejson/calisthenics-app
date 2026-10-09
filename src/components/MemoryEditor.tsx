@@ -1,0 +1,14 @@
+import { useEffect, useRef, useState } from 'react';
+import { Modal, KeyboardAvoidingView, Platform, Text, TextInput, Pressable, View } from 'react-native';
+import { editMemory, readOrInitializeMemory } from '../memory/operations';
+import { profileMarkdown } from '../memory/profileMemory';
+import { useAppStore } from '../store/AppStore';
+import { appPalette as c } from '../theme';
+export function MemoryEditor({onClose}:{onClose:()=>void}){
+ const {profile,ready}=useAppStore(state => ({ profile: state.profile, ready: state.ready }));
+ const [original,setOriginal]=useState<string|null>(null),[draft,setDraft]=useState(''),[error,setError]=useState(''),[busy,setBusy]=useState(false);
+ const saving=useRef(false),edited=useRef(false);
+ useEffect(()=>{if(!ready||edited.current)return;let active=true;void readOrInitializeMemory(profile?profileMarkdown(profile):null).then(value=>{if(active&&!edited.current){setOriginal(value??'');setDraft(value??'');}}).catch(reason=>{if(active)setError(String(reason));});return()=>{active=false;};},[ready,profile]);
+ const save=async()=>{if(saving.current||original===null)return;saving.current=true;setBusy(true);setError('');try{await editMemory({expectedMarkdown:original,oldText:original,newText:draft});onClose();}catch(reason){setError(reason instanceof Error?reason.message:'保存失败');}finally{saving.current=false;setBusy(false);}};
+ return <Modal visible animationType="slide" onRequestClose={()=>{if(!busy)onClose();}}><KeyboardAvoidingView style={{flex:1,backgroundColor:c.background,padding:20,paddingTop:44}} behavior={Platform.OS==='ios'?'padding':'height'}><Text style={{color:c.text,fontSize:22,fontWeight:'800'}}>个人记忆 · MEMORY.md</Text>{original===null?<Text style={{color:c.muted,marginTop:16}}>正在读取个人记忆…</Text>:!draft.trim()?<View style={{gap:12,marginTop:16}}><Text style={{color:c.muted}}>{profile?'记忆目前为空，可以从已有个人档案生成。':'尚未建立个人档案。可在“我的”填写，也可以直接在下面写入记忆。'}</Text>{profile?<Pressable accessibilityRole="button" disabled={busy} onPress={()=>{edited.current=true;setDraft(profileMarkdown(profile));}} style={{paddingVertical:12}}><Text style={{color:c.lime}}>从个人档案生成</Text></Pressable>:null}</View>:null}<TextInput placeholder="在这里编辑个人记忆" placeholderTextColor={c.muted} accessibilityLabel="个人记忆 Markdown" multiline editable={!busy&&original!==null} value={draft} onChangeText={value=>{edited.current=true;setDraft(value);}} style={{flex:1,color:c.text,fontSize:15,textAlignVertical:'top',marginVertical:16}}/>{error?<Text accessibilityRole="alert" style={{color:c.warning}}>{error}</Text>:null}<View style={{flexDirection:'row',gap:24}}><Pressable accessibilityRole="button" disabled={busy||original===null} onPress={()=>void save()} style={{padding:16}}><Text style={{color:c.lime}}>{busy?'保存中…':'保存记忆'}</Text></Pressable><Pressable accessibilityRole="button" disabled={busy} onPress={onClose} style={{padding:16}}><Text style={{color:c.text}}>关闭个人记忆</Text></Pressable></View></KeyboardAvoidingView></Modal>;
+}

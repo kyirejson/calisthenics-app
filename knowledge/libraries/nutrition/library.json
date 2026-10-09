@@ -1,0 +1,344 @@
+{
+  "version": 1,
+  "id": "nutrition",
+  "name": "运动营养与食物知识库",
+  "documents": [
+    {
+      "path": "00_运动营养·知识地图与食物速查.md",
+      "title": "🥗 运动营养与中国食物知识地图 · 核心导航",
+      "kind": "reference",
+      "sha256": "05019a2164ab9e22d61c86f82f82918c1985c3824bc5f2a41848b5079eba7a84",
+      "sourceSha256": "335d7437fb0636cec2834f7f4a9b8da4493ee8ee06c8483af0783c7cdf0e49dc"
+    },
+    {
+      "path": "01_基础食材物理常数库/01_谷薯主食类.md",
+      "title": "🍚 基础食材物理常数库 · 谷薯主食类",
+      "kind": "reference",
+      "sha256": "ef410b6770aa5cb4177330ff579607e6f541afa6d30a649755f00b504ff16738",
+      "sourceSha256": "ef410b6770aa5cb4177330ff579607e6f541afa6d30a649755f00b504ff16738"
+    },
+    {
+      "path": "01_基础食材物理常数库/02_肉类水产类.md",
+      "title": "🥩 基础食材物理常数库 · 肉类与水产海鲜类",
+      "kind": "reference",
+      "sha256": "5b1470b3865be534c2303e012d9e6dc056e447222cb16e4c924d928140d6c7c3",
+      "sourceSha256": "5b1470b3865be534c2303e012d9e6dc056e447222cb16e4c924d928140d6c7c3"
+    },
+    {
+      "path": "01_基础食材物理常数库/03_蛋乳豆制品类.md",
+      "title": "🥚 基础食材物理常数库 · 蛋类、乳制品与大豆豆制品类",
+      "kind": "reference",
+      "sha256": "212c9973a51495c42d9863c543ade0f85a4849c5bff992c2397d01cb91564ca1",
+      "sourceSha256": "212c9973a51495c42d9863c543ade0f85a4849c5bff992c2397d01cb91564ca1"
+    },
+    {
+      "path": "01_基础食材物理常数库/04_蔬菜菌藻类.md",
+      "title": "🥦 基础食材物理常数库 · 蔬菜与食用菌藻类",
+      "kind": "reference",
+      "sha256": "cd6a0038a140ff061801855621886ac52cb99283c9ea3cfc5663fc3b0685853f",
+      "sourceSha256": "cd6a0038a140ff061801855621886ac52cb99283c9ea3cfc5663fc3b0685853f"
+    },
+    {
+      "path": "01_基础食材物理常数库/05_水果与坚果油脂类.md",
+      "title": "🥑 基础食材物理常数库 · 水果、坚果与油脂类",
+      "kind": "reference",
+      "sha256": "4914ba4e29e7a4ade123dc25a0e3fab8f6394d701d52db509f2331522e1c02a3",
+      "sourceSha256": "4914ba4e29e7a4ade123dc25a0e3fab8f6394d701d52db509f2331522e1c02a3"
+    },
+    {
+      "path": "02_烹饪与外卖生存指南/01_外卖与食堂场景点单避坑.md",
+      "title": "🛵 烹饪与外卖生存指南 · 外卖与食堂场景点单避坑",
+      "kind": "reference",
+      "sha256": "0b63e0462aa49595c43c67b0f37078f298ff6884f411a8a34755d9eaae47bcd5",
+      "sourceSha256": "0b63e0462aa49595c43c67b0f37078f298ff6884f411a8a34755d9eaae47bcd5"
+    },
+    {
+      "path": "02_烹饪与外卖生存指南/02_家常中餐配方合成与吸油率换算.md",
+      "title": "🍳 烹饪与外卖生存指南 · 家常中餐配方合成与吸油率换算",
+      "kind": "reference",
+      "sha256": "7db2e3be3ded3c9d1913478f1a43becca5934aea4342393c4bca83cdbff4ed61",
+      "sourceSha256": "7db2e3be3ded3c9d1913478f1a43becca5934aea4342393c4bca83cdbff4ed61"
+    },
+    {
+      "path": "02_烹饪与外卖生存指南/03_火锅烧烤与社交聚餐生存指南.md",
+      "title": "🍲 烹饪与外卖生存指南 · 火锅、烧烤与社交聚餐生存指南",
+      "kind": "reference",
+      "sha256": "e89067cd1b7c547b8197db3bb83124c72111fb724c2a8f7124b5e2ae11105946",
+      "sourceSha256": "e89067cd1b7c547b8197db3bb83124c72111fb724c2a8f7124b5e2ae11105946"
+    },
+    {
+      "path": "03_运动营养学原理/01_营养时机与练前练后窗口.md",
+      "title": "⚡ 运动营养学原理 · 营养时机与练前练后窗口",
+      "kind": "reference",
+      "sha256": "aa230c8ca4416a96ba9435a8e8e81f2427eb8cc6a1ef4f2420f0d85779386a83",
+      "sourceSha256": "aa230c8ca4416a96ba9435a8e8e81f2427eb8cc6a1ef4f2420f0d85779386a83"
+    },
+    {
+      "path": "03_运动营养学原理/02_手掌份量估算法与生活化度量.md",
+      "title": "✋ 运动营养学原理 · 手掌份量估算法与生活化度量",
+      "kind": "reference",
+      "sha256": "35a5c33970ff70f4f5d04b073f42ed88e6a11d07de63294fd8d15757478bcec1",
+      "sourceSha256": "35a5c33970ff70f4f5d04b073f42ed88e6a11d07de63294fd8d15757478bcec1"
+    },
+    {
+      "path": "03_运动营养学原理/03_个体化能量代谢与三大宏量分配算法.md",
+      "title": "🧮 运动营养学原理 · 个体化能量代谢与三大宏量分配算法",
+      "kind": "reference",
+      "sha256": "a1afa0b107b267d5c0a987fa8d1e80f1d771a90e9df9b84a4afd0006f4bf57ed",
+      "sourceSha256": "a1afa0b107b267d5c0a987fa8d1e80f1d771a90e9df9b84a4afd0006f4bf57ed"
+    },
+    {
+      "path": "04_补剂与水分科学/01_运动健身补剂权威指南.md",
+      "title": "💊 补剂与水分科学 · 运动健身补剂权威指南与饮水管理",
+      "kind": "reference",
+      "sha256": "151963d495b4482ba410f92214332399e1e50c8f793393fcf859c011e5891cd4",
+      "sourceSha256": "151963d495b4482ba410f92214332399e1e50c8f793393fcf859c011e5891cd4"
+    },
+    {
+      "path": "04_补剂与水分科学/02_深海鱼油与Omega3全指南.md",
+      "title": "🐟 补剂与功能保健 · 深海鱼油与 Omega-3 权威科学全解",
+      "kind": "reference",
+      "sha256": "535e825c605a8b1ab3faa59c3a1f31ed4c49ccb2eca94c09464158ff412dc9f9",
+      "sourceSha256": "535e825c605a8b1ab3faa59c3a1f31ed4c49ccb2eca94c09464158ff412dc9f9"
+    },
+    {
+      "path": "04_补剂与水分科学/03_维生素与必需矿物质全解.md",
+      "title": "🧬 补剂与功能保健 · 维生素与必需矿物质权威科学全解",
+      "kind": "reference",
+      "sha256": "78178d4e8caafa2659333237889f9c844d23fdf18c10f67f66020f0247c5cc06",
+      "sourceSha256": "78178d4e8caafa2659333237889f9c844d23fdf18c10f67f66020f0247c5cc06"
+    },
+    {
+      "path": "04_补剂与水分科学/04_护肝护心与线粒体机能保健.md",
+      "title": "🫀 补剂与功能保健 · 护肝、护心与线粒体机能循证医学与毒理学全解",
+      "kind": "reference",
+      "sha256": "82c9fe86b19386a39e7bc985197ec760fd02cb7083757b0d6699db2a833a2f57",
+      "sourceSha256": "82c9fe86b19386a39e7bc985197ec760fd02cb7083757b0d6699db2a833a2f57"
+    },
+    {
+      "path": "04_补剂与水分科学/05_男性睾酮优化与循证促睾指南.md",
+      "title": "🔱 男性睾酮优化与循证促睾指南 · 拆穿\"壮阳神话\"的分子级真相",
+      "kind": "reference",
+      "sha256": "718faadab6b852b2beb590983cbda4a519404e46d4f43e91bf5f701712245a1c",
+      "sourceSha256": "718faadab6b852b2beb590983cbda4a519404e46d4f43e91bf5f701712245a1c"
+    },
+    {
+      "path": "05_临床营养与医学营养治疗/01_营养护理流程NCP与营养评估方法.md",
+      "title": "🏥 临床营养学 · 营养护理流程（NCP）与营养评估方法",
+      "kind": "reference",
+      "sha256": "a247e4ed355b49c381abf68d64627c030c009a11af457a476e4569bf6aae83c5",
+      "sourceSha256": "4431c696ffc4c2c3ad87a70d5d8a840493d29073d08058aab0c8e470ae69093f"
+    },
+    {
+      "path": "05_临床营养与医学营养治疗/02_糖尿病MNT与碳水化合物计算.md",
+      "title": "🏥 临床营养学 · 糖尿病医学营养治疗(MNT)与碳水化合物计算",
+      "kind": "reference",
+      "sha256": "9f94b69a336496074d4b14236c7f44db2e7387037d770b13227521f4c7647cfa",
+      "sourceSha256": "9f94b69a336496074d4b14236c7f44db2e7387037d770b13227521f4c7647cfa"
+    },
+    {
+      "path": "05_临床营养与医学营养治疗/03_心血管疾病脂质管理与治疗性饮食模式.md",
+      "title": "🏥 临床营养学 · 心血管疾病脂质管理与治疗性饮食模式",
+      "kind": "reference",
+      "sha256": "0ad62e7b104f95730381557d7d840488327453689b156e920c0e8e477ebe3908",
+      "sourceSha256": "0ad62e7b104f95730381557d7d840488327453689b156e920c0e8e477ebe3908"
+    },
+    {
+      "path": "05_临床营养与医学营养治疗/04_慢性肾脏病CKD与高尿酸血症MNT.md",
+      "title": "🧬 临床营养 · 慢性肾脏病CKD与高尿酸血症MNT",
+      "kind": "reference",
+      "sha256": "315ebe8dbf839d945e49ecbe881b7452b7cbb9cc0086e3312cb30d12a18e2d2f",
+      "sourceSha256": "315ebe8dbf839d945e49ecbe881b7452b7cbb9cc0086e3312cb30d12a18e2d2f"
+    },
+    {
+      "path": "05_临床营养与医学营养治疗/05_消化系统疾病与低FODMAP饮食治疗.md",
+      "title": "🧬 临床营养 · 消化系统疾病与低FODMAP饮食治疗",
+      "kind": "reference",
+      "sha256": "6f5d50582c75ef95bbb34cdadea889bcfa32560fe16d26d95a80c1113ec00e18",
+      "sourceSha256": "6f5d50582c75ef95bbb34cdadea889bcfa32560fe16d26d95a80c1113ec00e18"
+    },
+    {
+      "path": "05_临床营养与医学营养治疗/06_肿瘤营养与恶病质干预.md",
+      "title": "🧬 临床营养 · 肿瘤营养与恶病质干预",
+      "kind": "reference",
+      "sha256": "bf2b5c1d546a053ea58e9fe36d6989fee3d624c84472dbd117b574989546cc6d",
+      "sourceSha256": "bf2b5c1d546a053ea58e9fe36d6989fee3d624c84472dbd117b574989546cc6d"
+    },
+    {
+      "path": "05_临床营养与医学营养治疗/07_肠内营养EN与肠外营养PN临床实操.md",
+      "title": "🧬 临床营养 · 肠内营养(EN)与肠外营养(PN)实操",
+      "kind": "reference",
+      "sha256": "a692fa38ef63949118a202a5e4a7aab03ac0ddf1214d2534d2e8fb2cd9ad774d",
+      "sourceSha256": "a692fa38ef63949118a202a5e4a7aab03ac0ddf1214d2534d2e8fb2cd9ad774d"
+    },
+    {
+      "path": "06_行为心理与营养咨询/01_动机式访谈MI与营养咨询核心技术.md",
+      "title": "🗣️ 行为心理与营养咨询 · 动机式访谈(MI)与营养咨询核心沟通技术",
+      "kind": "reference",
+      "sha256": "74b5043e4412268bfeea76fbc2c97c8e0494323efaac2d555d151ea4ae82954e",
+      "sourceSha256": "74b5043e4412268bfeea76fbc2c97c8e0494323efaac2d555d151ea4ae82954e"
+    },
+    {
+      "path": "06_行为心理与营养咨询/02_进食障碍识别干预与饮食行为改变理论.md",
+      "title": "🧠 行为心理与营养咨询 · 进食障碍识别干预与饮食行为改变理论",
+      "kind": "reference",
+      "sha256": "c42d82a778f9c3e8468783f237afb0d1ccf7afc900715929e53da4f7ec44c274",
+      "sourceSha256": "21f079fd3ca45a07f0cea34618f2b8efd71e792011ee88060362f91c08e857a7"
+    },
+    {
+      "path": "06_行为心理与营养咨询/03_认知行为CBT与接纳承诺ACT在营养咨询中的应用.md",
+      "title": "🧠 认知行为CBT与接纳承诺ACT在营养咨询中的应用",
+      "kind": "reference",
+      "sha256": "9df1069fd5762c61df6fd8ece3c489dfa80564902e18dfd10b5fb05a9c859973",
+      "sourceSha256": "9df1069fd5762c61df6fd8ece3c489dfa80564902e18dfd10b5fb05a9c859973"
+    },
+    {
+      "path": "06_行为心理与营养咨询/04_直觉饮食正念进食与食物关系修复.md",
+      "title": "🧘‍♀️ 直觉饮食正念进食与食物关系修复",
+      "kind": "reference",
+      "sha256": "065cc4537a89fdcfdc179741d5be456105554bcc2cd51f18bc326d13096427cf",
+      "sourceSha256": "065cc4537a89fdcfdc179741d5be456105554bcc2cd51f18bc326d13096427cf"
+    },
+    {
+      "path": "06_行为心理与营养咨询/05_行为经济学助推微习惯与营养咨询标准化SOP.md",
+      "title": "🚀 行为经济学助推微习惯与营养咨询标准化SOP",
+      "kind": "reference",
+      "sha256": "a20a7c8a3b543940ac3b735a50f4abe5786d3b3ac0e1b6891f16321cee9dd93c",
+      "sourceSha256": "a20a7c8a3b543940ac3b735a50f4abe5786d3b3ac0e1b6891f16321cee9dd93c"
+    },
+    {
+      "path": "07_生物化学与代谢通路/01_碳水化合物代谢与能量通路.md",
+      "title": "🧬 生物化学 · 碳水化合物代谢与能量通路",
+      "kind": "reference",
+      "sha256": "7149d1fd86f7c1c172c9bf77024d227cc6c31ee64c239de26c057a8e5847c29f",
+      "sourceSha256": "7149d1fd86f7c1c172c9bf77024d227cc6c31ee64c239de26c057a8e5847c29f"
+    },
+    {
+      "path": "07_生物化学与代谢通路/02_脂质代谢与酮体生成.md",
+      "title": "🧬 生物化学 · 脂质代谢与酮体生成",
+      "kind": "reference",
+      "sha256": "e98f9ae8bb7871d4f2086ee8652b9dd81c2a16c230e37eee3cfe9c951b6c7140",
+      "sourceSha256": "e98f9ae8bb7871d4f2086ee8652b9dd81c2a16c230e37eee3cfe9c951b6c7140"
+    },
+    {
+      "path": "07_生物化学与代谢通路/03_氨基酸代谢与蛋白质周转.md",
+      "title": "🧬 生物化学 · 氨基酸代谢与蛋白质周转",
+      "kind": "reference",
+      "sha256": "65cbcc18b16f27c08b47979c82150852b1cc7a66b4c1b34169667709a35c9218",
+      "sourceSha256": "65cbcc18b16f27c08b47979c82150852b1cc7a66b4c1b34169667709a35c9218"
+    },
+    {
+      "path": "07_生物化学与代谢通路/04_激素调控网络与营养代谢整合.md",
+      "title": "🧬 生物化学 · 激素调控网络与营养代谢整合",
+      "kind": "reference",
+      "sha256": "e2def915a400da0813b1605ca096f938d9f274b1ac89a1ae16e492ebe4026991",
+      "sourceSha256": "e2def915a400da0813b1605ca096f938d9f274b1ac89a1ae16e492ebe4026991"
+    },
+    {
+      "path": "08_人体解剖与运动生理学/01_消化系统解剖与营养素吸收.md",
+      "title": "🧬 消化系统解剖与营养素吸收",
+      "kind": "reference",
+      "sha256": "a39011d6ddf8faf84d259f68438dd41d2adaa5682168462e481a914c68d9085e",
+      "sourceSha256": "a39011d6ddf8faf84d259f68438dd41d2adaa5682168462e481a914c68d9085e"
+    },
+    {
+      "path": "08_人体解剖与运动生理学/02_内分泌系统与代谢调控.md",
+      "title": "🧬 内分泌系统与代谢调控",
+      "kind": "reference",
+      "sha256": "36159ad4347a8f28bdaa55ac511d05e27c0bcd57cdc6ac828e34f09a37c4d380",
+      "sourceSha256": "36159ad4347a8f28bdaa55ac511d05e27c0bcd57cdc6ac828e34f09a37c4d380"
+    },
+    {
+      "path": "08_人体解剖与运动生理学/03_三大能量供应系统与运动代谢.md",
+      "title": "🧬 三大能量供应系统与运动代谢",
+      "kind": "reference",
+      "sha256": "924ab8c94389f2c33845e7924698b05dea2cef6231021c7d7001ca7e25d03de0",
+      "sourceSha256": "924ab8c94389f2c33845e7924698b05dea2cef6231021c7d7001ca7e25d03de0"
+    },
+    {
+      "path": "08_人体解剖与运动生理学/04_骨骼肌生理与运动适应.md",
+      "title": "🧬 骨骼肌生理与运动适应",
+      "kind": "reference",
+      "sha256": "232c7226d7ba87859386c69bd1965b6744410ee11ab329e3ccb66c55df5bbdc0",
+      "sourceSha256": "232c7226d7ba87859386c69bd1965b6744410ee11ab329e3ccb66c55df5bbdc0"
+    },
+    {
+      "path": "08_人体解剖与运动生理学/05_心肺系统与氧运输.md",
+      "title": "🧬 心肺系统与氧运输",
+      "kind": "reference",
+      "sha256": "ef5d9a20cf6ef1b7ed3e66a706692591cd4f5b3d36da4089b6018bb6c98fe534",
+      "sourceSha256": "ef5d9a20cf6ef1b7ed3e66a706692591cd4f5b3d36da4089b6018bb6c98fe534"
+    },
+    {
+      "path": "09_生命周期营养学/01_孕期与哺乳期营养.md",
+      "title": "🧬 妇幼营养 · 孕期与哺乳期营养代谢",
+      "kind": "reference",
+      "sha256": "28fe763c3d55810d0db4fe314711efc5bc4e827c44281b6e92da6c1b92d09591",
+      "sourceSha256": "28fe763c3d55810d0db4fe314711efc5bc4e827c44281b6e92da6c1b92d09591"
+    },
+    {
+      "path": "09_生命周期营养学/02_婴幼儿与儿童营养.md",
+      "title": "🍼 儿科营养 · 婴幼儿与儿童生长发育",
+      "kind": "reference",
+      "sha256": "32b33ecb06d27066146fd06bc280dfe4fa71aabfb5fc69b73e3741aeecc25889",
+      "sourceSha256": "32b33ecb06d27066146fd06bc280dfe4fa71aabfb5fc69b73e3741aeecc25889"
+    },
+    {
+      "path": "09_生命周期营养学/03_青少年营养与运动员发育.md",
+      "title": "🏃 生长发育 · 青少年营养与运动员特殊需求",
+      "kind": "reference",
+      "sha256": "39e8e6bd9c65ff2f88acc27e28823bbd636f11d9ddeef3d95eeb0144b9160a56",
+      "sourceSha256": "6619cfaba641c3950ceff68761601ac27234380a30f9de598fa201987f6effba"
+    },
+    {
+      "path": "09_生命周期营养学/04_老年营养与肌少症防治.md",
+      "title": "🧓 衰老生物学 · 老年营养与肌少症防治",
+      "kind": "reference",
+      "sha256": "0fb4c1170e75167164a007624300845172cb5ba5c128bea4ab4180aea8d56322",
+      "sourceSha256": "435f0df81241280deca8f911fd81ed1b0478f316af82bade1999a92adf87aa98"
+    },
+    {
+      "path": "10_研究方法与循证实践/01_循证营养学实践与PICO检索策略.md",
+      "title": "🔎 研究方法 · 循证营养学实践与PICO检索策略",
+      "kind": "reference",
+      "sha256": "f7ba07c191191263bb264e2f7ac76b9b925e8923efd8fef8f2d0b2194b80c2c6",
+      "sourceSha256": "f7ba07c191191263bb264e2f7ac76b9b925e8923efd8fef8f2d0b2194b80c2c6"
+    },
+    {
+      "path": "10_研究方法与循证实践/02_临床统计学基础与流行病学指标解读.md",
+      "title": "📊 研究方法 · 临床统计学基础与流行病学指标解读",
+      "kind": "reference",
+      "sha256": "4059a40ce8dbf73e872244b3974aa2828394ca77f67f9ad2ea115f1c89a7f2fd",
+      "sourceSha256": "4059a40ce8dbf73e872244b3974aa2828394ca77f67f9ad2ea115f1c89a7f2fd"
+    },
+    {
+      "path": "10_研究方法与循证实践/03_GRADE证据分级与系统评价森林图解析.md",
+      "title": "📈 研究方法 · GRADE证据分级与系统评价森林图解析",
+      "kind": "reference",
+      "sha256": "1ec39ad5e4d5d408770d0398ea8142b9f8498cdbe042b9d33fd6073f652f4e8f",
+      "sourceSha256": "1ec39ad5e4d5d408770d0398ea8142b9f8498cdbe042b9d33fd6073f652f4e8f"
+    },
+    {
+      "path": "11_食品安全法规与标签科学/01_食品营养标签法规与避坑速查.md",
+      "title": "🏷️ 食品营养标签法规与避坑速查",
+      "kind": "reference",
+      "sha256": "3876024c1e5be2b1fdd29d8aab9383d3380c7d2911c9875b00c39557310624de",
+      "sourceSha256": "3876024c1e5be2b1fdd29d8aab9383d3380c7d2911c9875b00c39557310624de"
+    },
+    {
+      "path": "11_食品安全法规与标签科学/02_食品安全防护与HACCP管理体系.md",
+      "title": "🦠 食品安全防护与HACCP管理体系",
+      "kind": "reference",
+      "sha256": "a9ee082dd20ea29243c4c34034bdd60525c2cb394ca2b6f546665cde3a63243d",
+      "sourceSha256": "a9ee082dd20ea29243c4c34034bdd60525c2cb394ca2b6f546665cde3a63243d"
+    },
+    {
+      "path": "11_食品安全法规与标签科学/03_保健食品监管法规与声称边界.md",
+      "title": "💊 保健食品监管法规与声称边界",
+      "kind": "reference",
+      "sha256": "56d842a7daec92bc875bbd0ece9be6a0b29b54b0a98bcc2849b2ad99da6f317e",
+      "sourceSha256": "56d842a7daec92bc875bbd0ece9be6a0b29b54b0a98bcc2849b2ad99da6f317e"
+    }
+  ],
+  "unresolvedLinks": []
+}

@@ -1,12 +1,10 @@
 const assert = require('node:assert/strict');
-const fs = require('node:fs');
+
 const { test } = require('node:test');
 const ts = require('typescript');
-require.extensions['.ts'] = (module, file) => module._compile(ts.transpileModule(fs.readFileSync(file, 'utf8'), {
-  compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 },
-}).outputText, file);
-const { recordWeight, summarizeWeightTrend, weightTrendWindow } = require('../src/data/weightTrend.ts');
-const { buildWeightChart, shortWeightDate } = require('../src/data/weightChart.ts');
+require('./lib/register-typescript.cjs')({ compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 }, extensions: ['.ts'] });
+const { recordWeight, summarizeWeightTrend, weightTrendWindow } = require('../src/domain/weight/weightTrend.ts');
+const { buildWeightChart, shortWeightDate } = require('../src/domain/weight/weightChart.ts');
 const today = new Date(2026, 8, 28, 12);
 const record = (date, kg) => ({ date, kg });
 

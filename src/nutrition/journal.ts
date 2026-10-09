@@ -1,14 +1,13 @@
 import { createIntakeEntry, normalizeCustomFood, normalizeNutritionPreferences, nutritionRevisionKey } from './engine';
-import type { Food, IntakeEntry, MealSlot, NutritionJournal, NutritionPreferences } from './types';
+import type { Food, IntakeEntry, NutritionJournal, NutritionPreferences } from './types';
 import { invalidateMealLogging } from './timeline';
-import { synchronizeMemoryAllergens } from './assistantMemory';
 
 export type IntakeInput = Omit<IntakeEntry, 'createdAt' | 'updatedAt' | 'foodDataVersion' | 'nutrients'>;
 
 export function withNutritionPreferences(current: NutritionJournal, input: NutritionPreferences): NutritionJournal {
   const preferences = normalizeNutritionPreferences(input);
   if (!preferences) throw new Error('营养档案不完整，请重新确认设置。');
-  return synchronizeMemoryAllergens({ ...current, preferences, manualAllergens: preferences.allergens });
+  return { ...current, preferences, manualAllergens: preferences.allergens };
 }
 
 /** A planned meal may be confirmed once per local date/slot; extra food is a manual entry. */
@@ -40,22 +39,6 @@ export function withoutIntakeEntry(current: NutritionJournal, id: string): Nutri
   if (!entry) return current;
   const next = invalidateMealLogging(current, entry.date, entry.slot);
   return { ...next, entries: next.entries.filter((item) => item.id !== id) };
-}
-
-export function withMealRevision(current: NutritionJournal, date: string, slot: MealSlot, revision: number): NutritionJournal {
-  const key = nutritionRevisionKey(date, slot);
-  if (!Number.isSafeInteger(revision) || revision < 0 || revision >= Number.MAX_SAFE_INTEGER) throw new Error('餐次候选编号无效，请重新选择。');
-  const mealOverrides = { ...current.mealOverrides };
-  delete mealOverrides[key];
-  return { ...current, mealRevisions: { ...current.mealRevisions, [key]: revision }, mealOverrides };
-}
-
-export function withoutMealOverride(current: NutritionJournal, date: string, slot: MealSlot): NutritionJournal {
-  const key = nutritionRevisionKey(date, slot);
-  if (!current.mealOverrides[key]) return current;
-  const mealOverrides = { ...current.mealOverrides };
-  delete mealOverrides[key];
-  return { ...current, mealOverrides };
 }
 
 export function withCustomFood(current: NutritionJournal, input: Food): NutritionJournal {

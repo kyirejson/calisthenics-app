@@ -40,6 +40,11 @@ yarn-error.*
 # generated native folders
 /ios
 /android
+/modules/uncover-running/android/build/
+/modules/uncover-running/android/.gradle/
+/modules/uncover-chat-files/android/build/
+/modules/uncover-chat-files/android/.gradle/
+/public/chat-pdf/
 
 # User-supplied book excerpts and attachments for local debugging only.
 # Do not upload without confirming publication rights.
@@ -59,8 +64,10 @@ credentials.json
 /apk-url.txt
 /*.apk
 /*.aab
-# Local book retrieval index; do not publish copyrighted source text.
+# Retired server caches and extra private libraries stay local; two explicitly approved libraries are public.
 /server/private/
-# Private licensed wake models; build-time opt-in, not part of the public knowledge release.
-/modules/uncover-copilot/android/src/main/assets/*.ppn
-/modules/uncover-copilot/android/src/main/assets/*.pv
+/knowledge/libraries/*
+!/knowledge/libraries/nutrition/
+!/knowledge/libraries/prisoner/
+/knowledge/sources.local.json
+/src/knowledge/private/

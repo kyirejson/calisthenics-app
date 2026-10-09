@@ -1,0 +1,1554 @@
+[
+  {
+    "id": "push_demon_01",
+    "name": "单臂击掌俯卧撑",
+    "nameEn": "One-Arm Clapping Push-ups",
+    "category": "push",
+    "categoryLabel": "俯卧撑",
+    "step": 11,
+    "isDemon": true,
+    "demonLabel": "魔鬼级",
+    "stepBadgeText": "魔鬼第 1 式",
+    "source": "第一册第五章变式",
+    "riskLevel": "high",
+    "equipment": [
+      "地面"
+    ],
+    "equipmentTags": [
+      "floor"
+    ],
+    "purpose": "俯卧撑弹震式与纯力量的终极结合，单臂推起身体腾空并在半空中击掌",
+    "keyPoints": [
+      "单手支撑，双脚分开稳固三角底座",
+      "身体笔直下潜至胸部离地面一拳",
+      "倾注全身爆发力单臂将躯干暴发推离地面，在腾空瞬间另一只手快速击掌并回防接住身体",
+      "极度考验神经反射与推力峰值做功"
+    ],
+    "commonIssues": [
+      {
+        "problem": "落地冲击过大",
+        "fix": "单臂接住地面时肘关节必须微屈顺势缓冲，严禁直臂硬碰"
+      }
+    ],
+    "standards": {
+      "beginner": "1组 × 1次 (每侧)",
+      "intermediate": "2组 × 3次",
+      "upgrade": "2组 × 6次"
+    },
+    "defaultPrescription": {
+      "sets": 3,
+      "repRange": [
+        1,
+        3
+      ],
+      "restSeconds": 150,
+      "tempoDescription": "蓄力下潜·极限爆发击掌",
+      "rirTarget": 2
+    }
+  },
+  {
+    "id": "push_demon_02",
+    "name": "蜥蜴俯卧撑",
+    "nameEn": "Lizard Push-ups",
+    "category": "push",
+    "categoryLabel": "俯卧撑",
+    "step": 12,
+    "isDemon": true,
+    "demonLabel": "魔鬼级",
+    "stepBadgeText": "魔鬼第 2 式",
+    "source": "第一册第五章变式",
+    "riskLevel": "high",
+    "equipment": [
+      "地面"
+    ],
+    "equipmentTags": [
+      "floor"
+    ],
+    "purpose": "对角单手单脚悬空俯卧撑，摧毁性的核心抗旋转与单侧推力掌控",
+    "keyPoints": [
+      "一臂向前完全平伸悬空，对侧单腿向后上方抬起悬空",
+      "仅靠单手单脚对角线支撑身体",
+      "缓慢屈肘下降至胸口几乎贴地，暂停一秒再纯力量推回",
+      "两侧对称练习"
+    ],
+    "commonIssues": [
+      {
+        "problem": "骨盆剧烈倾斜翻转",
+        "fix": "核心如钢板紧绷，下背部与臀肌持续施加稳定力矩"
+      }
+    ],
+    "standards": {
+      "beginner": "1组 × 2次 (每侧)",
+      "intermediate": "2组 × 5次",
+      "upgrade": "2组 × 10次"
+    },
+    "defaultPrescription": {
+      "sets": 3,
+      "repRange": [
+        2,
+        5
+      ],
+      "restSeconds": 120,
+      "tempoDescription": "2秒下·1秒停·2秒上",
+      "rirTarget": 2
+    }
+  },
+  {
+    "id": "push_demon_03",
+    "name": "老派负重单臂俯卧撑",
+    "nameEn": "Weighted One-Arm Push-ups",
+    "category": "push",
+    "categoryLabel": "俯卧撑",
+    "step": 13,
+    "isDemon": true,
+    "demonLabel": "魔鬼级",
+    "stepBadgeText": "魔鬼第 3 式",
+    "source": "第一册第五章更上一层楼",
+    "riskLevel": "high",
+    "equipment": [
+      "负重哑铃/铁块"
+    ],
+    "equipmentTags": [
+      "support"
+    ],
+    "purpose": "背手手持沉重哑铃或重物做标准单臂俯卧撑，真正铁人级别的终极推力",
+    "keyPoints": [
+      "背在身后的手紧握哑铃或重物置于背部中轴",
+      "支撑手稳固支撑，双脚分开略宽于髋部",
+      "匀速缓慢下潜，杜绝任何身体扭曲代偿",
+      "液压机般平稳推回顶点"
+    ],
+    "commonIssues": [
+      {
+        "problem": "重物滑落或偏沉",
+        "fix": "选用稳固哑铃贴紧后背中线，先从轻负重起步"
+      }
+    ],
+    "standards": {
+      "beginner": "1组 × 1次 (每侧)",
+      "intermediate": "2组 × 3次",
+      "upgrade": "2组 × 5次"
+    },
+    "defaultPrescription": {
+      "sets": 3,
+      "repRange": [
+        1,
+        3
+      ],
+      "restSeconds": 150,
+      "tempoDescription": "3秒下·1秒停·2秒上",
+      "rirTarget": 2
+    }
+  },
+  {
+    "id": "push_demon_04",
+    "name": "超人俯卧撑",
+    "nameEn": "Superman Push-ups",
+    "category": "push",
+    "categoryLabel": "俯卧撑",
+    "step": 14,
+    "isDemon": true,
+    "demonLabel": "魔鬼级",
+    "stepBadgeText": "魔鬼第 4 式",
+    "source": "第一册第五章变式",
+    "riskLevel": "high",
+    "equipment": [
+      "地面"
+    ],
+    "equipmentTags": [
+      "floor"
+    ],
+    "purpose": "双手平放于头顶前方极远地板，超长力臂极大压迫胸小肌、上胸部与背阔肌",
+    "keyPoints": [
+      "双手向前大幅度伸出超出头部数尺，手臂接近完全平伸",
+      "脚尖着地，身体紧绷如长矛",
+      "小幅度缓慢屈臂下沉胸腔，再以极长力矩纯胸背肌力强力推起",
+      "核心与腰背全程锁紧"
+    ],
+    "commonIssues": [
+      {
+        "problem": "腰椎下塌塌陷",
+        "fix": "腹肌紧缩保持骨盆后倾，力臂过长时先缩短伸展距离"
+      }
+    ],
+    "standards": {
+      "beginner": "1组 × 3次",
+      "intermediate": "2组 × 6次",
+      "upgrade": "2组 × 15次"
+    },
+    "defaultPrescription": {
+      "sets": 3,
+      "repRange": [
+        3,
+        6
+      ],
+      "restSeconds": 120,
+      "tempoDescription": "2秒下·1秒停·2秒上",
+      "rirTarget": 2
+    }
+  },
+  {
+    "id": "push_demon_05",
+    "name": "单臂双杠屈臂撑",
+    "nameEn": "One-Arm Dips",
+    "category": "push",
+    "categoryLabel": "俯卧撑",
+    "step": 15,
+    "isDemon": true,
+    "demonLabel": "魔鬼级",
+    "stepBadgeText": "魔鬼第 5 式",
+    "source": "第一册第五章变式与更上一层楼",
+    "riskLevel": "high",
+    "equipment": [
+      "稳固双杠/单杠"
+    ],
+    "equipmentTags": [
+      "bar",
+      "support"
+    ],
+    "purpose": "单臂支撑全身垂直下压屈伸，考验极强的肘关节韧带与肱三头肌单侧爆发力",
+    "keyPoints": [
+      "单手紧握单杠或稳固双杠一侧，身体悬空垂直微倾",
+      "非发力手臂紧贴躯干平衡",
+      "控制下降至上臂与地面接近平行",
+      "纯单臂向后下压将身体推回原位"
+    ],
+    "commonIssues": [
+      {
+        "problem": "肩关节不稳摇晃",
+        "fix": "全程沉肩锁紧肩胛下压肌群，避免在最低点失控自由落体"
+      }
+    ],
+    "standards": {
+      "beginner": "1组 × 1次 (每侧)",
+      "intermediate": "2组 × 3次",
+      "upgrade": "2组 × 6次"
+    },
+    "defaultPrescription": {
+      "sets": 3,
+      "repRange": [
+        1,
+        3
+      ],
+      "restSeconds": 150,
+      "tempoDescription": "2秒下·1秒停·2秒上",
+      "rirTarget": 2
+    }
+  },
+  {
+    "id": "push_demon_06",
+    "name": "行走俯卧撑",
+    "nameEn": "Walking Push-ups",
+    "category": "push",
+    "categoryLabel": "俯卧撑",
+    "step": 16,
+    "isDemon": true,
+    "demonLabel": "魔鬼级",
+    "stepBadgeText": "魔鬼第 6 式",
+    "source": "第四册额外章节二·十二金刚",
+    "riskLevel": "high",
+    "equipment": [
+      "平整开阔地面"
+    ],
+    "equipmentTags": [
+      "floor"
+    ],
+    "purpose": "双手交替前后行走做推力，迫使胸肌与三角肌从多变未知角度承受压力",
+    "keyPoints": [
+      "标准俯卧撑姿势下潜一次推起",
+      "单臂承重，另一只手向前移动6英寸下潜一次",
+      "两手交替前进推起，核心与全身肌肉高度协同",
+      "重复直至极度力竭"
+    ],
+    "commonIssues": [
+      {
+        "problem": "步伐凌乱节奏丧失",
+        "fix": "保持匀速呼吸，每一步推起到最高点后再移动手掌"
+      }
+    ],
+    "standards": {
+      "beginner": "1组 × 10步",
+      "intermediate": "2组 × 20步",
+      "upgrade": "2组 × 40步"
+    },
+    "defaultPrescription": {
+      "sets": 2,
+      "repRange": [
+        15,
+        30
+      ],
+      "restSeconds": 120,
+      "tempoDescription": "匀速行进·力竭为止",
+      "rirTarget": 1
+    }
+  },
+  {
+    "id": "squat_demon_01",
+    "name": "单腿跳箱深蹲",
+    "nameEn": "One-Leg Box Jump Squat",
+    "category": "squat",
+    "categoryLabel": "深蹲",
+    "step": 11,
+    "isDemon": true,
+    "demonLabel": "魔鬼级",
+    "stepBadgeText": "魔鬼第 1 式",
+    "source": "第一册第六章更上一层楼",
+    "riskLevel": "high",
+    "equipment": [
+      "稳固跳箱/高台"
+    ],
+    "equipmentTags": [
+      "support"
+    ],
+    "purpose": "下肢活塞爆发力与动态平衡的巅峰，深蹲到底后单腿全力跃上高箱",
+    "keyPoints": [
+      "单腿全幅下蹲至臀部贴紧小腿后侧",
+      "在最底端消除反弹，完全依靠单侧股四头肌与臀肌纯发力向上爆发起跳",
+      "跃上跳箱后仍以单腿稳稳缓冲落地，另一腿全程悬空不沾地"
+    ],
+    "commonIssues": [
+      {
+        "problem": "落地重心不稳",
+        "fix": "跳箱高度由低起步，着地膝关节顺向深度屈曲缓冲"
+      }
+    ],
+    "standards": {
+      "beginner": "1组 × 2次 (每侧)",
+      "intermediate": "2组 × 4次",
+      "upgrade": "2组 × 8次"
+    },
+    "defaultPrescription": {
+      "sets": 3,
+      "repRange": [
+        2,
+        4
+      ],
+      "restSeconds": 120,
+      "tempoDescription": "慢下潜·瞬间起跳·轻盈落地",
+      "rirTarget": 2
+    }
+  },
+  {
+    "id": "squat_demon_02",
+    "name": "老派负重单腿蹲",
+    "nameEn": "Weighted Pistol Squats",
+    "category": "squat",
+    "categoryLabel": "深蹲",
+    "step": 12,
+    "isDemon": true,
+    "demonLabel": "魔鬼级",
+    "stepBadgeText": "魔鬼第 2 式",
+    "source": "第一册第六章更上一层楼 (老派大力士阿瑟拉缇式)",
+    "riskLevel": "high",
+    "equipment": [
+      "负重哑铃/壶铃"
+    ],
+    "equipmentTags": [
+      "support"
+    ],
+    "purpose": "在单腿全幅深蹲基础上施加大负荷，打造超越常人极限的钢铁活塞双腿",
+    "keyPoints": [
+      "双手在胸前紧抱沉重哑铃或重物（20~50kg）",
+      "单腿直立，非发力腿前伸锁死",
+      "平稳匀速下潜至大腿完全折叠，背部挺拔中立",
+      "液压机般推回完全站立，膝盖不内扣"
+    ],
+    "commonIssues": [
+      {
+        "problem": "腰背弯曲代偿",
+        "fix": "负重紧贴胸口中轴线，核心保持极致腹压"
+      }
+    ],
+    "standards": {
+      "beginner": "1组 × 3次 (每侧)",
+      "intermediate": "2组 × 6次",
+      "upgrade": "2组 × 12次"
+    },
+    "defaultPrescription": {
+      "sets": 3,
+      "repRange": [
+        3,
+        6
+      ],
+      "restSeconds": 120,
+      "tempoDescription": "3秒下·1秒停·2秒上",
+      "rirTarget": 2
+    }
+  },
+  {
+    "id": "squat_demon_03",
+    "name": "虾式深蹲",
+    "nameEn": "Shrimp Squats",
+    "category": "squat",
+    "categoryLabel": "深蹲",
+    "step": 13,
+    "isDemon": true,
+    "demonLabel": "魔鬼级",
+    "stepBadgeText": "魔鬼第 3 式",
+    "source": "第四册额外章节二·十二金刚",
+    "riskLevel": "high",
+    "equipment": [
+      "平整地面"
+    ],
+    "equipmentTags": [
+      "floor"
+    ],
+    "purpose": "单腿直立，手抓后足贴紧臀部，全幅度下蹲至后膝轻点地面，严禁后腿借力",
+    "keyPoints": [
+      "单腿直立，同侧或对侧手抓紧屈曲小腿脚踝，足跟贴臀",
+      "前大腿平稳屈膝下潜，上身尽量不过分前倾",
+      "后膝极轻微触碰地面即止，杜绝碰撞借力",
+      "前腿臀腿肌群发力液压机般推回完全站立"
+    ],
+    "commonIssues": [
+      {
+        "problem": "后脚松脱借力",
+        "fix": "手掌死死抓握脚背贴紧臀部，迫使前腿独立做功"
+      }
+    ],
+    "standards": {
+      "beginner": "1组 × 3次 (每侧)",
+      "intermediate": "2组 × 6次",
+      "upgrade": "2组 × 15次"
+    },
+    "defaultPrescription": {
+      "sets": 3,
+      "repRange": [
+        3,
+        6
+      ],
+      "restSeconds": 120,
+      "tempoDescription": "2秒下·1秒停·2秒上",
+      "rirTarget": 2
+    }
+  },
+  {
+    "id": "squat_demon_04",
+    "name": "单腿立定跳远",
+    "nameEn": "One-Leg Broad Jump",
+    "category": "squat",
+    "categoryLabel": "深蹲",
+    "step": 14,
+    "isDemon": true,
+    "demonLabel": "魔鬼级",
+    "stepBadgeText": "魔鬼第 4 式",
+    "source": "第一册第六章变式",
+    "riskLevel": "high",
+    "equipment": [
+      "宽敞地面/草地"
+    ],
+    "equipmentTags": [
+      "floor"
+    ],
+    "purpose": "无助跑单腿全幅下蹲爆发跃向远处，起跳腿落地保持绝对平衡不倾倒",
+    "keyPoints": [
+      "单腿站立，平稳下蹲蓄力",
+      "手臂与髋部爆发协同向前上方极力跃出",
+      "落地时依然同一条腿触地，膝关节弹性屈曲缓冲",
+      "身体绝对锁住平衡，手脚均不落地借力"
+    ],
+    "commonIssues": [
+      {
+        "problem": "落地前倾扑倒",
+        "fix": "跳跃距离循序渐进，重点在于单腿落地急停吸震"
+      }
+    ],
+    "standards": {
+      "beginner": "1组 × 3次 (每侧)",
+      "intermediate": "2组 × 5次",
+      "upgrade": "3组 × 8次"
+    },
+    "defaultPrescription": {
+      "sets": 3,
+      "repRange": [
+        3,
+        5
+      ],
+      "restSeconds": 120,
+      "tempoDescription": "蓄力下潜·极限飞跃·稳锁落地",
+      "rirTarget": 2
+    }
+  },
+  {
+    "id": "squat_demon_05",
+    "name": "西西弗斯柔式深蹲",
+    "nameEn": "Sissy Squat",
+    "category": "squat",
+    "categoryLabel": "深蹲",
+    "step": 15,
+    "isDemon": true,
+    "demonLabel": "魔鬼级",
+    "stepBadgeText": "魔鬼第 5 式",
+    "source": "第一册第六章变式",
+    "riskLevel": "high",
+    "equipment": [
+      "稳固扶手/立柱"
+    ],
+    "equipmentTags": [
+      "support"
+    ],
+    "purpose": "踮起脚尖、膝关节极限前推、大腿与躯干保持一条直线极度后仰，股四头肌火烧般孤立刺激",
+    "keyPoints": [
+      "双脚并拢踮起脚尖，膝关节大幅前移下压",
+      "髋部完全伸展锁死，躯干向后仰成斜线",
+      "下蹲至膝盖弯曲接近90度，最低点暂停一秒",
+      "仅靠股四头肌将身体拉回站立"
+    ],
+    "commonIssues": [
+      {
+        "problem": "下背部反弓折腰",
+        "fix": "腹肌紧锁，髋部保持完全展开，避免腰椎代偿"
+      }
+    ],
+    "standards": {
+      "beginner": "1组 × 10次",
+      "intermediate": "2组 × 20次",
+      "upgrade": "2组 × 40次"
+    },
+    "defaultPrescription": {
+      "sets": 3,
+      "repRange": [
+        10,
+        20
+      ],
+      "restSeconds": 90,
+      "tempoDescription": "3秒慢下·1秒停·2秒拉回",
+      "rirTarget": 2
+    }
+  },
+  {
+    "id": "squat_demon_06",
+    "name": "团身跳",
+    "nameEn": "Tuck Jump",
+    "category": "squat",
+    "categoryLabel": "深蹲",
+    "step": 16,
+    "isDemon": true,
+    "demonLabel": "魔鬼级",
+    "stepBadgeText": "魔鬼第 6 式",
+    "source": "第四册额外章节二·十二金刚",
+    "riskLevel": "high",
+    "equipment": [
+      "平整地面"
+    ],
+    "equipmentTags": [
+      "floor"
+    ],
+    "purpose": "爆发跳起空中双膝高抬贴紧胸口，落地无缝衔接下一次起跳，释放下肢最高神经爆发力",
+    "keyPoints": [
+      "对称站姿下蹲起跳，在空中瞬间将双膝向胸部极限提起",
+      "落地瞬间弹性屈膝缓冲并立即借惯性二次爆发腾空",
+      "连续无停顿完成动作，心率与神经系统推至巅峰"
+    ],
+    "commonIssues": [
+      {
+        "problem": "落地脚跟硬砸",
+        "fix": "前脚掌先行着地顺势过渡，利用跟腱弹性回弹"
+      }
+    ],
+    "standards": {
+      "beginner": "1组 × 10次",
+      "intermediate": "2组 × 20次",
+      "upgrade": "3组 × 30次"
+    },
+    "defaultPrescription": {
+      "sets": 3,
+      "repRange": [
+        15,
+        25
+      ],
+      "restSeconds": 90,
+      "tempoDescription": "疾速弹跳·膝贴胸口",
+      "rirTarget": 2
+    }
+  },
+  {
+    "id": "pull_demon_01",
+    "name": "哨兵引体向上",
+    "nameEn": "Sentry Pull-ups (Muscle-Up)",
+    "category": "pull",
+    "categoryLabel": "引体向上",
+    "step": 11,
+    "isDemon": true,
+    "demonLabel": "魔鬼级",
+    "stepBadgeText": "魔鬼第 1 式",
+    "source": "第一册第七章变式",
+    "riskLevel": "high",
+    "equipment": [
+      "稳固单杠"
+    ],
+    "equipmentTags": [
+      "bar"
+    ],
+    "purpose": "上肢拉力与推力合二为一，爆发拉起胸骨过杠，手腕翻转推至完全直臂撑杠",
+    "keyPoints": [
+      "正握悬挂单杠，全身紧绷形成微反弓",
+      "爆发式沉肩屈背将身体向斜上方暴拉，胸口超越杠面高度",
+      "手腕手肘疾速前翻转为支撑位",
+      "顺势如屈臂撑般将身体完全推起锁死于单杠上方"
+    ],
+    "commonIssues": [
+      {
+        "problem": "一只手先上一只手后上(鸡翅上杠)",
+        "fix": "两侧背阔肌对称爆发发力，前期可垫小幅度摆动起跳练习"
+      }
+    ],
+    "standards": {
+      "beginner": "1组 × 1次",
+      "intermediate": "2组 × 3次",
+      "upgrade": "2组 × 8次"
+    },
+    "defaultPrescription": {
+      "sets": 3,
+      "repRange": [
+        1,
+        3
+      ],
+      "restSeconds": 150,
+      "tempoDescription": "极限爆发拉·快速翻腕·推起锁死",
+      "rirTarget": 2
+    }
+  },
+  {
+    "id": "pull_demon_02",
+    "name": "仰卧直臂悬垂",
+    "nameEn": "Front Lever",
+    "category": "pull",
+    "categoryLabel": "引体向上",
+    "step": 12,
+    "isDemon": true,
+    "demonLabel": "魔鬼级",
+    "stepBadgeText": "魔鬼第 2 式",
+    "source": "第一册第七章更上一层楼",
+    "riskLevel": "high",
+    "equipment": [
+      "稳固单杠/吊环"
+    ],
+    "equipmentTags": [
+      "bar",
+      "rings"
+    ],
+    "purpose": "体操大师级神技，双臂伸直向下压杠，全身呈绝对刚性水平木板静力悬浮",
+    "keyPoints": [
+      "双手抓杠，双臂完全伸直锁定",
+      "背阔肌与胸肌协同向下施加巨大的静力压杠力矩",
+      "核心、臀部、大腿后侧全面收紧锁死成一条水平直线",
+      "躯干从肩到踝关节与地面绝对平行"
+    ],
+    "commonIssues": [
+      {
+        "problem": "屈肘弯臂或屈髋塌臀",
+        "fix": "由团身直臂悬垂逐步进阶至分腿、单腿，再完全伸展直腿"
+      }
+    ],
+    "standards": {
+      "beginner": "维持 3 秒",
+      "intermediate": "维持 8 秒",
+      "upgrade": "维持 15 秒"
+    },
+    "defaultPrescription": {
+      "sets": 4,
+      "repRange": [
+        3,
+        8
+      ],
+      "restSeconds": 120,
+      "tempoDescription": "下压平浮·绝对静力锁死",
+      "rirTarget": 2
+    }
+  },
+  {
+    "id": "pull_demon_03",
+    "name": "吊环铁十字",
+    "nameEn": "Iron Cross",
+    "category": "pull",
+    "categoryLabel": "引体向上",
+    "step": 13,
+    "isDemon": true,
+    "demonLabel": "魔鬼级",
+    "stepBadgeText": "魔鬼第 3 式",
+    "source": "第一册第七章更上一层楼",
+    "riskLevel": "high",
+    "equipment": [
+      "体操吊环"
+    ],
+    "equipmentTags": [
+      "rings"
+    ],
+    "purpose": "体操世界级终极神技，双臂水平展开90度将自重牢牢悬吊支撑于吊环之间",
+    "keyPoints": [
+      "双手握吊环上拉支撑，双臂慢慢向身体两侧完全水平展开",
+      "身体保持如钢铁长矛般垂直笔直，双肩沉锁",
+      "在双臂与躯干成直角的水平位静力支撑，胸背与肩胛肌群承受极大拉力",
+      "控制呼吸，平稳维持"
+    ],
+    "commonIssues": [
+      {
+        "problem": "肘关节过度超伸疼痛",
+        "fix": "前置肘部韧带强化必须经过数年悬挂与拉力筑基，严禁盲目尝试"
+      }
+    ],
+    "standards": {
+      "beginner": "维持 2 秒",
+      "intermediate": "维持 5 秒",
+      "upgrade": "维持 10 秒"
+    },
+    "defaultPrescription": {
+      "sets": 3,
+      "repRange": [
+        2,
+        5
+      ],
+      "restSeconds": 150,
+      "tempoDescription": "侧展平悬·静力悬停",
+      "rirTarget": 2
+    }
+  },
+  {
+    "id": "pull_demon_04",
+    "name": "吊环马耳他十字",
+    "nameEn": "Maltese Cross",
+    "category": "pull",
+    "categoryLabel": "引体向上",
+    "step": 14,
+    "isDemon": true,
+    "demonLabel": "魔鬼级",
+    "stepBadgeText": "魔鬼第 4 式",
+    "source": "第一册第七章更上一层楼",
+    "riskLevel": "high",
+    "equipment": [
+      "体操吊环"
+    ],
+    "equipmentTags": [
+      "rings"
+    ],
+    "purpose": "身体呈水平俯卧姿势，双臂水平向外展开支撑，力矩与肌力要求甚至超越铁十字",
+    "keyPoints": [
+      "从吊环俯卧悬垂位展开双臂，躯干与地面完全平行",
+      "双臂展开于身体两侧略偏后，胸大肌与背阔肌处于极限拉伸位支撑",
+      "极其严苛的肩关节稳定性与核心刚性",
+      "数秒静力维持"
+    ],
+    "commonIssues": [
+      {
+        "problem": "躯干下坠下塌",
+        "fix": "核心与臀大肌极限收缩，先以脚着地辅助减轻部分负重"
+      }
+    ],
+    "standards": {
+      "beginner": "维持 1 秒",
+      "intermediate": "维持 3 秒",
+      "upgrade": "维持 8 秒"
+    },
+    "defaultPrescription": {
+      "sets": 3,
+      "repRange": [
+        1,
+        3
+      ],
+      "restSeconds": 180,
+      "tempoDescription": "水平俯撑·神技定格",
+      "rirTarget": 2
+    }
+  },
+  {
+    "id": "pull_demon_05",
+    "name": "无腿单臂攀绳",
+    "nameEn": "Legless Rope Climb",
+    "category": "pull",
+    "categoryLabel": "引体向上",
+    "step": 15,
+    "isDemon": true,
+    "demonLabel": "魔鬼级",
+    "stepBadgeText": "魔鬼第 5 式",
+    "source": "第四册额外章节二·十二金刚 (班克式)",
+    "riskLevel": "high",
+    "equipment": [
+      "稳固攀爬粗绳"
+    ],
+    "equipmentTags": [
+      "rope",
+      "support"
+    ],
+    "purpose": "双腿完全伸直悬空，不借助任何足部缠绳，仅依靠单臂交替强力拉升攀登6米粗绳",
+    "keyPoints": [
+      "双腿呈L形前伸悬空锁定，严禁足部碰触绳索借力",
+      "一只手臂拉至胸前锁定，另一只手臂全力向上抓握更高处",
+      "匀速交替攀爬至顶部，再有控制地下潜回到起点",
+      "练就撕裂钢链般的绝对握力与肱二头肌"
+    ],
+    "commonIssues": [
+      {
+        "problem": "下滑滑落烧伤手掌",
+        "fix": "下降同样依靠手臂交替屈伸，严禁握绳快速滑降"
+      }
+    ],
+    "standards": {
+      "beginner": "攀爬 3 米 (无腿)",
+      "intermediate": "攀爬 6 米 (单程)",
+      "upgrade": "攀爬 6 米 (往返2次)"
+    },
+    "defaultPrescription": {
+      "sets": 2,
+      "repRange": [
+        1,
+        2
+      ],
+      "restSeconds": 150,
+      "tempoDescription": "臂力攀升·匀速下送",
+      "rirTarget": 1
+    }
+  },
+  {
+    "id": "pull_demon_06",
+    "name": "连续单杠翻身",
+    "nameEn": "Bar Pullover (50 Reps)",
+    "category": "pull",
+    "categoryLabel": "引体向上",
+    "step": 16,
+    "isDemon": true,
+    "demonLabel": "魔鬼级",
+    "stepBadgeText": "魔鬼第 6 式",
+    "source": "第四册额外章节二·十二金刚",
+    "riskLevel": "high",
+    "equipment": [
+      "高单杠"
+    ],
+    "equipmentTags": [
+      "bar"
+    ],
+    "purpose": "悬吊上拉同时双腿绕过横杠完成360度大回环，下潜送回原位连续进行高次数拉力与心肺极限轰炸",
+    "keyPoints": [
+      "悬吊起拉的同时屈髋抬腿，双腿越过单杠上方带动躯干完全转动",
+      "在单杠上方短暂停留后顺畅送回悬垂起始位",
+      "一气呵成不间断回环翻转，极其考验抓握力、背部耐力与肺活量"
+    ],
+    "commonIssues": [
+      {
+        "problem": "头晕恶心体能透支",
+        "fix": "呼吸与旋转保持匀速韵律，前期每组5-10次递增"
+      }
+    ],
+    "standards": {
+      "beginner": "连续 5 次",
+      "intermediate": "连续 15 次",
+      "upgrade": "连续 50 次 (大师级)"
+    },
+    "defaultPrescription": {
+      "sets": 2,
+      "repRange": [
+        10,
+        25
+      ],
+      "restSeconds": 120,
+      "tempoDescription": "流畅翻转·连续回环",
+      "rirTarget": 1
+    }
+  },
+  {
+    "id": "legRaise_demon_01",
+    "name": "悬垂 V 字举腿",
+    "nameEn": "Hanging V-Raise",
+    "category": "legRaise",
+    "categoryLabel": "举腿",
+    "step": 11,
+    "isDemon": true,
+    "demonLabel": "魔鬼级",
+    "stepBadgeText": "魔鬼第 1 式",
+    "source": "第一册第八章更上一层楼",
+    "riskLevel": "high",
+    "equipment": [
+      "稳固单杠"
+    ],
+    "equipmentTags": [
+      "bar"
+    ],
+    "purpose": "超越垂直90度的终极中段强化，双腿夹角缩小贴近胸膛，李小龙至尊核心绝技",
+    "keyPoints": [
+      "双手抓杠悬垂，身体稳定无晃动",
+      "双腿完全伸直并拢，屈髋抬升超过水平90度",
+      "腹肌极度压缩，将双腿直直送向胸部使身体形成尖锐V字",
+      "在顶点停顿片刻，完全依靠肌力平稳下放"
+    ],
+    "commonIssues": [
+      {
+        "problem": "依靠摆动甩腿上冲",
+        "fix": "消除一切惯性，动作慢速匀速，柔韧性受限先做坐姿过渡"
+      }
+    ],
+    "standards": {
+      "beginner": "1组 × 2次",
+      "intermediate": "2组 × 6次",
+      "upgrade": "2组 × 15次"
+    },
+    "defaultPrescription": {
+      "sets": 3,
+      "repRange": [
+        3,
+        8
+      ],
+      "restSeconds": 90,
+      "tempoDescription": "2秒起·1秒顶峰压缩·2秒放",
+      "rirTarget": 2
+    }
+  },
+  {
+    "id": "legRaise_demon_02",
+    "name": "地面直角撑",
+    "nameEn": "L-Sit",
+    "category": "legRaise",
+    "categoryLabel": "举腿",
+    "step": 12,
+    "isDemon": true,
+    "demonLabel": "魔鬼级",
+    "stepBadgeText": "魔鬼第 2 式",
+    "source": "第一册第八章变式",
+    "riskLevel": "high",
+    "equipment": [
+      "平整地面"
+    ],
+    "equipmentTags": [
+      "floor"
+    ],
+    "purpose": "双手撑地将全身推离地面，双腿水平伸直锁定成直角，强悍的背阔肌下压与腹直肌静力支撑",
+    "keyPoints": [
+      "坐在平地上，双腿并拢伸直锁死",
+      "双手平放在臀部两侧地面，下压沉肩将臀部与双腿完全推离地面",
+      "身体与双腿维持严格的90度直角，双脚悬空不触地",
+      "保持平稳深长呼吸"
+    ],
+    "commonIssues": [
+      {
+        "problem": "脚跟蹭地无法悬空",
+        "fix": "加强背阔肌主动下压沉肩发力，前期可手垫书本或木砖抬高"
+      }
+    ],
+    "standards": {
+      "beginner": "维持 5 秒",
+      "intermediate": "维持 15 秒",
+      "upgrade": "维持 30 秒"
+    },
+    "defaultPrescription": {
+      "sets": 4,
+      "repRange": [
+        5,
+        15
+      ],
+      "restSeconds": 90,
+      "tempoDescription": "下压悬浮·静力保持",
+      "rirTarget": 2
+    }
+  },
+  {
+    "id": "legRaise_demon_03",
+    "name": "俄式反折高位撑",
+    "nameEn": "Manna Support",
+    "category": "legRaise",
+    "categoryLabel": "举腿",
+    "step": 13,
+    "isDemon": true,
+    "demonLabel": "魔鬼级",
+    "stepBadgeText": "魔鬼第 3 式",
+    "source": "第一册第八章更上一层楼",
+    "riskLevel": "high",
+    "equipment": [
+      "平整地面/平行木砖"
+    ],
+    "equipmentTags": [
+      "floor"
+    ],
+    "purpose": "直角撑的终极形态，双手撑地重心大幅后倾，双腿抬升超过垂直线向头部反折，身体中段力量与柔韧性的神级殿堂",
+    "keyPoints": [
+      "双手撑地推起直角撑，骨盆主动向前上方推举",
+      "双臂后伸肩部极限前倾支撑，双腿越过90度继续向上反折",
+      "双腿完全绷直锁死贴近面部，骨盆高过两肩高度",
+      "全身体操神级静态保持"
+    ],
+    "commonIssues": [
+      {
+        "problem": "肩后伸柔韧不足",
+        "fix": "循序渐进先练熟高位V角撑（V-Sit），避免肩胛与手腕强扭"
+      }
+    ],
+    "standards": {
+      "beginner": "维持 1 秒",
+      "intermediate": "维持 3 秒",
+      "upgrade": "维持 8 秒"
+    },
+    "defaultPrescription": {
+      "sets": 3,
+      "repRange": [
+        1,
+        3
+      ],
+      "restSeconds": 150,
+      "tempoDescription": "反折上送·静力定格",
+      "rirTarget": 2
+    }
+  },
+  {
+    "id": "legRaise_demon_04",
+    "name": "极端罗马椅悬空折叠",
+    "nameEn": "Extreme Roman Chair Sit-ups",
+    "category": "legRaise",
+    "categoryLabel": "举腿",
+    "step": 14,
+    "isDemon": true,
+    "demonLabel": "魔鬼级",
+    "stepBadgeText": "魔鬼第 4 式",
+    "source": "第一册第八章变式",
+    "riskLevel": "high",
+    "equipment": [
+      "稳固罗马椅/高台固定架"
+    ],
+    "equipmentTags": [
+      "support"
+    ],
+    "purpose": "双脚固定，大腿躯干在无任何支撑下完全向后悬空大角度下沉，强力反向卷起，打造黄金时代老派硬汉腰腹",
+    "keyPoints": [
+      "下半身固定于高台，骨盆以上完全悬空后仰超过水平面",
+      "双手置于太阳穴或胸前，以髋部为轴匀速下潜至深部拉伸",
+      "腹部核心肌群强力收缩带动上半身平稳推起，杜绝颈部拉扯",
+      "全程消除惯性"
+    ],
+    "commonIssues": [
+      {
+        "problem": "双手死勒颈部",
+        "fix": "双手轻触太阳穴，严禁扳拉后脑；腰椎保持微屈"
+      }
+    ],
+    "standards": {
+      "beginner": "1组 × 10次",
+      "intermediate": "2组 × 20次",
+      "upgrade": "2组 × 50次"
+    },
+    "defaultPrescription": {
+      "sets": 3,
+      "repRange": [
+        15,
+        30
+      ],
+      "restSeconds": 90,
+      "tempoDescription": "慢速下倾·核心卷回",
+      "rirTarget": 2
+    }
+  },
+  {
+    "id": "legRaise_demon_05",
+    "name": "悬垂直举腿50次耐力挑战",
+    "nameEn": "50-Rep Hanging Leg Raise Challenge",
+    "category": "legRaise",
+    "categoryLabel": "举腿",
+    "step": 15,
+    "isDemon": true,
+    "demonLabel": "魔鬼级",
+    "stepBadgeText": "魔鬼第 5 式",
+    "source": "第一册第八章更上一层楼",
+    "riskLevel": "high",
+    "equipment": [
+      "稳固单杠"
+    ],
+    "equipmentTags": [
+      "bar"
+    ],
+    "purpose": "一口气完成50次姿势标准的悬垂直举腿，腹外斜肌与腹直肌如同刚铸钢板的神级耐力",
+    "keyPoints": [
+      "悬垂于单杠，躯干保持稳定无任何前后摆动借力",
+      "双腿完全伸直锁死，匀速抬升至脚尖碰触横杠",
+      "缓慢原路下放至垂直位并保持张力，立即进行下一次",
+      "不可思议的魔鬼六块极限耐力"
+    ],
+    "commonIssues": [
+      {
+        "problem": "后半程摆荡代偿",
+        "fix": "腹肌持续保持张力，若摆动可让背阔肌后拉止摆"
+      }
+    ],
+    "standards": {
+      "beginner": "1组 × 20次",
+      "intermediate": "1组 × 35次",
+      "upgrade": "1组 × 50次 (英雄级)"
+    },
+    "defaultPrescription": {
+      "sets": 2,
+      "repRange": [
+        20,
+        50
+      ],
+      "restSeconds": 150,
+      "tempoDescription": "精准韵律·无休连续",
+      "rirTarget": 1
+    }
+  },
+  {
+    "id": "bridge_demon_01",
+    "name": "高位台阶跌落反推铁板桥",
+    "nameEn": "High-Platform Drop Bridge",
+    "category": "bridge",
+    "categoryLabel": "桥",
+    "step": 11,
+    "isDemon": true,
+    "demonLabel": "魔鬼级",
+    "stepBadgeText": "魔鬼第 1 式",
+    "source": "第一册第九章更上一层楼",
+    "riskLevel": "high",
+    "equipment": [
+      "高台/稳固台阶"
+    ],
+    "equipmentTags": [
+      "support"
+    ],
+    "purpose": "超越平地的超大幅度铁板桥，站在高台上向后弯腰触地成桥，再依靠极致爆发力推回站立",
+    "keyPoints": [
+      "站在台阶或稳固平台上，双脚与肩同宽",
+      "脊柱向后弯曲成弓，双手向下极度伸展直至落于低处的地面成桥",
+      "利用躯干全后链与手掌爆发推力，一口气将身体推回台阶站立姿势",
+      "考验全身柔韧性与后链极值做功"
+    ],
+    "commonIssues": [
+      {
+        "problem": "手腕冲击过大",
+        "fix": "落手时手腕微曲缓冲，前期先使用低落差平台练习"
+      }
+    ],
+    "standards": {
+      "beginner": "1组 × 1次",
+      "intermediate": "2组 × 3次",
+      "upgrade": "2组 × 6次"
+    },
+    "defaultPrescription": {
+      "sets": 3,
+      "repRange": [
+        1,
+        3
+      ],
+      "restSeconds": 150,
+      "tempoDescription": "后仰探底·强力反弹推回",
+      "rirTarget": 2
+    }
+  },
+  {
+    "id": "bridge_demon_02",
+    "name": "倒立与铁桥动力转换",
+    "nameEn": "Handstand Bridge Transitions",
+    "category": "bridge",
+    "categoryLabel": "桥",
+    "step": 12,
+    "isDemon": true,
+    "demonLabel": "魔鬼级",
+    "stepBadgeText": "魔鬼第 2 式",
+    "source": "第一册第九章更上一层楼",
+    "riskLevel": "high",
+    "equipment": [
+      "平整开阔软垫地面"
+    ],
+    "equipmentTags": [
+      "floor"
+    ],
+    "purpose": "自重两大神级体系融合，倒立姿态缓慢下降双腿成铁板桥，再靠双腿蹬地与核心反弹推回倒立",
+    "keyPoints": [
+      "自由倒立姿态锁定身体",
+      "缓慢弯曲脊柱与髋部，控制双脚轻盈落向地面成标准桥式",
+      "在桥式最深处聚力，双腿爆发后蹬带动骨盆，双手推撑将身体翻回垂直倒立",
+      "行云流水无缝转换"
+    ],
+    "commonIssues": [
+      {
+        "problem": "落脚砸地失控",
+        "fix": "下落时肩部主动向前对抗维持平衡，地面铺设减震软垫"
+      }
+    ],
+    "standards": {
+      "beginner": "1组 × 1次 (往返)",
+      "intermediate": "2组 × 3次",
+      "upgrade": "2组 × 6次"
+    },
+    "defaultPrescription": {
+      "sets": 3,
+      "repRange": [
+        1,
+        3
+      ],
+      "restSeconds": 150,
+      "tempoDescription": "慢下潜入桥·爆发蹬回倒立",
+      "rirTarget": 2
+    }
+  },
+  {
+    "id": "bridge_demon_03",
+    "name": "瑜伽蝎子式桥",
+    "nameEn": "Scorpion Bridge",
+    "category": "bridge",
+    "categoryLabel": "桥",
+    "step": 13,
+    "isDemon": true,
+    "demonLabel": "魔鬼级",
+    "stepBadgeText": "魔鬼第 3 式",
+    "source": "第一册第九章更上一层楼",
+    "riskLevel": "high",
+    "equipment": [
+      "软垫地面"
+    ],
+    "equipmentTags": [
+      "floor"
+    ],
+    "purpose": "人类脊柱向后弯曲的极致柔韧性与深层后链肌群掌控，在桥式最低点实现双脚底紧贴头顶",
+    "keyPoints": [
+      "推起高幅度标准铁板桥，胸椎与肩关节充分打开",
+      "双手与双脚逐步缩短间距，头部后仰寻找双脚脚底",
+      "双腿弯曲使足底平稳贴在头顶中央，后侧肌肉链处于极致等长收缩状态",
+      "平缓呼吸，安全退回"
+    ],
+    "commonIssues": [
+      {
+        "problem": "腰椎局部挤压剧痛",
+        "fix": "必须将弯曲弧度均匀分布于胸椎与髋部，严禁用折叠下背部代偿"
+      }
+    ],
+    "standards": {
+      "beginner": "维持 3 秒",
+      "intermediate": "维持 8 秒",
+      "upgrade": "维持 15 秒"
+    },
+    "defaultPrescription": {
+      "sets": 3,
+      "repRange": [
+        3,
+        8
+      ],
+      "restSeconds": 120,
+      "tempoDescription": "极度后曲·脚底触顶",
+      "rirTarget": 2
+    }
+  },
+  {
+    "id": "bridge_demon_04",
+    "name": "蜥蜴铁桥",
+    "nameEn": "Lizard Bridge",
+    "category": "bridge",
+    "categoryLabel": "桥",
+    "step": 14,
+    "isDemon": true,
+    "demonLabel": "魔鬼级",
+    "stepBadgeText": "魔鬼第 4 式",
+    "source": "第一册第九章变式",
+    "riskLevel": "high",
+    "equipment": [
+      "平整地面"
+    ],
+    "equipmentTags": [
+      "floor"
+    ],
+    "purpose": "在拱起的高位铁板桥上，对角单臂与单腿同时离地水平伸展，极致考验对角线抗扭力矩",
+    "keyPoints": [
+      "推起标准深拱铁板桥，四角支撑平稳",
+      "将重心转移至左手和右脚，右手与左腿同时离开地面水平平伸",
+      "腰背深层肌群极度收缩维持脊柱不侧倾坍塌",
+      "维持数秒后换对侧对称练习"
+    ],
+    "commonIssues": [
+      {
+        "problem": "离地瞬间坍塌倾倒",
+        "fix": "先练习单手离地或单脚离地，具备稳定基础后再尝试对角同时离地"
+      }
+    ],
+    "standards": {
+      "beginner": "维持 3 秒 (每侧)",
+      "intermediate": "维持 6 秒",
+      "upgrade": "维持 12 秒"
+    },
+    "defaultPrescription": {
+      "sets": 3,
+      "repRange": [
+        3,
+        6
+      ],
+      "restSeconds": 120,
+      "tempoDescription": "对角腾空·铁桥锁死",
+      "rirTarget": 2
+    }
+  },
+  {
+    "id": "bridge_demon_05",
+    "name": "老派负重铁板桥",
+    "nameEn": "Weighted Bridge",
+    "category": "bridge",
+    "categoryLabel": "桥",
+    "step": 15,
+    "isDemon": true,
+    "demonLabel": "魔鬼级",
+    "stepBadgeText": "魔鬼第 5 式",
+    "source": "第一册第九章更上一层楼",
+    "riskLevel": "high",
+    "equipment": [
+      "杠铃片/负重伙伴"
+    ],
+    "equipmentTags": [
+      "support"
+    ],
+    "purpose": "圣昆汀牢房大力士传奇绝技，腹部承受大负荷或同伴体重下做深桥拱起",
+    "keyPoints": [
+      "平躺于地面，腹部安置重物或训练同伴",
+      "手脚同时爆发发力，将骨盆与脊柱液压机般推向最高点",
+      "深层竖脊肌与后链肌腱承受极大压力，在最高点锁定片刻",
+      "极其严格的下背部前置力量储备"
+    ],
+    "commonIssues": [
+      {
+        "problem": "椎间盘受压不适",
+        "fix": "严禁突加大重量，负重必须由轻量杠铃片开始逐渐适应"
+      }
+    ],
+    "standards": {
+      "beginner": "1组 × 2次 (负重20kg)",
+      "intermediate": "2组 × 5次 (负重50kg)",
+      "upgrade": "2组 × 8次 (负重90kg)"
+    },
+    "defaultPrescription": {
+      "sets": 3,
+      "repRange": [
+        2,
+        5
+      ],
+      "restSeconds": 150,
+      "tempoDescription": "重压推起·钢弓顶峰",
+      "rirTarget": 2
+    }
+  },
+  {
+    "id": "hspu_demon_01",
+    "name": "自由平衡单臂倒立撑",
+    "nameEn": "One-Arm Freestanding HSPU",
+    "category": "hspu",
+    "categoryLabel": "倒立撑",
+    "step": 11,
+    "isDemon": true,
+    "demonLabel": "魔鬼级",
+    "stepBadgeText": "魔鬼第 1 式",
+    "source": "第一册第十章更上一层楼 (伯特·阿瑟拉缇式)",
+    "riskLevel": "high",
+    "equipment": [
+      "平整开阔地面"
+    ],
+    "equipmentTags": [
+      "floor"
+    ],
+    "purpose": "自重力量的物理极限，脱离任何墙面支撑，完全依靠单手保持动态平衡并完成垂直推起",
+    "keyPoints": [
+      "单手手掌支撑地面，五指成鹰爪紧抓地面微调重心",
+      "全身绷成倒立长矛，非支撑手悬空于体侧调节力矩",
+      "缓慢控制身体下降数英寸，再以三角肌与肱三头肌神力推回直臂",
+      "人类自重推力的终极丰碑"
+    ],
+    "commonIssues": [
+      {
+        "problem": "身体失衡歪斜跌落",
+        "fix": "必须先完全掌握自由双手倒立撑与靠墙单臂倒立撑"
+      }
+    ],
+    "standards": {
+      "beginner": "1组 × 1次 (每侧)",
+      "intermediate": "2组 × 2次",
+      "upgrade": "2组 × 5次"
+    },
+    "defaultPrescription": {
+      "sets": 3,
+      "repRange": [
+        1,
+        2
+      ],
+      "restSeconds": 180,
+      "tempoDescription": "极度专注·单手下沉推起",
+      "rirTarget": 2
+    }
+  },
+  {
+    "id": "hspu_demon_02",
+    "name": "虎立倒立臂屈伸",
+    "nameEn": "Tiger Bend",
+    "category": "hspu",
+    "categoryLabel": "倒立撑",
+    "step": 12,
+    "isDemon": true,
+    "demonLabel": "魔鬼级",
+    "stepBadgeText": "魔鬼第 2 式",
+    "source": "第一册第十章变式 (席格·克莱恩式)",
+    "riskLevel": "high",
+    "equipment": [
+      "平整地面"
+    ],
+    "equipmentTags": [
+      "floor"
+    ],
+    "purpose": "老派大力士神级绝技，自由倒立中前臂完全贴地成虎立，再依靠肱三头肌与爆发蹬力瞬间推回标准手掌倒立",
+    "keyPoints": [
+      "自由倒立姿态控制身体下降",
+      "肘关节大幅屈曲，前臂与手肘顺滑完全平贴于地面（形成大型猫科动物前爪般的虎立姿态）",
+      "在最低点锁定片刻，纯上肢带肌与肱三头肌爆发做功（结合微小蹬力）瞬间将身体强推回手掌直臂倒立",
+      "练就钛合金般坚硬的肘部肌腱"
+    ],
+    "commonIssues": [
+      {
+        "problem": "手肘下沉时失控砸地",
+        "fix": "下降动作全程离心减速控制，肘下可垫毛巾"
+      }
+    ],
+    "standards": {
+      "beginner": "1组 × 1次",
+      "intermediate": "2组 × 3次",
+      "upgrade": "2组 × 6次"
+    },
+    "defaultPrescription": {
+      "sets": 3,
+      "repRange": [
+        1,
+        3
+      ],
+      "restSeconds": 150,
+      "tempoDescription": "前臂落垫·爆发推回手掌",
+      "rirTarget": 2
+    }
+  },
+  {
+    "id": "hspu_demon_03",
+    "name": "双手倒立行走上下台阶",
+    "nameEn": "Stair Handstand Walking",
+    "category": "hspu",
+    "categoryLabel": "倒立撑",
+    "step": 13,
+    "isDemon": true,
+    "demonLabel": "魔鬼级",
+    "stepBadgeText": "魔鬼第 3 式",
+    "source": "第一册第十章变式",
+    "riskLevel": "high",
+    "equipment": [
+      "稳固楼梯台阶"
+    ],
+    "equipmentTags": [
+      "support"
+    ],
+    "purpose": "自由倒立状态下用双手在楼梯台阶上逐级向上攀爬与向下倒退，动态肩部推力与神经平衡之王",
+    "keyPoints": [
+      "自由倒立起立锁死身体，手掌指根持续微调重心",
+      "单手离地向前上方台阶稳固落掌，随后另一手跟上",
+      "逐步克服高度落差带来的重心理论偏移，下台阶时手臂主动屈伸缓冲",
+      "极其严苛的肩部做功与防摔保护"
+    ],
+    "commonIssues": [
+      {
+        "problem": "台阶踩空或跌落",
+        "fix": "先从1-2级矮台阶开始练习，身旁配备防摔防护垫"
+      }
+    ],
+    "standards": {
+      "beginner": "单手攀爬 3 级台阶",
+      "intermediate": "攀爬 6 级台阶",
+      "upgrade": "攀爬 12 级台阶往返"
+    },
+    "defaultPrescription": {
+      "sets": 3,
+      "repRange": [
+        4,
+        8
+      ],
+      "restSeconds": 120,
+      "tempoDescription": "逐级挪手·步步为营",
+      "rirTarget": 2
+    }
+  },
+  {
+    "id": "hspu_demon_04",
+    "name": "双杠超深自由倒立撑",
+    "nameEn": "Parallettes Deep Freestanding HSPU",
+    "category": "hspu",
+    "categoryLabel": "倒立撑",
+    "step": 14,
+    "isDemon": true,
+    "demonLabel": "魔鬼级",
+    "stepBadgeText": "魔鬼第 4 式",
+    "source": "第一册第十章更上一层楼",
+    "riskLevel": "high",
+    "equipment": [
+      "平行双杠/倒立木架"
+    ],
+    "equipmentTags": [
+      "bar",
+      "support"
+    ],
+    "purpose": "在双杠上进行自由倒立，身体下降使得头部完全沉入双杠水平面下方，实现超全行程极限垂直推肩",
+    "keyPoints": [
+      "握住双杠平稳倒立起立，双脚并拢身体刚直",
+      "缓慢屈肘下潜，头部穿过双杠平面直至肩膀接触双杠高度",
+      "消除反弹，纯三角肌前束与肱三头肌爆发推起回顶点",
+      "无任何墙面依靠"
+    ],
+    "commonIssues": [
+      {
+        "problem": "手腕受压过度",
+        "fix": "正握木质双杠把手保持中立位，避免过度背屈"
+      }
+    ],
+    "standards": {
+      "beginner": "1组 × 1次",
+      "intermediate": "2组 × 4次",
+      "upgrade": "2组 × 8次"
+    },
+    "defaultPrescription": {
+      "sets": 3,
+      "repRange": [
+        2,
+        5
+      ],
+      "restSeconds": 150,
+      "tempoDescription": "超深下潜·垂直贯通推回",
+      "rirTarget": 2
+    }
+  },
+  {
+    "id": "hspu_demon_05",
+    "name": "不平衡高低物体单臂倒立",
+    "nameEn": "Uneven Object One-Arm Handstand",
+    "category": "hspu",
+    "categoryLabel": "倒立撑",
+    "step": 15,
+    "isDemon": true,
+    "demonLabel": "魔鬼级",
+    "stepBadgeText": "魔鬼第 5 式",
+    "source": "第一册第十章更上一层楼",
+    "riskLevel": "high",
+    "equipment": [
+      "高低台阶/稳固椅面"
+    ],
+    "equipmentTags": [
+      "support"
+    ],
+    "purpose": "单手支撑于不平衡高低物体（如单手撑在椅子边缘或一级台阶边缘）保持自由单臂倒立",
+    "keyPoints": [
+      "单手掌心贴紧不平衡物体边缘，手指施加极端下压对冲力矩",
+      "身体侧斜寻找唯一微妙的零重力重心垂线",
+      "非支撑手悬空平衡，心流高度专注",
+      "老派体操艺术之巅"
+    ],
+    "commonIssues": [
+      {
+        "problem": "支撑物翻倒摇晃",
+        "fix": "必须确保物体绝对稳固不晃荡，先从微小高度落差练习"
+      }
+    ],
+    "standards": {
+      "beginner": "维持 2 秒 (每侧)",
+      "intermediate": "维持 5 秒",
+      "upgrade": "维持 10 秒"
+    },
+    "defaultPrescription": {
+      "sets": 3,
+      "repRange": [
+        2,
+        5
+      ],
+      "restSeconds": 180,
+      "tempoDescription": "非对称支撑·绝对定力",
+      "rirTarget": 2
+    }
+  }
+]

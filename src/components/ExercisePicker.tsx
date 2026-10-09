@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { FlatList, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
-import { canAddExercise, categories, categoryMatches, exercises } from '../data/catalog';
+import { canAddExercise, categories, categoryMatches, exercises } from '../domain/training/catalog';
 import { useAppStore } from '../store/AppStore';
 import { fitnessColors as colors, appPalette, radius, progressPageLayout } from '../theme';
 import type { Exercise } from '../types';
@@ -9,7 +9,7 @@ import { ExerciseMedia } from './ExerciseResource';
 export function ExercisePicker({ visible, onClose, onSelect, excludedIds = [] }: {
   visible: boolean; onClose: () => void; onSelect: (exercise: Exercise) => void | Promise<void>; excludedIds?: string[];
 }) {
-  const { profile, sessions } = useAppStore();
+  const { profile, sessions } = useAppStore(state => ({ profile: state.profile, sessions: state.sessions }));
   const [query, setQuery] = useState('');
   const [category, setCategory] = useState('all');
   const [busy, setBusy] = useState(false);

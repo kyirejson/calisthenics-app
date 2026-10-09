@@ -1,6 +1,6 @@
 import { useMemo, useRef, useState } from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { getCalendarMonths, getDisplayedSchedule, localDateKey, type ScheduledDay } from '../data/planProgress';
+import { getCalendarMonths, getDisplayedSchedule, localDateKey, type ScheduledDay } from '../domain/training/planProgress';
 import { fitnessColors as colors, appPalette, radius, progressPageLayout } from '../theme';
 import type { Profile, TrainingSession } from '../types';
 import { ScheduleDayDetail } from './ScheduleDayDetail';
@@ -70,10 +70,13 @@ export function YearSchedule({ profile, sessions, anchor, onSelect, onOpenExerci
             </View>
           </View>
           {activeDay ? <View key={localDateKey(activeDay.date)} onLayout={(event) => {
-            detailTop.current = event.nativeEvent.layout.y;
-            if (jumpToDetail.current) {
-              jumpToDetail.current = false;
-              requestAnimationFrame(() => scrollRef.current?.scrollTo({ y: Math.max(0, detailTop.current - 8), animated: true }));
+            const layoutY = event?.nativeEvent?.layout?.y;
+            if (typeof layoutY === 'number') {
+              detailTop.current = layoutY;
+              if (jumpToDetail.current) {
+                jumpToDetail.current = false;
+                requestAnimationFrame(() => scrollRef.current?.scrollTo({ y: Math.max(0, detailTop.current - 8), animated: true }));
+              }
             }
           }} style={styles.dayDetail}>
             <Pressable accessibilityRole="button" accessibilityLabel="返回本月日历" onPress={() => scrollRef.current?.scrollTo({ y: 0, animated: true })} style={styles.backToMonth}><Text style={styles.backToMonthText}>↑ 返回本月日历</Text></Pressable>

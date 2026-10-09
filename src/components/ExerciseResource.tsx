@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Image, Pressable, StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native';
+import { Image, StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native';
 import { getOriginalImage, getOriginalResource } from '../data/originalResources';
 import { getExerciseArtwork, type ArtworkFrame } from '../data/exerciseArtwork';
 import { appPalette, fitnessColors as colors, radius } from '../theme';
@@ -7,6 +7,7 @@ import type { Exercise } from '../types';
 import { hasSupportIllustration, SupportIllustration } from './SupportIllustration';
 import { loadedImageDimensions } from '../utils/imageDimensions';
 import { fitSubjectFrame, getSubjectFrame, photoAspect } from '../utils/exerciseFraming';
+import { DetailDisclosures, DetailSteps, DetailTabs, detailStyles as d } from './MovementDetail';
 
 const imageSizes = new Map<string, { width: number; height: number }>();
 
@@ -47,8 +48,11 @@ export function ExercisePhoto({ exercise, frame, resizeMode = 'contain', framing
   const schematic = !imageVisible && hasSupportIllustration(exercise.id);
 
   return <View style={[styles.photo, style]} onLayout={event => {
-    const { width, height } = event.nativeEvent.layout;
-    setBox(previous => previous.width === width && previous.height === height ? previous : { width, height });
+    const layout = event?.nativeEvent?.layout;
+    if (layout && typeof layout.width === 'number' && typeof layout.height === 'number') {
+      const { width, height } = layout;
+      setBox(previous => previous.width === width && previous.height === height ? previous : { width, height });
+    }
   }}>
     {schematic ? <SupportIllustration id={exercise.id} compact={compact} /> : !imageVisible ? <View style={styles.photoMissing}><Text style={[styles.photoMissingIcon, compact && styles.photoMissingIconCompact]}>↗</Text><Text style={[styles.photoMissingText, compact && styles.photoMissingTextCompact]}>{artwork.missingReason ? '配图待补' : imageSource ? '加载配图中' : compact ? '暂无配图' : '图片暂不可用，请按文字指导练习'}</Text></View> : null}
     {imageSource ? <Image accessibilityLabel={exercise.name + '动作配图'} source={imageSource} style={[styles.photoImage, cropStyle && { position: 'absolute', right: undefined, bottom: undefined, ...cropStyle }, !imageVisible && styles.photoImagePending]} resizeMode={cropStyle || generatedDemo ? 'contain' : resizeMode} onLoad={(event) => {
@@ -76,13 +80,19 @@ export function ExerciseMedia({ exercise, width = '100%', minHeight = 52, maxHei
   const [measured, setMeasured] = useState(typeof width === 'number' ? width : 0);
   useEffect(() => setRatio(initialRatio), [exercise.id, frame?.key, initialRatio]);
   const height = Math.max(minHeight, Math.min(maxHeight, (measured || (typeof width === 'number' ? width : 280)) / ratio));
-  return <View testID={testID} style={[styles.media, { width, height }, style]} onLayout={event => setMeasured(previous => Math.abs(previous - event.nativeEvent.layout.width) < .5 ? previous : event.nativeEvent.layout.width)}>
+  return <View testID={testID} style={[styles.media, { width, height }, style]} onLayout={event => {
+    const layoutWidth = event?.nativeEvent?.layout?.width;
+    if (typeof layoutWidth === 'number' && Number.isFinite(layoutWidth) && layoutWidth > 0) {
+      setMeasured(previous => Math.abs(previous - layoutWidth) < 0.5 ? previous : layoutWidth);
+    }
+  }}>
     <ExercisePhoto exercise={exercise} framing={framing} resizeMode="contain" showShade={false} showTag={false} compact={maxHeight < 150} onDimensions={(imageWidth, imageHeight) => setRatio(previous => Math.abs(previous - imageWidth / imageHeight) < .001 ? previous : imageWidth / imageHeight)} />
   </View>;
 }
 
-export function ExerciseDetailedGuide({ exercise, initialTab = 'summary' }: { exercise: Exercise; initialTab?: 'summary' | 'original' }) {
-  const [tab, setTab] = useState<'summary' | 'original'>(initialTab);
+export function ExerciseDetailedGuide({ exercise, initialTab = 'summary', selectedTab, onTabChange }: { exercise: Exercise; initialTab?: 'summary' | 'original'; selectedTab?: 'summary' | 'original'; onTabChange?: (tab: 'summary' | 'original') => void }) {
+  const [localTab, setLocalTab] = useState<'summary' | 'original'>(initialTab);
+  const tab = selectedTab ?? localTab;
   const resource = getOriginalResource(exercise.id);
   const supplementalDemo = exercise.id === 'aux_singleLegCalf' || exercise.id === 'neck_handResistance' ? getExerciseArtwork(exercise).cover : undefined;
   const points = (exercise.keyPoints || []).filter(Boolean);
@@ -90,23 +100,26 @@ export function ExerciseDetailedGuide({ exercise, initialTab = 'summary' }: { ex
   const standards = Object.entries(exercise.standards || {}).filter(([, value]) => Boolean(value));
 
   return <View>
-    {supplementalDemo ? <View style={styles.demoGuide}>
+    <DetailTabs selected={tab} onChange={id => { const next = id === 'original' ? 'original' : 'summary'; setLocalTab(next); onTabChange?.(next); }} tabs={[
+      { id: 'summary', label: '动作指导', accessibilityLabel: '速览指导' },
+      { id: 'original', label: '原文与配图', accessibilityLabel: '资料原文与配图' },
+    ]} />
+
+    {tab === 'summary' ? <View>
+      {exercise.purpose || exercise.source ? <View style={d.intro}>
+        {exercise.purpose ? <><Text style={d.introTitle}>训练目的</Text><Text style={d.body}>{exercise.purpose}</Text></> : null}
+        {exercise.source ? <Text style={d.source}>来源：{exercise.source}</Text> : null}
+      </View> : null}
+      {supplementalDemo ? <View style={styles.demoGuide}>
       <Image source={supplementalDemo.source} style={styles.demoGuideImage} resizeMode="contain" />
       <View style={styles.demoGuideCopy}><Text style={styles.sourceKind}>{exercise.id === 'aux_singleLegCalf' ? '扶稳 · 慢起慢落' : '轻阻力 · 小幅活动'}</Text>
         <Text style={styles.body}>{exercise.id === 'aux_singleLegCalf' ? '前脚掌推地、脚跟抬起，再缓慢落回地面。左右交替，记录两侧合计次数。' : '双手轻放脑后，小幅点头再回正。图片仅示意手位，不代表用力大小；保持轻阻力与无痛活动范围。'}</Text>
       </View>
-    </View> : null}
-    <View style={styles.tabs}>
-      <Pressable accessibilityRole="tab" accessibilityState={{ selected: tab === 'summary' }} onPress={() => setTab('summary')} style={[styles.tab, tab === 'summary' && styles.tabActive]}><Text style={[styles.tabText, tab === 'summary' && styles.tabTextActive]}>速览指导</Text></Pressable>
-      <Pressable accessibilityRole="tab" accessibilityState={{ selected: tab === 'original' }} onPress={() => setTab('original')} style={[styles.tab, tab === 'original' && styles.tabActive]}><Text style={[styles.tabText, tab === 'original' && styles.tabTextActive]}>资料原文与配图</Text></Pressable>
-    </View>
-
-    {tab === 'summary' ? <View>
-      {exercise.source ? <View style={styles.sourceInfo}><Text style={styles.sourceKind}>动作来源</Text><Text style={styles.body}>{exercise.source}</Text></View> : null}
-      {exercise.purpose ? <View style={styles.purpose}><Text style={styles.sectionLabel}>训练目的</Text><Text style={styles.body}>{exercise.purpose}</Text></View> : null}
-      {points.length ? <View style={styles.guideSection}><Text style={styles.sectionTitle}>动作要点</Text>{points.map((point, index) => <View key={index} style={styles.quickRow}><Text style={styles.quickNum}>{String(index + 1).padStart(2, '0')}</Text><Text style={styles.quickText}>{point}</Text></View>)}</View> : null}
-      {issues.length ? <View style={styles.guideSection}><Text style={styles.sectionTitle}>易错与纠正</Text>{issues.map((issue, index) => <View key={index} style={styles.quickIssue}><Text style={styles.issueTitle}>{issue.problem}</Text><Text style={styles.issueFix}>{issue.fix}</Text></View>)}</View> : null}
-      {standards.length ? <View style={styles.guideSection}><Text style={styles.sectionTitle}>进阶参考标准</Text>{standards.map(([name, value]) => <View key={name} style={styles.standardRow}><Text style={styles.standardName}>{standardName(name)}</Text><Text style={styles.standardValue}>{value}</Text></View>)}</View> : null}
+      </View> : null}
+      {points.length ? <View style={d.section}><Text style={d.sectionTitle}>动作要点</Text><DetailSteps items={points.map(text => ({ text }))} /></View> : null}
+      {issues.length ? <View style={d.section}><Text style={d.sectionTitle}>易错与纠正</Text><DetailDisclosures warning initialOpen="issue-0" items={issues.map((issue, index) => ({ id: `issue-${index}`, title: issue.problem, content: <Text style={d.body}>{issue.fix}</Text> }))} /></View> : null}
+      {standards.length ? <View style={d.section}><Text style={d.sectionTitle}>训练标准</Text><DetailDisclosures items={standards.map(([name, value]) => ({ id: name, title: standardName(name) + '标准', content: <Text style={d.body}>{value}</Text> }))} /></View> : null}
+      {exercise.source ? <View style={d.section}><Text style={d.sectionTitle}>资料来源</Text><DetailDisclosures items={[{ id: 'source', title: exercise.source, content: <Text style={d.muted}>{resource ? resource.kind === 'book' ? '对应书籍资料可在“原文与配图”中阅读。' : '小程序补充资料，未在所指书籍章节核实。' : '此项来源以动作说明为准，暂无可核对的原文资料。'}</Text> }]} /></View> : null}
     </View> : <View>
       {resource ? <>
         <View style={[styles.sourceInfo, resource.kind === 'mini_program' && styles.supplementInfo]}>
@@ -115,7 +128,7 @@ export function ExerciseDetailedGuide({ exercise, initialTab = 'summary' }: { ex
           {resource.sourceFile && resource.kind === 'book' ? <Text style={styles.sourcePath}>{resource.sourceFile.replace(/\.md$/, '').split('/').map((part) => part.replace(/^\d+_/, '').replaceAll('_', ' · ')).join(' / ')}</Text> : null}
         </View>
         <SourceMarkdown markdown={resource.markdown} />
-        {exercise.id === 'neck_handResistance' ? <View style={styles.missingNotice}><Text style={styles.missingNoticeTitle}>原书未配图</Text><Text style={styles.missingNoticeText}>上方为应用生成的补充演示，不属于书籍原图或真人实拍。原书热身次数与本应用的初始训练量分别展示。</Text></View> : null}
+        {exercise.id === 'neck_handResistance' ? <View style={styles.missingNotice}><Text style={styles.missingNoticeTitle}>原书未配图</Text><Text style={styles.missingNoticeText}>“动作指导”中的应用补充演示不属于书籍原图或真人实拍。原书热身次数与本应用的初始训练量分别展示。</Text></View> : null}
         {resource.missingImageNames?.length ? <View style={styles.missingNotice}><Text style={styles.missingNoticeTitle}>原图未收录</Text><Text style={styles.missingNoticeText}>当前本地资料没有这幅图。上方参考图如有显示，不代表该动作的书籍原图。</Text></View> : null}
       </> : <Text style={styles.noSource}>{exercise.source?.startsWith('应用') ? `${exercise.source}。请查看速览中的应用指导，不将其视为书籍原文。` : '这项动作暂无可核对的原文资料。'}</Text>}
     </View>}
@@ -152,7 +165,12 @@ function SourceMarkdown({ markdown }: { markdown: string }) {
 function OriginalFigure({ source, table = false }: { source: NonNullable<ReturnType<typeof getOriginalImage>>; table?: boolean }) {
   const [width, setWidth] = useState(0);
   const [ratio, setRatio] = useState(4 / 3);
-  return <View style={[styles.figure, { height: Math.max(table ? 80 : 100, Math.min(table ? 220 : 400, (width || 240) / ratio)) }]} onLayout={event => setWidth(event.nativeEvent.layout.width)}>
+  return <View style={[styles.figure, { height: Math.max(table ? 80 : 100, Math.min(table ? 220 : 400, (width || 240) / ratio)) }]} onLayout={event => {
+    const layoutWidth = event?.nativeEvent?.layout?.width;
+    if (typeof layoutWidth === 'number' && Number.isFinite(layoutWidth) && layoutWidth > 0) {
+      setWidth(layoutWidth);
+    }
+  }}>
     <Image source={source} style={styles.figureImage} resizeMode="contain" onLoad={event => { const size = loadedImageDimensions(event, source); if (size) setRatio(size.width / size.height); }} />
   </View>;
 }
@@ -181,26 +199,8 @@ const styles = StyleSheet.create({
   photoMissingTextCompact: { fontSize: 9, textAlign: 'center' },
   photoTag: { position: 'absolute', right: 10, top: 10, backgroundColor: 'rgba(10,12,9,0.82)', borderRadius: radius.pill, paddingHorizontal: 9, paddingVertical: 5 },
   photoTagText: { color: '#FFFFFF', fontSize: 10, fontWeight: '800' },
-  issueTitle: { color: colors.ink, fontSize: 12, fontWeight: '900' },
-  issueFix: { color: colors.inkMuted, fontSize: 12, lineHeight: 18, marginTop: 4 },
-  tabs: { flexDirection: 'row', backgroundColor: appPalette.card, borderRadius: radius.pill, padding: 4, marginTop: 5, marginBottom: 15 },
-  tab: { flex: 1, minHeight: 44, borderRadius: radius.pill, alignItems: 'center', justifyContent: 'center' },
-  tabActive: { backgroundColor: appPalette.raised },
-  tabText: { color: colors.inkMuted, fontSize: 11, fontWeight: '800' },
-  tabTextActive: { color: colors.ink },
-  purpose: { backgroundColor: appPalette.olive, borderRadius: radius.md, padding: 13 },
-  sectionLabel: { color: colors.green, fontSize: 11, fontWeight: '900' },
   body: { color: colors.ink, fontSize: 12, lineHeight: 19, marginTop: 5 },
-  guideSection: { marginTop: 17 },
-  sectionTitle: { color: colors.ink, fontSize: 16, fontWeight: '900', marginBottom: 9 },
-  quickRow: { flexDirection: 'row', paddingVertical: 8, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.line },
-  quickNum: { color: colors.limeDark, fontSize: 11, fontWeight: '900', width: 29 },
-  quickText: { flex: 1, color: colors.ink, fontSize: 12, lineHeight: 19 },
-  quickIssue: { backgroundColor: colors.card, borderWidth: 1, borderColor: colors.line, borderRadius: radius.sm, padding: 11, marginBottom: 7 },
-  standardRow: { flexDirection: 'row', paddingVertical: 8, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.line },
-  standardName: { color: colors.green, fontSize: 11, fontWeight: '900', width: 48 },
-  standardValue: { color: colors.ink, fontSize: 11, lineHeight: 17, flex: 1 },
-  sourceInfo: { backgroundColor: appPalette.olive, borderRadius: radius.md, padding: 13, marginBottom: 9 },
+  sourceInfo: { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.line, paddingVertical: 16, marginBottom: 9 },
   supplementInfo: { backgroundColor: appPalette.warningBackground },
   sourceKind: { color: colors.green, fontSize: 10, fontWeight: '900' },
   sourceTitle: { color: colors.ink, fontSize: 14, fontWeight: '900', marginTop: 4 },
@@ -208,7 +208,7 @@ const styles = StyleSheet.create({
   sourceBody: { paddingBottom: 8 },
   markdownHeading: { color: colors.ink, fontSize: 18, lineHeight: 25, fontWeight: '900', marginTop: 17, marginBottom: 8 },
   markdownSubheading: { color: colors.green, fontSize: 14, lineHeight: 21, marginTop: 15 },
-  markdownText: { color: colors.ink, fontSize: 12, lineHeight: 21, marginBottom: 9 },
+  markdownText: { color: colors.ink, fontSize: 14, lineHeight: 25, marginBottom: 12 },
   inlineBold: { fontWeight: '900' },
   bulletRow: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: 4 },
   bulletMark: { color: colors.green, width: 16, fontSize: 13, fontWeight: '900' },

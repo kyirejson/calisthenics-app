@@ -2,12 +2,10 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const { test } = require('node:test');
 const ts = require('typescript');
-require.extensions['.ts'] = (module, filename) => module._compile(ts.transpileModule(fs.readFileSync(filename, 'utf8'), {
-  compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 },
-}).outputText, filename);
-const history = require('../src/data/trainingHistory.ts');
-const chart = require('../src/data/progressChart.ts');
-const { getSeriesExercises, parseMasteryCriteria } = require('../src/data/progression.ts');
+require('./lib/register-typescript.cjs')({ compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 }, extensions: ['.ts'] });
+const history = require('../src/domain/training/trainingHistory.ts');
+const chart = require('../src/domain/training/progressChart.ts');
+const { getSeriesExercises, parseMasteryCriteria } = require('../src/domain/training/progression.ts');
 const now = new Date(2026, 8, 28, 20);
 const date = (day, month = 8, year = 2026) => new Date(year, month, day, 10).toISOString();
 function session(id, day, values = [10], extra = {}) {
@@ -26,10 +24,8 @@ function exam(id, day, exercise) {
 }
 const perf = sessions => history.derivePerformanceHistory(sessions, 'push_05', 'reps', now);
 
-test('no records means no invented points, personal best, or reviewed days', () => {
+test('no records means no invented points or personal best', () => {
   assert.deepEqual(perf([]), { points: [], bestAllTime: 0, latest: null, hasData: false });
-  assert.deepEqual(history.computeReviewedTrainingStreak([], now), { days: null, status: 'empty' });
-  assert.equal(history.computeWeekStreak([], now), 0);
 });
 test('only actually checked positive finite integer reps count', () => {
   const record = session('s', 1, [{ reps: 8, completed: true }, { reps: 20, completed: false },
@@ -98,14 +94,14 @@ test('merely viewing, an empty session, and running with zero duration do not co
   const records = [session('s', 1, [{ reps: 10, completed: false }]), session('empty', 1, [], { exercises: [] }),
     session('run', 1, [], { kind: 'running', durationSeconds: 0 })];
   assert.equal(history.validHistorySessions(records, now).length, 0);
-  assert.equal(history.computeMonthStats(records, now).count, 0);
+  assert.equal(history.groupHistoryByDay(records, now).length, 0);
 });
 test('a reversed session clock is not a reliable training record', () => {
   assert.equal(perf([session('s', 2, [8], { completedAt: date(1) })]).hasData, false);
 });
 test('real running duration counts without inventing strength results', () => {
   const run = session('run', 1, [], { kind: 'running', durationSeconds: 600, exercises: [] });
-  assert.equal(history.computeMonthStats([run], now).count, 1);
+  assert.equal(history.validHistorySessions([run], now).length, 1);
   assert.equal(perf([run]).hasData, false);
 });
 test('unknown feedback stays unknown and there is no fabricated RIR', () => {
@@ -163,31 +159,11 @@ test('deleting exam evidence removes the badge instead of trusting the chosen le
   const all = getSeriesExercises('push'), records = [exam('a', 1, all[3]), exam('b', 3, all[3])];
   assert.equal(history.deriveSeriesStaircase(records.slice(1), 'push', 5, all, 5, now).some(step => step.isCompleted), false);
 });
-test('feedback streak counts reviewed training days, not the forty-eight calendar days since pain', () => {
-  const records = [session('a', 1, [8], { quality: 'pain' }), session('b', 8, [8], { quality: 'solid' }), session('c', 20, [8], { quality: 'hard' })];
-  assert.deepEqual(history.computeReviewedTrainingStreak(records, now), { days: 2, status: 'reported' });
-});
-test('latest unknown feedback does not mean no pain; explicit pain gives zero', () => {
-  assert.deepEqual(history.computeReviewedTrainingStreak([session('s', 1)], now), { days: null, status: 'unreviewed' });
-  assert.deepEqual(history.computeReviewedTrainingStreak([session('s', 1, [8], { quality: 'pain' })], now), { days: 0, status: 'pain' });
-});
-test('same-day unknown feedback breaks a reviewed-day streak rather than disappearing', () => {
-  assert.equal(history.computeReviewedTrainingStreak([session('a', 1, [8], { quality: 'solid' }), session('b', 1)], now).status, 'unreviewed');
-});
-test('month comparison uses matching elapsed dates and separates active days from sessions', () => {
-  const records = [session('a', 1), session('b', 1), session('c', 20),
-    session('prev', 1, [8], { startedAt: date(15, 7), completedAt: date(15, 7) }),
-    session('prev-late', 1, [8], { startedAt: date(31, 7), completedAt: date(31, 7) })];
-  const stats = history.computeMonthStats(records, now);
-  assert.equal(stats.count, 3); assert.equal(stats.activeDays, 2); assert.equal(stats.prevCount, 1);
-  assert.equal(stats.seconds, 270); assert.equal(stats.deltaPercent, 200);
-});
 test('valid checked sets count even when duration is unmeasured, but missing time is explicit', () => {
   const records = [session('a', 1), session('b', 2, [8], { durationSeconds: 0 }),
     session('c', 3, [8], { durationSeconds: -1 }), session('d', 4, [8], { durationSeconds: NaN })];
-  const stats = history.computeMonthStats(records, now);
-  assert.equal(stats.count, 4); assert.equal(stats.seconds, 90); assert.equal(stats.unmeasuredCount, 3);
-  assert.deepEqual(history.summarizeHistoryDuration(records), { seconds: 90, unmeasuredCount: 3 });
+  assert.equal(history.validHistorySessions(records, now).length, 4);
+  assert.equal(perf(records).points.length, 4);
   assert.equal(history.formatDuration(NaN), '—');
   assert.equal(history.formatDuration(-1), '—');
   assert.equal(history.formatDuration(0), '0 秒');
@@ -198,11 +174,6 @@ test('calendar rolls across years and missing completion is partial, not complet
   assert.equal(grid[0].key, '2025-12-01');
   assert.equal(grid.at(-1).key, '2025-12-31');
   assert.equal(grid.at(-1).state, 'partial');
-});
-test('week streak ignores empty sessions and allows an unfinished current week', () => {
-  const records = [session('last', 22), session('before', 15)];
-  assert.equal(history.computeWeekStreak(records, now), 2);
-  assert.equal(history.computeWeekStreak([session('empty', 28, [])], now), 0);
 });
 test('previous comparison uses the same unit and skips uncompleted intervening attempts', () => {
   const old = session('old', 1, [10]);

@@ -1,8 +1,15 @@
 import Svg, { Circle, Path } from 'react-native-svg';
 import { appPalette } from '../theme';
 
-export type GlyphName = 'camera' | 'search' | 'chevron' | 'back' | 'flame' | 'chat' | 'run' | 'clock' | 'pace' | 'pause' | 'stop' | 'plus' | 'check' | 'expand' | 'calendar' | 'settings' | 'edit' | 'shield' | 'download' | 'trash' | 'refresh' | 'vibrate' | 'utensils' | 'dumbbell' | 'info' | 'image' | 'flash' | 'microphone' | 'send' | 'chart';
+export type GlyphName = 'key' | 'eye' | 'help' | 'camera' | 'search' | 'chevron' | 'back' | 'flame' | 'chat' | 'run' | 'clock' | 'pace' | 'pause' | 'stop' | 'plus' | 'check' | 'expand' | 'calendar' | 'settings' | 'edit' | 'shield' | 'download' | 'trash' | 'refresh' | 'vibrate' | 'utensils' | 'dumbbell' | 'info' | 'image' | 'flash' | 'microphone' | 'send' | 'chart' | 'paperclip' | 'book' | 'document' | 'arrowUp';
 const paths: Record<GlyphName, string> = {
+  paperclip: 'M8 12l7-7a4 4 0 0 1 6 6l-9 9a6 6 0 0 1-8-8l9-9M8 12l7-7m-7 7a2 2 0 0 0 3 3l7-7',
+  book: 'M12 5v16M3 3l9 2 9-2v16l-9 2-9-2V3z',
+  document: 'M5 2h9l5 5v15H5V2zm9 0v5h5M8 12h8m-8 4h6',
+  arrowUp: 'M12 20V4m-6 6l6-6 6 6',
+  key: 'M14 3a7 7 0 0 0-5 12l-6 6H1v-4l6-6a7 7 0 1 1 7-8zm2 4h.1',
+  eye: 'M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12zm14 0a4 4 0 1 1-8 0 4 4 0 0 1 8 0',
+  help: 'M9 9a3 3 0 1 1 5 2c-2 1-2 2-2 3m0 3v.1M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0',
   chart: 'M3 20h18M4 15l5-5 4 3 7-9m-5 0h5v5',
   microphone: 'M9 5a3 3 0 0 1 6 0v7a3 3 0 0 1-6 0V5zm-3 6v1a6 6 0 0 0 12 0v-1M12 18v4m-4 0h8',
   send: 'M3 3l18 9-18 9 4-9-4-9zm4 9h14',

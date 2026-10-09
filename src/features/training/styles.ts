@@ -1,0 +1,48 @@
+import { StyleSheet } from 'react-native';
+
+import { appPalette, fitnessColors as colors, progressPageLayout } from '../../theme';
+export const styles = StyleSheet.create({
+  safe: { flex: 1, backgroundColor: appPalette.background },
+  empty: { ...progressPageLayout.content, paddingTop: 24, gap: 20 },
+  actionTitle: { color: colors.ink, fontSize: 22, fontWeight: '800' },
+  close: { width: 48, height: 48, justifyContent: 'center', alignItems: 'center' },
+  note: { color: colors.inkMuted, fontSize: 12, lineHeight: 19, marginTop: 3 },
+  eyebrow: { color: colors.lime, fontSize: 12, fontWeight: '700', marginBottom: 4 },
+  linkText: { color: colors.green, fontSize: 12, fontWeight: '700' },
+  secondaryText: { color: colors.ink, fontSize: 14, fontWeight: '800' },
+  helper: { color: colors.inkMuted, fontSize: 12, lineHeight: 19, marginVertical: 12 },
+  cooldownLink: { minHeight: 48, justifyContent: 'center', alignItems: 'center' },
+  shade: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 16,
+    backgroundColor: 'rgba(0,0,0,.72)',
+  },
+  sheet: {
+    width: '100%',
+    maxWidth: 440,
+    maxHeight: '90%',
+    backgroundColor: colors.paper,
+    borderWidth: 1,
+    borderColor: colors.line,
+    borderRadius: 20,
+    overflow: 'hidden',
+  },
+  modalHead: { flexDirection: 'row', alignItems: 'center', padding: 16 },
+  modalTitle: { flex: 1, color: colors.ink, fontSize: 20, fontWeight: '900' },
+  modalClose: { color: colors.inkMuted, fontSize: 28 },
+  guideContent: { paddingHorizontal: 16, paddingBottom: 20 },
+  modalFoot: { padding: 16 },
+  qualitySheet: { padding: 16 },
+  qualityOption: {
+    backgroundColor: colors.card,
+    borderWidth: 1,
+    borderColor: colors.line,
+    borderRadius: 14,
+    padding: 14,
+    marginTop: 9,
+  },
+  qualityPain: { backgroundColor: '#302322' },
+  criteria: { padding: 12, borderWidth: 1, borderColor: colors.line, borderRadius: 12 },
+});

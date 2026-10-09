@@ -1,0 +1,4326 @@
+{
+  "date": "2026-10-01",
+  "horizonWeeks": 12,
+  "scope": "Synthetic profiles; current estimator output, not measured human workout duration. Default all gear, balanced priority. Sequential timer scenario assumes rest before transition.",
+  "registeredWorkouts": 85,
+  "configurations": 100,
+  "visibleConfigurations": 75,
+  "simulatedSessions": 4740,
+  "visibleSessions": 3540,
+  "specSummary": [
+    {
+      "spec": "mini",
+      "budget": 20,
+      "configurations": 15,
+      "sessions": 708,
+      "min": 17,
+      "max": 20,
+      "weightedMean": 19.2,
+      "under80": 0,
+      "overBudget": 0,
+      "sequentialOverBudget": 708
+    },
+    {
+      "spec": "light",
+      "budget": 30,
+      "configurations": 15,
+      "sessions": 708,
+      "min": 21,
+      "max": 30,
+      "weightedMean": 27.2,
+      "under80": 72,
+      "overBudget": 0,
+      "sequentialOverBudget": 588
+    },
+    {
+      "spec": "standard",
+      "budget": 45,
+      "configurations": 15,
+      "sessions": 708,
+      "min": 22,
+      "max": 45,
+      "weightedMean": 36.5,
+      "under80": 348,
+      "overBudget": 0,
+      "sequentialOverBudget": 318
+    },
+    {
+      "spec": "pro",
+      "budget": 60,
+      "configurations": 15,
+      "sessions": 708,
+      "min": 23,
+      "max": 57,
+      "weightedMean": 39.2,
+      "under80": 588,
+      "overBudget": 0,
+      "sequentialOverBudget": 96
+    },
+    {
+      "spec": "ultra",
+      "budget": 75,
+      "configurations": 15,
+      "sessions": 708,
+      "min": 23,
+      "max": 57,
+      "weightedMean": 39.3,
+      "under80": 708,
+      "overBudget": 0,
+      "sequentialOverBudget": 0
+    }
+  ],
+  "equalDose": [
+    {
+      "split": "bro",
+      "frequency": 1,
+      "allCoursesSame": true,
+      "proMinutes": [
+        57,
+        57
+      ],
+      "ultraMinutes": [
+        57,
+        57
+      ]
+    },
+    {
+      "split": "bro",
+      "frequency": 2,
+      "allCoursesSame": true,
+      "proMinutes": [
+        39,
+        44
+      ],
+      "ultraMinutes": [
+        39,
+        44
+      ]
+    },
+    {
+      "split": "bro",
+      "frequency": 3,
+      "allCoursesSame": true,
+      "proMinutes": [
+        35,
+        37
+      ],
+      "ultraMinutes": [
+        35,
+        37
+      ]
+    },
+    {
+      "split": "bro",
+      "frequency": 4,
+      "allCoursesSame": true,
+      "proMinutes": [
+        37,
+        49
+      ],
+      "ultraMinutes": [
+        37,
+        49
+      ]
+    },
+    {
+      "split": "bro",
+      "frequency": 5,
+      "allCoursesSame": false,
+      "proMinutes": [
+        31,
+        44
+      ],
+      "ultraMinutes": [
+        31,
+        44
+      ]
+    },
+    {
+      "split": "bro",
+      "frequency": 6,
+      "allCoursesSame": false,
+      "proMinutes": [
+        23,
+        44
+      ],
+      "ultraMinutes": [
+        23,
+        44
+      ]
+    },
+    {
+      "split": "ppl",
+      "frequency": 3,
+      "allCoursesSame": true,
+      "proMinutes": [
+        34,
+        42
+      ],
+      "ultraMinutes": [
+        34,
+        42
+      ]
+    },
+    {
+      "split": "ppl",
+      "frequency": 4,
+      "allCoursesSame": true,
+      "proMinutes": [
+        34,
+        42
+      ],
+      "ultraMinutes": [
+        34,
+        42
+      ]
+    },
+    {
+      "split": "ppl",
+      "frequency": 5,
+      "allCoursesSame": true,
+      "proMinutes": [
+        34,
+        42
+      ],
+      "ultraMinutes": [
+        34,
+        42
+      ]
+    },
+    {
+      "split": "ppl",
+      "frequency": 6,
+      "allCoursesSame": true,
+      "proMinutes": [
+        34,
+        42
+      ],
+      "ultraMinutes": [
+        34,
+        42
+      ]
+    },
+    {
+      "split": "upper_lower",
+      "frequency": 2,
+      "allCoursesSame": true,
+      "proMinutes": [
+        46,
+        57
+      ],
+      "ultraMinutes": [
+        46,
+        57
+      ]
+    },
+    {
+      "split": "upper_lower",
+      "frequency": 3,
+      "allCoursesSame": true,
+      "proMinutes": [
+        46,
+        57
+      ],
+      "ultraMinutes": [
+        46,
+        57
+      ]
+    },
+    {
+      "split": "upper_lower",
+      "frequency": 4,
+      "allCoursesSame": true,
+      "proMinutes": [
+        46,
+        57
+      ],
+      "ultraMinutes": [
+        46,
+        57
+      ]
+    },
+    {
+      "split": "upper_lower",
+      "frequency": 5,
+      "allCoursesSame": true,
+      "proMinutes": [
+        39,
+        51
+      ],
+      "ultraMinutes": [
+        39,
+        51
+      ]
+    },
+    {
+      "split": "upper_lower",
+      "frequency": 6,
+      "allCoursesSame": true,
+      "proMinutes": [
+        29,
+        35
+      ],
+      "ultraMinutes": [
+        29,
+        35
+      ]
+    }
+  ],
+  "examples": [
+    {
+      "spec": "mini",
+      "budget": 20,
+      "upperA": {
+        "id": "equipment_upper_lower_4_0",
+        "title": "上肢训练 A",
+        "minutes": 19,
+        "sets": 5,
+        "movements": 3,
+        "estimate": {
+          "warmupSeconds": 360,
+          "workSeconds": 240,
+          "restSeconds": 300,
+          "transitionsSeconds": 120,
+          "cooldownSeconds": 120,
+          "totalSeconds": 1140,
+          "totalMinutes": 19
+        },
+        "crossRestSeconds": 300,
+        "timerSequentialMinutes": 24,
+        "items": [
+          {
+            "id": "equipment_chest_03",
+            "source": "equipment_chest_03",
+            "name": "坐姿水平对敛推胸机",
+            "group": "chest",
+            "regions": [
+              "chest_middle"
+            ],
+            "sets": 2,
+            "range": [
+              8,
+              12
+            ],
+            "rest": 150,
+            "perSide": false,
+            "rir": 3
+          },
+          {
+            "id": "equipment_back_01",
+            "source": "equipment_back_01",
+            "name": "正手/对握高位下拉",
+            "group": "back",
+            "regions": [
+              "back_lats"
+            ],
+            "sets": 2,
+            "range": [
+              8,
+              12
+            ],
+            "rest": 150,
+            "perSide": false,
+            "rir": 3
+          },
+          {
+            "id": "equipment_chest_01",
+            "source": "equipment_chest_01",
+            "name": "30° 上斜哑铃卧推",
+            "group": "chest",
+            "regions": [
+              "chest_upper"
+            ],
+            "sets": 1,
+            "range": [
+              8,
+              12
+            ],
+            "rest": 150,
+            "perSide": false,
+            "rir": 3
+          }
+        ]
+      },
+      "broChest": {
+        "id": "equipment_bro_5_0",
+        "title": "胸部训练",
+        "minutes": 20,
+        "sets": 6,
+        "movements": 3,
+        "estimate": {
+          "warmupSeconds": 240,
+          "workSeconds": 306,
+          "restSeconds": 390,
+          "transitionsSeconds": 120,
+          "cooldownSeconds": 120,
+          "totalSeconds": 1176,
+          "totalMinutes": 20
+        },
+        "crossRestSeconds": 300,
+        "timerSequentialMinutes": 25,
+        "items": [
+          {
+            "id": "equipment_chest_03",
+            "source": "equipment_chest_03",
+            "name": "坐姿水平对敛推胸机",
+            "group": "chest",
+            "regions": [
+              "chest_middle"
+            ],
+            "sets": 2,
+            "range": [
+              8,
+              12
+            ],
+            "rest": 150,
+            "perSide": false,
+            "rir": 3
+          },
+          {
+            "id": "equipment_chest_01",
+            "source": "equipment_chest_01",
+            "name": "30° 上斜哑铃卧推",
+            "group": "chest",
+            "regions": [
+              "chest_upper"
+            ],
+            "sets": 2,
+            "range": [
+              8,
+              12
+            ],
+            "rest": 150,
+            "perSide": false,
+            "rir": 3
+          },
+          {
+            "id": "equipment_chest_04",
+            "source": "equipment_chest_04",
+            "name": "蝴蝶机夹胸 (Pec Deck)",
+            "group": "chest",
+            "regions": [
+              "chest_middle"
+            ],
+            "sets": 2,
+            "range": [
+              10,
+              15
+            ],
+            "rest": 90,
+            "perSide": false,
+            "rir": 3
+          }
+        ]
+      },
+      "broFull": {
+        "id": "equipment_bro_1_0",
+        "title": "全身部位训练",
+        "minutes": 18,
+        "sets": 4,
+        "movements": 3,
+        "estimate": {
+          "warmupSeconds": 480,
+          "workSeconds": 192,
+          "restSeconds": 150,
+          "transitionsSeconds": 120,
+          "cooldownSeconds": 120,
+          "totalSeconds": 1062,
+          "totalMinutes": 18
+        },
+        "crossRestSeconds": 300,
+        "timerSequentialMinutes": 23,
+        "items": [
+          {
+            "id": "equipment_legs_02",
+            "source": "equipment_legs_02",
+            "name": "45°倒蹬机",
+            "group": "legs",
+            "regions": [
+              "legs_quads",
+              "legs_glutes"
+            ],
+            "sets": 2,
+            "range": [
+              8,
+              12
+            ],
+            "rest": 150,
+            "perSide": false,
+            "rir": 3
+          },
+          {
+            "id": "equipment_chest_03",
+            "source": "equipment_chest_03",
+            "name": "坐姿水平对敛推胸机",
+            "group": "chest",
+            "regions": [
+              "chest_middle"
+            ],
+            "sets": 1,
+            "range": [
+              8,
+              12
+            ],
+            "rest": 150,
+            "perSide": false,
+            "rir": 3
+          },
+          {
+            "id": "equipment_back_01",
+            "source": "equipment_back_01",
+            "name": "正手/对握高位下拉",
+            "group": "back",
+            "regions": [
+              "back_lats"
+            ],
+            "sets": 1,
+            "range": [
+              8,
+              12
+            ],
+            "rest": 150,
+            "perSide": false,
+            "rir": 3
+          }
+        ]
+      }
+    },
+    {
+      "spec": "light",
+      "budget": 30,
+      "upperA": {
+        "id": "equipment_upper_lower_4_0",
+        "title": "上肢训练 A",
+        "minutes": 29,
+        "sets": 8,
+        "movements": 4,
+        "estimate": {
+          "warmupSeconds": 360,
+          "workSeconds": 384,
+          "restSeconds": 600,
+          "transitionsSeconds": 180,
+          "cooldownSeconds": 180,
+          "totalSeconds": 1704,
+          "totalMinutes": 29
+        },
+        "crossRestSeconds": 450,
+        "timerSequentialMinutes": 36,
+        "items": [
+          {
+            "id": "equipment_chest_03",
+            "source": "equipment_chest_03",
+            "name": "坐姿水平对敛推胸机",
+            "group": "chest",
+            "regions": [
+              "chest_middle"
+            ],
+            "sets": 2,
+            "range": [
+              8,
+              12
+            ],
+            "rest": 150,
+            "perSide": false,
+            "rir": 3
+          },
+          {
+            "id": "equipment_back_01",
+            "source": "equipment_back_01",
+            "name": "正手/对握高位下拉",
+            "group": "back",
+            "regions": [
+              "back_lats"
+            ],
+            "sets": 2,
+            "range": [
+              8,
+              12
+            ],
+            "rest": 150,
+            "perSide": false,
+            "rir": 3
+          },
+          {
+            "id": "equipment_chest_01",
+            "source": "equipment_chest_01",
+            "name": "30° 上斜哑铃卧推",
+            "group": "chest",
+            "regions": [
+              "chest_upper"
+            ],
+            "sets": 2,
+            "range": [
+              8,
+              12
+            ],
+            "rest": 150,
+            "perSide": false,
+            "rir": 3
+          },
+          {
+            "id": "equipment_back_15",
+            "source": "equipment_back_15",
+            "name": "坐姿胸支撑器械划船（中立握）",
+            "group": "back",
+            "regions": [
+              "back_lats",
+              "back_upper"
+            ],
+            "sets": 2,
+            "range": [
+              8,
+              12
+            ],
+            "rest": 150,
+            "perSide": false,
+            "rir": 3
+          }
+        ]
+      },
+      "broChest": {
+        "id": "equipment_bro_5_0",
+        "title": "胸部训练",
+        "minutes": 25,
+        "sets": 8,
+        "movements": 4,
+        "estimate": {
+          "warmupSeconds": 240,
+          "workSeconds": 420,
+          "restSeconds": 480,
+          "transitionsSeconds": 180,
+          "cooldownSeconds": 180,
+          "totalSeconds": 1500,
+          "totalMinutes": 25
+        },
+        "crossRestSeconds": 390,
+        "timerSequentialMinutes": 32,
+        "items": [
+          {
+            "id": "equipment_chest_03",
+            "source": "equipment_chest_03",
+            "name": "坐姿水平对敛推胸机",
+            "group": "chest",
+            "regions": [
+              "chest_middle"
+            ],
+            "sets": 2,
+            "range": [
+              8,
+              12
+            ],
+            "rest": 150,
+            "perSide": false,
+            "rir": 3
+          },
+          {
+            "id": "equipment_chest_01",
+            "source": "equipment_chest_01",
+            "name": "30° 上斜哑铃卧推",
+            "group": "chest",
+            "regions": [
+              "chest_upper"
+            ],
+            "sets": 2,
+            "range": [
+              8,
+              12
+            ],
+            "rest": 150,
+            "perSide": false,
+            "rir": 3
+          },
+          {
+            "id": "equipment_chest_04",
+            "source": "equipment_chest_04",
+            "name": "蝴蝶机夹胸 (Pec Deck)",
+            "group": "chest",
+            "regions": [
+              "chest_middle"
+            ],
+            "sets": 2,
+            "range": [
+              10,
+              15
+            ],
+            "rest": 90,
+            "perSide": false,
+            "rir": 3
+          },
+          {
+            "id": "equipment_chest_07",
+            "source": "equipment_chest_07",
+            "name": "绳索高位向斜下夹胸",
+            "group": "chest",
+            "regions": [
+              "chest_lower"
+            ],
+            "sets": 2,
+            "range": [
+              12,
+              15
+            ],
+            "rest": 90,
+            "perSide": false,
+            "rir": 3
+          }
+        ]
+      },
+      "broFull": {
+        "id": "equipment_bro_1_0",
+        "title": "全身部位训练",
+        "minutes": 26,
+        "sets": 6,
+        "movements": 3,
+        "estimate": {
+          "warmupSeconds": 480,
+          "workSeconds": 288,
+          "restSeconds": 450,
+          "transitionsSeconds": 120,
+          "cooldownSeconds": 180,
+          "totalSeconds": 1518,
+          "totalMinutes": 26
+        },
+        "crossRestSeconds": 300,
+        "timerSequentialMinutes": 31,
+        "items": [
+          {
+            "id": "equipment_legs_02",
+            "source": "equipment_legs_02",
+            "name": "45°倒蹬机",
+            "group": "legs",
+            "regions": [
+              "legs_quads",
+              "legs_glutes"
+            ],
+            "sets": 2,
+            "range": [
+              8,
+              12
+            ],
+            "rest": 150,
+            "perSide": false,
+            "rir": 3
+          },
+          {
+            "id": "equipment_chest_03",
+            "source": "equipment_chest_03",
+            "name": "坐姿水平对敛推胸机",
+            "group": "chest",
+            "regions": [
+              "chest_middle"
+            ],
+            "sets": 2,
+            "range": [
+              8,
+              12
+            ],
+            "rest": 150,
+            "perSide": false,
+            "rir": 3
+          },
+          {
+            "id": "equipment_back_01",
+            "source": "equipment_back_01",
+            "name": "正手/对握高位下拉",
+            "group": "back",
+            "regions": [
+              "back_lats"
+            ],
+            "sets": 2,
+            "range": [
+              8,
+              12
+            ],
+            "rest": 150,
+            "perSide": false,
+            "rir": 3
+          }
+        ]
+      }
+    },
+    {
+      "spec": "standard",
+      "budget": 45,
+      "upperA": {
+        "id": "equipment_upper_lower_4_0",
+        "title": "上肢训练 A",
+        "minutes": 45,
+        "sets": 12,
+        "movements": 5,
+        "estimate": {
+          "warmupSeconds": 480,
+          "workSeconds": 744,
+          "restSeconds": 975,
+          "transitionsSeconds": 240,
+          "cooldownSeconds": 240,
+          "totalSeconds": 2679,
+          "totalMinutes": 45
+        },
+        "crossRestSeconds": 600,
+        "timerSequentialMinutes": 55,
+        "items": [
+          {
+            "id": "equipment_chest_03",
+            "source": "equipment_chest_03",
+            "name": "坐姿水平对敛推胸机",
+            "group": "chest",
+            "regions": [
+              "chest_middle"
+            ],
+            "sets": 3,
+            "range": [
+              8,
+              12
+            ],
+            "rest": 150,
+            "perSide": false,
+            "rir": 2
+          },
+          {
+            "id": "equipment_back_01",
+            "source": "equipment_back_01",
+            "name": "正手/对握高位下拉",
+            "group": "back",
+            "regions": [
+              "back_lats"
+            ],
+            "sets": 3,
+            "range": [
+              8,
+              12
+            ],
+            "rest": 150,
+            "perSide": false,
+            "rir": 2
+          },
+          {
+            "id": "equipment_chest_01",
+            "source": "equipment_chest_01",
+            "name": "30° 上斜哑铃卧推",
+            "group": "chest",
+            "regions": [
+              "chest_upper"
+            ],
+            "sets": 2,
+            "range": [
+              8,
+              12
+            ],
+            "rest": 150,
+            "perSide": false,
+            "rir": 2
+          },
+          {
+            "id": "equipment_back_15",
+            "source": "equipment_back_15",
+            "name": "坐姿胸支撑器械划船（中立握）",
+            "group": "back",
+            "regions": [
+              "back_lats",
+              "back_upper"
+            ],
+            "sets": 2,
+            "range": [
+              8,
+              12
+            ],
+            "rest": 150,
+            "perSide": false,
+            "rir": 2
+          },
+          {
+            "id": "equipment_shoulders_01",
+            "source": "equipment_shoulders_01",
+            "name": "肩胛面绳索侧平举",
+            "group": "shoulders",
+            "regions": [
+              "shoulders_side"
+            ],
+            "sets": 2,
+            "range": [
+              12,
+              20
+            ],
+            "rest": 75,
+            "perSide": true,
+            "rir": 2
+          }
+        ]
+      },
+      "broChest": {
+        "id": "equipment_bro_5_0",
+        "title": "胸部训练",
+        "minutes": 33,
+        "sets": 10,
+        "movements": 4,
+        "estimate": {
+          "warmupSeconds": 240,
+          "workSeconds": 516,
+          "restSeconds": 780,
+          "transitionsSeconds": 180,
+          "cooldownSeconds": 240,
+          "totalSeconds": 1956,
+          "totalMinutes": 33
+        },
+        "crossRestSeconds": 390,
+        "timerSequentialMinutes": 40,
+        "items": [
+          {
+            "id": "equipment_chest_03",
+            "source": "equipment_chest_03",
+            "name": "坐姿水平对敛推胸机",
+            "group": "chest",
+            "regions": [
+              "chest_middle"
+            ],
+            "sets": 3,
+            "range": [
+              8,
+              12
+            ],
+            "rest": 150,
+            "perSide": false,
+            "rir": 2
+          },
+          {
+            "id": "equipment_chest_01",
+            "source": "equipment_chest_01",
+            "name": "30° 上斜哑铃卧推",
+            "group": "chest",
+            "regions": [
+              "chest_upper"
+            ],
+            "sets": 3,
+            "range": [
+              8,
+              12
+            ],
+            "rest": 150,
+            "perSide": false,
+            "rir": 2
+          },
+          {
+            "id": "equipment_chest_04",
+            "source": "equipment_chest_04",
+            "name": "蝴蝶机夹胸 (Pec Deck)",
+            "group": "chest",
+            "regions": [
+              "chest_middle"
+            ],
+            "sets": 2,
+            "range": [
+              10,
+              15
+            ],
+            "rest": 90,
+            "perSide": false,
+            "rir": 2
+          },
+          {
+            "id": "equipment_chest_07",
+            "source": "equipment_chest_07",
+            "name": "绳索高位向斜下夹胸",
+            "group": "chest",
+            "regions": [
+              "chest_lower"
+            ],
+            "sets": 2,
+            "range": [
+              12,
+              15
+            ],
+            "rest": 90,
+            "perSide": false,
+            "rir": 2
+          }
+        ]
+      },
+      "broFull": {
+        "id": "equipment_bro_1_0",
+        "title": "全身部位训练",
+        "minutes": 42,
+        "sets": 11,
+        "movements": 4,
+        "estimate": {
+          "warmupSeconds": 480,
+          "workSeconds": 528,
+          "restSeconds": 1050,
+          "transitionsSeconds": 180,
+          "cooldownSeconds": 240,
+          "totalSeconds": 2478,
+          "totalMinutes": 42
+        },
+        "crossRestSeconds": 450,
+        "timerSequentialMinutes": 49,
+        "items": [
+          {
+            "id": "equipment_legs_02",
+            "source": "equipment_legs_02",
+            "name": "45°倒蹬机",
+            "group": "legs",
+            "regions": [
+              "legs_quads",
+              "legs_glutes"
+            ],
+            "sets": 3,
+            "range": [
+              8,
+              12
+            ],
+            "rest": 150,
+            "perSide": false,
+            "rir": 2
+          },
+          {
+            "id": "equipment_chest_03",
+            "source": "equipment_chest_03",
+            "name": "坐姿水平对敛推胸机",
+            "group": "chest",
+            "regions": [
+              "chest_middle"
+            ],
+            "sets": 3,
+            "range": [
+              8,
+              12
+            ],
+            "rest": 150,
+            "perSide": false,
+            "rir": 2
+          },
+          {
+            "id": "equipment_back_01",
+            "source": "equipment_back_01",
+            "name": "正手/对握高位下拉",
+            "group": "back",
+            "regions": [
+              "back_lats"
+            ],
+            "sets": 3,
+            "range": [
+              8,
+              12
+            ],
+            "rest": 150,
+            "perSide": false,
+            "rir": 2
+          },
+          {
+            "id": "equipment_shoulders_14",
+            "source": "equipment_shoulders_14",
+            "name": "器械侧平举",
+            "group": "shoulders",
+            "regions": [
+              "shoulders_side"
+            ],
+            "sets": 2,
+            "range": [
+              8,
+              12
+            ],
+            "rest": 150,
+            "perSide": false,
+            "rir": 2
+          }
+        ]
+      }
+    },
+    {
+      "spec": "pro",
+      "budget": 60,
+      "upperA": {
+        "id": "equipment_upper_lower_4_0",
+        "title": "上肢训练 A",
+        "minutes": 55,
+        "sets": 16,
+        "movements": 7,
+        "estimate": {
+          "warmupSeconds": 480,
+          "workSeconds": 972,
+          "restSeconds": 1155,
+          "transitionsSeconds": 360,
+          "cooldownSeconds": 300,
+          "totalSeconds": 3267,
+          "totalMinutes": 55
+        },
+        "crossRestSeconds": 765,
+        "timerSequentialMinutes": 68,
+        "items": [
+          {
+            "id": "equipment_chest_03",
+            "source": "equipment_chest_03",
+            "name": "坐姿水平对敛推胸机",
+            "group": "chest",
+            "regions": [
+              "chest_middle"
+            ],
+            "sets": 3,
+            "range": [
+              8,
+              12
+            ],
+            "rest": 150,
+            "perSide": false,
+            "rir": 2
+          },
+          {
+            "id": "equipment_back_01",
+            "source": "equipment_back_01",
+            "name": "正手/对握高位下拉",
+            "group": "back",
+            "regions": [
+              "back_lats"
+            ],
+            "sets": 3,
+            "range": [
+              8,
+              12
+            ],
+            "rest": 150,
+            "perSide": false,
+            "rir": 2
+          },
+          {
+            "id": "equipment_chest_01",
+            "source": "equipment_chest_01",
+            "name": "30° 上斜哑铃卧推",
+            "group": "chest",
+            "regions": [
+              "chest_upper"
+            ],
+            "sets": 2,
+            "range": [
+              8,
+              12
+            ],
+            "rest": 150,
+            "perSide": false,
+            "rir": 2
+          },
+          {
+            "id": "equipment_back_15",
+            "source": "equipment_back_15",
+            "name": "坐姿胸支撑器械划船（中立握）",
+            "group": "back",
+            "regions": [
+              "back_lats",
+              "back_upper"
+            ],
+            "sets": 2,
+            "range": [
+              8,
+              12
+            ],
+            "rest": 150,
+            "perSide": false,
+            "rir": 2
+          },
+          {
+            "id": "equipment_shoulders_01",
+            "source": "equipment_shoulders_01",
+            "name": "肩胛面绳索侧平举",
+            "group": "shoulders",
+            "regions": [
+              "shoulders_side"
+            ],
+            "sets": 2,
+            "range": [
+              12,
+              20
+            ],
+            "rest": 75,
+            "perSide": true,
+            "rir": 2
+          },
+          {
+            "id": "equipment_arms_01",
+            "source": "equipment_arms_01",
+            "name": "过顶绳索臂屈伸",
+            "group": "arms",
+            "regions": [
+              "arms_triceps"
+            ],
+            "sets": 2,
+            "range": [
+              10,
+              15
+            ],
+            "rest": 90,
+            "perSide": false,
+            "rir": 2
+          },
+          {
+            "id": "equipment_arms_08",
+            "source": "equipment_arms_08",
+            "name": "EZ杠牧师凳弯举",
+            "group": "arms",
+            "regions": [
+              "arms_biceps",
+              "arms_brachialis"
+            ],
+            "sets": 2,
+            "range": [
+              10,
+              15
+            ],
+            "rest": 90,
+            "perSide": false,
+            "rir": 2
+          }
+        ]
+      },
+      "broChest": {
+        "id": "equipment_bro_5_0",
+        "title": "胸部训练",
+        "minutes": 34,
+        "sets": 10,
+        "movements": 4,
+        "estimate": {
+          "warmupSeconds": 240,
+          "workSeconds": 516,
+          "restSeconds": 780,
+          "transitionsSeconds": 180,
+          "cooldownSeconds": 300,
+          "totalSeconds": 2016,
+          "totalMinutes": 34
+        },
+        "crossRestSeconds": 390,
+        "timerSequentialMinutes": 41,
+        "items": [
+          {
+            "id": "equipment_chest_03",
+            "source": "equipment_chest_03",
+            "name": "坐姿水平对敛推胸机",
+            "group": "chest",
+            "regions": [
+              "chest_middle"
+            ],
+            "sets": 3,
+            "range": [
+              8,
+              12
+            ],
+            "rest": 150,
+            "perSide": false,
+            "rir": 2
+          },
+          {
+            "id": "equipment_chest_01",
+            "source": "equipment_chest_01",
+            "name": "30° 上斜哑铃卧推",
+            "group": "chest",
+            "regions": [
+              "chest_upper"
+            ],
+            "sets": 3,
+            "range": [
+              8,
+              12
+            ],
+            "rest": 150,
+            "perSide": false,
+            "rir": 2
+          },
+          {
+            "id": "equipment_chest_04",
+            "source": "equipment_chest_04",
+            "name": "蝴蝶机夹胸 (Pec Deck)",
+            "group": "chest",
+            "regions": [
+              "chest_middle"
+            ],
+            "sets": 2,
+            "range": [
+              10,
+              15
+            ],
+            "rest": 90,
+            "perSide": false,
+            "rir": 2
+          },
+          {
+            "id": "equipment_chest_07",
+            "source": "equipment_chest_07",
+            "name": "绳索高位向斜下夹胸",
+            "group": "chest",
+            "regions": [
+              "chest_lower"
+            ],
+            "sets": 2,
+            "range": [
+              12,
+              15
+            ],
+            "rest": 90,
+            "perSide": false,
+            "rir": 2
+          }
+        ]
+      },
+      "broFull": {
+        "id": "equipment_bro_1_0",
+        "title": "全身部位训练",
+        "minutes": 57,
+        "sets": 17,
+        "movements": 7,
+        "estimate": {
+          "warmupSeconds": 480,
+          "workSeconds": 834,
+          "restSeconds": 1440,
+          "transitionsSeconds": 360,
+          "cooldownSeconds": 300,
+          "totalSeconds": 3414,
+          "totalMinutes": 57
+        },
+        "crossRestSeconds": 900,
+        "timerSequentialMinutes": 72,
+        "items": [
+          {
+            "id": "equipment_legs_02",
+            "source": "equipment_legs_02",
+            "name": "45°倒蹬机",
+            "group": "legs",
+            "regions": [
+              "legs_quads",
+              "legs_glutes"
+            ],
+            "sets": 3,
+            "range": [
+              8,
+              12
+            ],
+            "rest": 150,
+            "perSide": false,
+            "rir": 2
+          },
+          {
+            "id": "equipment_chest_03",
+            "source": "equipment_chest_03",
+            "name": "坐姿水平对敛推胸机",
+            "group": "chest",
+            "regions": [
+              "chest_middle"
+            ],
+            "sets": 3,
+            "range": [
+              8,
+              12
+            ],
+            "rest": 150,
+            "perSide": false,
+            "rir": 2
+          },
+          {
+            "id": "equipment_back_01",
+            "source": "equipment_back_01",
+            "name": "正手/对握高位下拉",
+            "group": "back",
+            "regions": [
+              "back_lats"
+            ],
+            "sets": 3,
+            "range": [
+              8,
+              12
+            ],
+            "rest": 150,
+            "perSide": false,
+            "rir": 2
+          },
+          {
+            "id": "equipment_shoulders_14",
+            "source": "equipment_shoulders_14",
+            "name": "器械侧平举",
+            "group": "shoulders",
+            "regions": [
+              "shoulders_side"
+            ],
+            "sets": 2,
+            "range": [
+              8,
+              12
+            ],
+            "rest": 150,
+            "perSide": false,
+            "rir": 2
+          },
+          {
+            "id": "equipment_legs_01",
+            "source": "equipment_legs_01",
+            "name": "坐姿器械腿弯举",
+            "group": "legs",
+            "regions": [
+              "legs_hamstrings"
+            ],
+            "sets": 2,
+            "range": [
+              8,
+              12
+            ],
+            "rest": 150,
+            "perSide": false,
+            "rir": 2
+          },
+          {
+            "id": "equipment_arms_01",
+            "source": "equipment_arms_01",
+            "name": "过顶绳索臂屈伸",
+            "group": "arms",
+            "regions": [
+              "arms_triceps"
+            ],
+            "sets": 2,
+            "range": [
+              8,
+              12
+            ],
+            "rest": 150,
+            "perSide": false,
+            "rir": 2
+          },
+          {
+            "id": "equipment_arms_08",
+            "source": "equipment_arms_08",
+            "name": "EZ杠牧师凳弯举",
+            "group": "arms",
+            "regions": [
+              "arms_biceps",
+              "arms_brachialis"
+            ],
+            "sets": 2,
+            "range": [
+              10,
+              15
+            ],
+            "rest": 90,
+            "perSide": false,
+            "rir": 2
+          }
+        ]
+      }
+    },
+    {
+      "spec": "ultra",
+      "budget": 75,
+      "upperA": {
+        "id": "equipment_upper_lower_4_0",
+        "title": "上肢训练 A",
+        "minutes": 55,
+        "sets": 16,
+        "movements": 7,
+        "estimate": {
+          "warmupSeconds": 480,
+          "workSeconds": 972,
+          "restSeconds": 1155,
+          "transitionsSeconds": 360,
+          "cooldownSeconds": 300,
+          "totalSeconds": 3267,
+          "totalMinutes": 55
+        },
+        "crossRestSeconds": 765,
+        "timerSequentialMinutes": 68,
+        "items": [
+          {
+            "id": "equipment_chest_03",
+            "source": "equipment_chest_03",
+            "name": "坐姿水平对敛推胸机",
+            "group": "chest",
+            "regions": [
+              "chest_middle"
+            ],
+            "sets": 3,
+            "range": [
+              8,
+              12
+            ],
+            "rest": 150,
+            "perSide": false,
+            "rir": 2
+          },
+          {
+            "id": "equipment_back_01",
+            "source": "equipment_back_01",
+            "name": "正手/对握高位下拉",
+            "group": "back",
+            "regions": [
+              "back_lats"
+            ],
+            "sets": 3,
+            "range": [
+              8,
+              12
+            ],
+            "rest": 150,
+            "perSide": false,
+            "rir": 2
+          },
+          {
+            "id": "equipment_chest_01",
+            "source": "equipment_chest_01",
+            "name": "30° 上斜哑铃卧推",
+            "group": "chest",
+            "regions": [
+              "chest_upper"
+            ],
+            "sets": 2,
+            "range": [
+              8,
+              12
+            ],
+            "rest": 150,
+            "perSide": false,
+            "rir": 2
+          },
+          {
+            "id": "equipment_back_15",
+            "source": "equipment_back_15",
+            "name": "坐姿胸支撑器械划船（中立握）",
+            "group": "back",
+            "regions": [
+              "back_lats",
+              "back_upper"
+            ],
+            "sets": 2,
+            "range": [
+              8,
+              12
+            ],
+            "rest": 150,
+            "perSide": false,
+            "rir": 2
+          },
+          {
+            "id": "equipment_shoulders_01",
+            "source": "equipment_shoulders_01",
+            "name": "肩胛面绳索侧平举",
+            "group": "shoulders",
+            "regions": [
+              "shoulders_side"
+            ],
+            "sets": 2,
+            "range": [
+              12,
+              20
+            ],
+            "rest": 75,
+            "perSide": true,
+            "rir": 2
+          },
+          {
+            "id": "equipment_arms_01",
+            "source": "equipment_arms_01",
+            "name": "过顶绳索臂屈伸",
+            "group": "arms",
+            "regions": [
+              "arms_triceps"
+            ],
+            "sets": 2,
+            "range": [
+              10,
+              15
+            ],
+            "rest": 90,
+            "perSide": false,
+            "rir": 2
+          },
+          {
+            "id": "equipment_arms_08",
+            "source": "equipment_arms_08",
+            "name": "EZ杠牧师凳弯举",
+            "group": "arms",
+            "regions": [
+              "arms_biceps",
+              "arms_brachialis"
+            ],
+            "sets": 2,
+            "range": [
+              10,
+              15
+            ],
+            "rest": 90,
+            "perSide": false,
+            "rir": 2
+          }
+        ]
+      },
+      "broChest": {
+        "id": "equipment_bro_5_0",
+        "title": "胸部训练",
+        "minutes": 34,
+        "sets": 10,
+        "movements": 4,
+        "estimate": {
+          "warmupSeconds": 240,
+          "workSeconds": 516,
+          "restSeconds": 780,
+          "transitionsSeconds": 180,
+          "cooldownSeconds": 300,
+          "totalSeconds": 2016,
+          "totalMinutes": 34
+        },
+        "crossRestSeconds": 390,
+        "timerSequentialMinutes": 41,
+        "items": [
+          {
+            "id": "equipment_chest_03",
+            "source": "equipment_chest_03",
+            "name": "坐姿水平对敛推胸机",
+            "group": "chest",
+            "regions": [
+              "chest_middle"
+            ],
+            "sets": 3,
+            "range": [
+              8,
+              12
+            ],
+            "rest": 150,
+            "perSide": false,
+            "rir": 2
+          },
+          {
+            "id": "equipment_chest_01",
+            "source": "equipment_chest_01",
+            "name": "30° 上斜哑铃卧推",
+            "group": "chest",
+            "regions": [
+              "chest_upper"
+            ],
+            "sets": 3,
+            "range": [
+              8,
+              12
+            ],
+            "rest": 150,
+            "perSide": false,
+            "rir": 2
+          },
+          {
+            "id": "equipment_chest_04",
+            "source": "equipment_chest_04",
+            "name": "蝴蝶机夹胸 (Pec Deck)",
+            "group": "chest",
+            "regions": [
+              "chest_middle"
+            ],
+            "sets": 2,
+            "range": [
+              10,
+              15
+            ],
+            "rest": 90,
+            "perSide": false,
+            "rir": 2
+          },
+          {
+            "id": "equipment_chest_07",
+            "source": "equipment_chest_07",
+            "name": "绳索高位向斜下夹胸",
+            "group": "chest",
+            "regions": [
+              "chest_lower"
+            ],
+            "sets": 2,
+            "range": [
+              12,
+              15
+            ],
+            "rest": 90,
+            "perSide": false,
+            "rir": 2
+          }
+        ]
+      },
+      "broFull": {
+        "id": "equipment_bro_1_0",
+        "title": "全身部位训练",
+        "minutes": 57,
+        "sets": 17,
+        "movements": 7,
+        "estimate": {
+          "warmupSeconds": 480,
+          "workSeconds": 834,
+          "restSeconds": 1440,
+          "transitionsSeconds": 360,
+          "cooldownSeconds": 300,
+          "totalSeconds": 3414,
+          "totalMinutes": 57
+        },
+        "crossRestSeconds": 900,
+        "timerSequentialMinutes": 72,
+        "items": [
+          {
+            "id": "equipment_legs_02",
+            "source": "equipment_legs_02",
+            "name": "45°倒蹬机",
+            "group": "legs",
+            "regions": [
+              "legs_quads",
+              "legs_glutes"
+            ],
+            "sets": 3,
+            "range": [
+              8,
+              12
+            ],
+            "rest": 150,
+            "perSide": false,
+            "rir": 2
+          },
+          {
+            "id": "equipment_chest_03",
+            "source": "equipment_chest_03",
+            "name": "坐姿水平对敛推胸机",
+            "group": "chest",
+            "regions": [
+              "chest_middle"
+            ],
+            "sets": 3,
+            "range": [
+              8,
+              12
+            ],
+            "rest": 150,
+            "perSide": false,
+            "rir": 2
+          },
+          {
+            "id": "equipment_back_01",
+            "source": "equipment_back_01",
+            "name": "正手/对握高位下拉",
+            "group": "back",
+            "regions": [
+              "back_lats"
+            ],
+            "sets": 3,
+            "range": [
+              8,
+              12
+            ],
+            "rest": 150,
+            "perSide": false,
+            "rir": 2
+          },
+          {
+            "id": "equipment_shoulders_14",
+            "source": "equipment_shoulders_14",
+            "name": "器械侧平举",
+            "group": "shoulders",
+            "regions": [
+              "shoulders_side"
+            ],
+            "sets": 2,
+            "range": [
+              8,
+              12
+            ],
+            "rest": 150,
+            "perSide": false,
+            "rir": 2
+          },
+          {
+            "id": "equipment_legs_01",
+            "source": "equipment_legs_01",
+            "name": "坐姿器械腿弯举",
+            "group": "legs",
+            "regions": [
+              "legs_hamstrings"
+            ],
+            "sets": 2,
+            "range": [
+              8,
+              12
+            ],
+            "rest": 150,
+            "perSide": false,
+            "rir": 2
+          },
+          {
+            "id": "equipment_arms_01",
+            "source": "equipment_arms_01",
+            "name": "过顶绳索臂屈伸",
+            "group": "arms",
+            "regions": [
+              "arms_triceps"
+            ],
+            "sets": 2,
+            "range": [
+              8,
+              12
+            ],
+            "rest": 150,
+            "perSide": false,
+            "rir": 2
+          },
+          {
+            "id": "equipment_arms_08",
+            "source": "equipment_arms_08",
+            "name": "EZ杠牧师凳弯举",
+            "group": "arms",
+            "regions": [
+              "arms_biceps",
+              "arms_brachialis"
+            ],
+            "sets": 2,
+            "range": [
+              10,
+              15
+            ],
+            "rest": 90,
+            "perSide": false,
+            "rir": 2
+          }
+        ]
+      }
+    }
+  ],
+  "priority": [
+    {
+      "priority": "balanced",
+      "course": {
+        "id": "equipment_bro_1_0",
+        "title": "全身部位训练",
+        "minutes": 18,
+        "sets": 4,
+        "movements": 3,
+        "estimate": {
+          "warmupSeconds": 480,
+          "workSeconds": 192,
+          "restSeconds": 150,
+          "transitionsSeconds": 120,
+          "cooldownSeconds": 120,
+          "totalSeconds": 1062,
+          "totalMinutes": 18
+        },
+        "crossRestSeconds": 300,
+        "timerSequentialMinutes": 23,
+        "items": [
+          {
+            "id": "equipment_legs_02",
+            "source": "equipment_legs_02",
+            "name": "45°倒蹬机",
+            "group": "legs",
+            "regions": [
+              "legs_quads",
+              "legs_glutes"
+            ],
+            "sets": 2,
+            "range": [
+              8,
+              12
+            ],
+            "rest": 150,
+            "perSide": false,
+            "rir": 3
+          },
+          {
+            "id": "equipment_chest_03",
+            "source": "equipment_chest_03",
+            "name": "坐姿水平对敛推胸机",
+            "group": "chest",
+            "regions": [
+              "chest_middle"
+            ],
+            "sets": 1,
+            "range": [
+              8,
+              12
+            ],
+            "rest": 150,
+            "perSide": false,
+            "rir": 3
+          },
+          {
+            "id": "equipment_back_01",
+            "source": "equipment_back_01",
+            "name": "正手/对握高位下拉",
+            "group": "back",
+            "regions": [
+              "back_lats"
+            ],
+            "sets": 1,
+            "range": [
+              8,
+              12
+            ],
+            "rest": 150,
+            "perSide": false,
+            "rir": 3
+          }
+        ]
+      }
+    },
+    {
+      "priority": "chest",
+      "course": {
+        "id": "equipment_bro_1_0",
+        "title": "全身部位训练",
+        "minutes": 18,
+        "sets": 4,
+        "movements": 3,
+        "estimate": {
+          "warmupSeconds": 480,
+          "workSeconds": 192,
+          "restSeconds": 150,
+          "transitionsSeconds": 120,
+          "cooldownSeconds": 120,
+          "totalSeconds": 1062,
+          "totalMinutes": 18
+        },
+        "crossRestSeconds": 300,
+        "timerSequentialMinutes": 23,
+        "items": [
+          {
+            "id": "equipment_chest_03",
+            "source": "equipment_chest_03",
+            "name": "坐姿水平对敛推胸机",
+            "group": "chest",
+            "regions": [
+              "chest_middle"
+            ],
+            "sets": 2,
+            "range": [
+              8,
+              12
+            ],
+            "rest": 150,
+            "perSide": false,
+            "rir": 3
+          },
+          {
+            "id": "equipment_legs_02",
+            "source": "equipment_legs_02",
+            "name": "45°倒蹬机",
+            "group": "legs",
+            "regions": [
+              "legs_quads",
+              "legs_glutes"
+            ],
+            "sets": 1,
+            "range": [
+              8,
+              12
+            ],
+            "rest": 150,
+            "perSide": false,
+            "rir": 3
+          },
+          {
+            "id": "equipment_back_01",
+            "source": "equipment_back_01",
+            "name": "正手/对握高位下拉",
+            "group": "back",
+            "regions": [
+              "back_lats"
+            ],
+            "sets": 1,
+            "range": [
+              8,
+              12
+            ],
+            "rest": 150,
+            "perSide": false,
+            "rir": 3
+          }
+        ]
+      }
+    },
+    {
+      "priority": "back",
+      "course": {
+        "id": "equipment_bro_1_0",
+        "title": "全身部位训练",
+        "minutes": 18,
+        "sets": 4,
+        "movements": 3,
+        "estimate": {
+          "warmupSeconds": 480,
+          "workSeconds": 192,
+          "restSeconds": 150,
+          "transitionsSeconds": 120,
+          "cooldownSeconds": 120,
+          "totalSeconds": 1062,
+          "totalMinutes": 18
+        },
+        "crossRestSeconds": 300,
+        "timerSequentialMinutes": 23,
+        "items": [
+          {
+            "id": "equipment_back_01",
+            "source": "equipment_back_01",
+            "name": "正手/对握高位下拉",
+            "group": "back",
+            "regions": [
+              "back_lats"
+            ],
+            "sets": 2,
+            "range": [
+              8,
+              12
+            ],
+            "rest": 150,
+            "perSide": false,
+            "rir": 3
+          },
+          {
+            "id": "equipment_legs_02",
+            "source": "equipment_legs_02",
+            "name": "45°倒蹬机",
+            "group": "legs",
+            "regions": [
+              "legs_quads",
+              "legs_glutes"
+            ],
+            "sets": 1,
+            "range": [
+              8,
+              12
+            ],
+            "rest": 150,
+            "perSide": false,
+            "rir": 3
+          },
+          {
+            "id": "equipment_chest_03",
+            "source": "equipment_chest_03",
+            "name": "坐姿水平对敛推胸机",
+            "group": "chest",
+            "regions": [
+              "chest_middle"
+            ],
+            "sets": 1,
+            "range": [
+              8,
+              12
+            ],
+            "rest": 150,
+            "perSide": false,
+            "rir": 3
+          }
+        ]
+      }
+    },
+    {
+      "priority": "legs",
+      "course": {
+        "id": "equipment_bro_1_0",
+        "title": "全身部位训练",
+        "minutes": 19,
+        "sets": 5,
+        "movements": 3,
+        "estimate": {
+          "warmupSeconds": 360,
+          "workSeconds": 240,
+          "restSeconds": 300,
+          "transitionsSeconds": 120,
+          "cooldownSeconds": 120,
+          "totalSeconds": 1140,
+          "totalMinutes": 19
+        },
+        "crossRestSeconds": 300,
+        "timerSequentialMinutes": 24,
+        "items": [
+          {
+            "id": "equipment_legs_02",
+            "source": "equipment_legs_02",
+            "name": "45°倒蹬机",
+            "group": "legs",
+            "regions": [
+              "legs_quads",
+              "legs_glutes"
+            ],
+            "sets": 2,
+            "range": [
+              8,
+              12
+            ],
+            "rest": 150,
+            "perSide": false,
+            "rir": 3
+          },
+          {
+            "id": "equipment_legs_01",
+            "source": "equipment_legs_01",
+            "name": "坐姿器械腿弯举",
+            "group": "legs",
+            "regions": [
+              "legs_hamstrings"
+            ],
+            "sets": 2,
+            "range": [
+              8,
+              12
+            ],
+            "rest": 150,
+            "perSide": false,
+            "rir": 3
+          },
+          {
+            "id": "equipment_chest_03",
+            "source": "equipment_chest_03",
+            "name": "坐姿水平对敛推胸机",
+            "group": "chest",
+            "regions": [
+              "chest_middle"
+            ],
+            "sets": 1,
+            "range": [
+              8,
+              12
+            ],
+            "rest": 150,
+            "perSide": false,
+            "rir": 3
+          }
+        ]
+      }
+    },
+    {
+      "priority": "arms",
+      "course": {
+        "id": "equipment_bro_1_0",
+        "title": "全身部位训练",
+        "minutes": 19,
+        "sets": 5,
+        "movements": 3,
+        "estimate": {
+          "warmupSeconds": 360,
+          "workSeconds": 258,
+          "restSeconds": 240,
+          "transitionsSeconds": 120,
+          "cooldownSeconds": 120,
+          "totalSeconds": 1098,
+          "totalMinutes": 19
+        },
+        "crossRestSeconds": 240,
+        "timerSequentialMinutes": 23,
+        "items": [
+          {
+            "id": "equipment_arms_01",
+            "source": "equipment_arms_01",
+            "name": "过顶绳索臂屈伸",
+            "group": "arms",
+            "regions": [
+              "arms_triceps"
+            ],
+            "sets": 2,
+            "range": [
+              8,
+              12
+            ],
+            "rest": 150,
+            "perSide": false,
+            "rir": 3
+          },
+          {
+            "id": "equipment_arms_08",
+            "source": "equipment_arms_08",
+            "name": "EZ杠牧师凳弯举",
+            "group": "arms",
+            "regions": [
+              "arms_biceps",
+              "arms_brachialis"
+            ],
+            "sets": 2,
+            "range": [
+              10,
+              15
+            ],
+            "rest": 90,
+            "perSide": false,
+            "rir": 3
+          },
+          {
+            "id": "equipment_legs_02",
+            "source": "equipment_legs_02",
+            "name": "45°倒蹬机",
+            "group": "legs",
+            "regions": [
+              "legs_quads",
+              "legs_glutes"
+            ],
+            "sets": 1,
+            "range": [
+              8,
+              12
+            ],
+            "rest": 150,
+            "perSide": false,
+            "rir": 3
+          }
+        ]
+      }
+    },
+    {
+      "priority": "shoulders",
+      "course": {
+        "id": "equipment_bro_1_0",
+        "title": "全身部位训练",
+        "minutes": 18,
+        "sets": 4,
+        "movements": 3,
+        "estimate": {
+          "warmupSeconds": 480,
+          "workSeconds": 192,
+          "restSeconds": 150,
+          "transitionsSeconds": 120,
+          "cooldownSeconds": 120,
+          "totalSeconds": 1062,
+          "totalMinutes": 18
+        },
+        "crossRestSeconds": 300,
+        "timerSequentialMinutes": 23,
+        "items": [
+          {
+            "id": "equipment_shoulders_14",
+            "source": "equipment_shoulders_14",
+            "name": "器械侧平举",
+            "group": "shoulders",
+            "regions": [
+              "shoulders_side"
+            ],
+            "sets": 2,
+            "range": [
+              8,
+              12
+            ],
+            "rest": 150,
+            "perSide": false,
+            "rir": 3
+          },
+          {
+            "id": "equipment_legs_02",
+            "source": "equipment_legs_02",
+            "name": "45°倒蹬机",
+            "group": "legs",
+            "regions": [
+              "legs_quads",
+              "legs_glutes"
+            ],
+            "sets": 1,
+            "range": [
+              8,
+              12
+            ],
+            "rest": 150,
+            "perSide": false,
+            "rir": 3
+          },
+          {
+            "id": "equipment_chest_03",
+            "source": "equipment_chest_03",
+            "name": "坐姿水平对敛推胸机",
+            "group": "chest",
+            "regions": [
+              "chest_middle"
+            ],
+            "sets": 1,
+            "range": [
+              8,
+              12
+            ],
+            "rest": 150,
+            "perSide": false,
+            "rir": 3
+          }
+        ]
+      }
+    }
+  ],
+  "coverage": [
+    {
+      "split": "bro",
+      "frequency": 1,
+      "allRotationPrimaryGroups": [
+        "back",
+        "chest",
+        "legs"
+      ],
+      "weekly": {
+        "week": 1,
+        "sets": 4,
+        "primaryGroupSets": {
+          "legs": 2,
+          "chest": 1,
+          "back": 1
+        }
+      },
+      "courses": [
+        {
+          "id": "equipment_bro_1_0",
+          "title": "全身部位训练",
+          "groups": [
+            "legs",
+            "chest",
+            "back"
+          ],
+          "sets": 4,
+          "minutes": 18
+        }
+      ]
+    },
+    {
+      "split": "bro",
+      "frequency": 2,
+      "allRotationPrimaryGroups": [
+        "back",
+        "chest",
+        "legs",
+        "shoulders"
+      ],
+      "weekly": {
+        "week": 1,
+        "sets": 10,
+        "primaryGroupSets": {
+          "chest": 4,
+          "shoulders": 1,
+          "legs": 3,
+          "back": 2
+        }
+      },
+      "courses": [
+        {
+          "id": "equipment_bro_2_0",
+          "title": "胸肩与三头",
+          "groups": [
+            "chest",
+            "chest",
+            "shoulders"
+          ],
+          "sets": 5,
+          "minutes": 19
+        },
+        {
+          "id": "equipment_bro_2_1",
+          "title": "背腿与二头",
+          "groups": [
+            "legs",
+            "back",
+            "legs"
+          ],
+          "sets": 5,
+          "minutes": 19
+        }
+      ]
+    },
+    {
+      "split": "bro",
+      "frequency": 3,
+      "allRotationPrimaryGroups": [
+        "back",
+        "chest",
+        "legs",
+        "shoulders"
+      ],
+      "weekly": {
+        "week": 1,
+        "sets": 15,
+        "primaryGroupSets": {
+          "chest": 3,
+          "shoulders": 2,
+          "back": 4,
+          "legs": 6
+        }
+      },
+      "courses": [
+        {
+          "id": "equipment_bro_3_0",
+          "title": "胸肩与三头",
+          "groups": [
+            "chest",
+            "chest",
+            "shoulders"
+          ],
+          "sets": 4,
+          "minutes": 18
+        },
+        {
+          "id": "equipment_bro_3_1",
+          "title": "背部与二头",
+          "groups": [
+            "back",
+            "back",
+            "shoulders"
+          ],
+          "sets": 5,
+          "minutes": 20
+        },
+        {
+          "id": "equipment_bro_3_2",
+          "title": "腿部与核心",
+          "groups": [
+            "legs",
+            "legs",
+            "legs"
+          ],
+          "sets": 6,
+          "minutes": 20
+        }
+      ]
+    },
+    {
+      "split": "bro",
+      "frequency": 4,
+      "allRotationPrimaryGroups": [
+        "back",
+        "chest",
+        "legs",
+        "shoulders"
+      ],
+      "weekly": {
+        "week": 1,
+        "sets": 22,
+        "primaryGroupSets": {
+          "chest": 3,
+          "back": 2,
+          "legs": 12,
+          "shoulders": 5
+        }
+      },
+      "courses": [
+        {
+          "id": "equipment_bro_4_0",
+          "title": "胸部与背部",
+          "groups": [
+            "chest",
+            "back",
+            "chest"
+          ],
+          "sets": 5,
+          "minutes": 19
+        },
+        {
+          "id": "equipment_bro_4_1",
+          "title": "下肢训练 A",
+          "groups": [
+            "legs",
+            "legs",
+            "legs"
+          ],
+          "sets": 6,
+          "minutes": 20
+        },
+        {
+          "id": "equipment_bro_4_2",
+          "title": "肩部与手臂",
+          "groups": [
+            "shoulders",
+            "shoulders",
+            "shoulders"
+          ],
+          "sets": 5,
+          "minutes": 17
+        },
+        {
+          "id": "equipment_bro_4_3",
+          "title": "下肢训练 B",
+          "groups": [
+            "legs",
+            "legs",
+            "legs"
+          ],
+          "sets": 6,
+          "minutes": 20
+        }
+      ]
+    },
+    {
+      "split": "bro",
+      "frequency": 5,
+      "allRotationPrimaryGroups": [
+        "arms",
+        "back",
+        "chest",
+        "legs",
+        "shoulders"
+      ],
+      "weekly": {
+        "week": 1,
+        "sets": 30,
+        "primaryGroupSets": {
+          "chest": 6,
+          "back": 6,
+          "shoulders": 6,
+          "legs": 6,
+          "arms": 6
+        }
+      },
+      "courses": [
+        {
+          "id": "equipment_bro_5_0",
+          "title": "胸部训练",
+          "groups": [
+            "chest",
+            "chest",
+            "chest"
+          ],
+          "sets": 6,
+          "minutes": 20
+        },
+        {
+          "id": "equipment_bro_5_1",
+          "title": "背部训练",
+          "groups": [
+            "back",
+            "back",
+            "back"
+          ],
+          "sets": 6,
+          "minutes": 20
+        },
+        {
+          "id": "equipment_bro_5_2",
+          "title": "肩部训练",
+          "groups": [
+            "shoulders",
+            "shoulders",
+            "shoulders"
+          ],
+          "sets": 6,
+          "minutes": 20
+        },
+        {
+          "id": "equipment_bro_5_3",
+          "title": "腿部训练",
+          "groups": [
+            "legs",
+            "legs",
+            "legs"
+          ],
+          "sets": 6,
+          "minutes": 20
+        },
+        {
+          "id": "equipment_bro_5_4",
+          "title": "手臂训练",
+          "groups": [
+            "arms",
+            "arms",
+            "arms"
+          ],
+          "sets": 6,
+          "minutes": 19
+        }
+      ]
+    },
+    {
+      "split": "bro",
+      "frequency": 6,
+      "allRotationPrimaryGroups": [
+        "arms",
+        "back",
+        "chest",
+        "core",
+        "legs",
+        "shoulders"
+      ],
+      "weekly": {
+        "week": 1,
+        "sets": 35,
+        "primaryGroupSets": {
+          "chest": 7,
+          "back": 7,
+          "shoulders": 7,
+          "legs": 7,
+          "arms": 6,
+          "core": 1
+        }
+      },
+      "courses": [
+        {
+          "id": "equipment_bro_6_0",
+          "title": "胸部训练",
+          "groups": [
+            "chest",
+            "chest",
+            "chest"
+          ],
+          "sets": 6,
+          "minutes": 20
+        },
+        {
+          "id": "equipment_bro_6_1",
+          "title": "背部训练",
+          "groups": [
+            "back",
+            "back",
+            "back"
+          ],
+          "sets": 6,
+          "minutes": 20
+        },
+        {
+          "id": "equipment_bro_6_2",
+          "title": "肩部训练",
+          "groups": [
+            "shoulders",
+            "shoulders",
+            "shoulders"
+          ],
+          "sets": 6,
+          "minutes": 20
+        },
+        {
+          "id": "equipment_bro_6_3",
+          "title": "腿部训练",
+          "groups": [
+            "legs",
+            "legs",
+            "legs"
+          ],
+          "sets": 6,
+          "minutes": 20
+        },
+        {
+          "id": "equipment_bro_6_4",
+          "title": "手臂训练",
+          "groups": [
+            "arms",
+            "arms",
+            "arms"
+          ],
+          "sets": 6,
+          "minutes": 19
+        },
+        {
+          "id": "equipment_bro_6_5",
+          "title": "轻量全身巩固",
+          "groups": [
+            "chest",
+            "back",
+            "legs",
+            "shoulders",
+            "core"
+          ],
+          "sets": 5,
+          "minutes": 20
+        }
+      ]
+    },
+    {
+      "split": "ppl",
+      "frequency": 3,
+      "allRotationPrimaryGroups": [
+        "back",
+        "chest",
+        "legs",
+        "shoulders"
+      ],
+      "weekly": {
+        "week": 1,
+        "sets": 15,
+        "primaryGroupSets": {
+          "chest": 3,
+          "shoulders": 2,
+          "back": 4,
+          "legs": 6
+        }
+      },
+      "courses": [
+        {
+          "id": "equipment_ppl_3_0_a",
+          "title": "推力训练 A",
+          "groups": [
+            "chest",
+            "chest",
+            "shoulders"
+          ],
+          "sets": 4,
+          "minutes": 18
+        },
+        {
+          "id": "equipment_ppl_3_1_a",
+          "title": "拉力训练 A",
+          "groups": [
+            "back",
+            "back",
+            "shoulders"
+          ],
+          "sets": 5,
+          "minutes": 20
+        },
+        {
+          "id": "equipment_ppl_3_2_a",
+          "title": "下肢训练 A",
+          "groups": [
+            "legs",
+            "legs",
+            "legs"
+          ],
+          "sets": 6,
+          "minutes": 20
+        },
+        {
+          "id": "equipment_ppl_3_0_b",
+          "title": "推力训练 B",
+          "groups": [
+            "chest",
+            "chest",
+            "shoulders"
+          ],
+          "sets": 5,
+          "minutes": 19
+        },
+        {
+          "id": "equipment_ppl_3_1_b",
+          "title": "拉力训练 B",
+          "groups": [
+            "back",
+            "back",
+            "shoulders"
+          ],
+          "sets": 5,
+          "minutes": 20
+        },
+        {
+          "id": "equipment_ppl_3_2_b",
+          "title": "下肢训练 B",
+          "groups": [
+            "legs",
+            "legs",
+            "legs"
+          ],
+          "sets": 6,
+          "minutes": 20
+        }
+      ]
+    },
+    {
+      "split": "ppl",
+      "frequency": 4,
+      "allRotationPrimaryGroups": [
+        "back",
+        "chest",
+        "legs",
+        "shoulders"
+      ],
+      "weekly": {
+        "week": 1,
+        "sets": 20,
+        "primaryGroupSets": {
+          "chest": 7,
+          "shoulders": 3,
+          "back": 4,
+          "legs": 6
+        }
+      },
+      "courses": [
+        {
+          "id": "equipment_ppl_4_0",
+          "title": "推力训练 A",
+          "groups": [
+            "chest",
+            "chest",
+            "shoulders"
+          ],
+          "sets": 4,
+          "minutes": 18
+        },
+        {
+          "id": "equipment_ppl_4_1",
+          "title": "拉力训练 A",
+          "groups": [
+            "back",
+            "back",
+            "shoulders"
+          ],
+          "sets": 5,
+          "minutes": 20
+        },
+        {
+          "id": "equipment_ppl_4_2",
+          "title": "下肢训练 A",
+          "groups": [
+            "legs",
+            "legs",
+            "legs"
+          ],
+          "sets": 6,
+          "minutes": 20
+        },
+        {
+          "id": "equipment_ppl_4_3",
+          "title": "推力训练 B",
+          "groups": [
+            "chest",
+            "chest",
+            "shoulders"
+          ],
+          "sets": 5,
+          "minutes": 19
+        },
+        {
+          "id": "equipment_ppl_4_4",
+          "title": "拉力训练 B",
+          "groups": [
+            "back",
+            "back",
+            "shoulders"
+          ],
+          "sets": 5,
+          "minutes": 20
+        },
+        {
+          "id": "equipment_ppl_4_5",
+          "title": "下肢训练 B",
+          "groups": [
+            "legs",
+            "legs",
+            "legs"
+          ],
+          "sets": 6,
+          "minutes": 20
+        }
+      ]
+    },
+    {
+      "split": "ppl",
+      "frequency": 5,
+      "allRotationPrimaryGroups": [
+        "back",
+        "chest",
+        "legs",
+        "shoulders"
+      ],
+      "weekly": {
+        "week": 1,
+        "sets": 25,
+        "primaryGroupSets": {
+          "chest": 7,
+          "shoulders": 4,
+          "back": 8,
+          "legs": 6
+        }
+      },
+      "courses": [
+        {
+          "id": "equipment_ppl_5_0",
+          "title": "推力训练 A",
+          "groups": [
+            "chest",
+            "chest",
+            "shoulders"
+          ],
+          "sets": 4,
+          "minutes": 18
+        },
+        {
+          "id": "equipment_ppl_5_1",
+          "title": "拉力训练 A",
+          "groups": [
+            "back",
+            "back",
+            "shoulders"
+          ],
+          "sets": 5,
+          "minutes": 20
+        },
+        {
+          "id": "equipment_ppl_5_2",
+          "title": "下肢训练 A",
+          "groups": [
+            "legs",
+            "legs",
+            "legs"
+          ],
+          "sets": 6,
+          "minutes": 20
+        },
+        {
+          "id": "equipment_ppl_5_3",
+          "title": "推力训练 B",
+          "groups": [
+            "chest",
+            "chest",
+            "shoulders"
+          ],
+          "sets": 5,
+          "minutes": 19
+        },
+        {
+          "id": "equipment_ppl_5_4",
+          "title": "拉力训练 B",
+          "groups": [
+            "back",
+            "back",
+            "shoulders"
+          ],
+          "sets": 5,
+          "minutes": 20
+        },
+        {
+          "id": "equipment_ppl_5_5",
+          "title": "下肢训练 B",
+          "groups": [
+            "legs",
+            "legs",
+            "legs"
+          ],
+          "sets": 6,
+          "minutes": 20
+        }
+      ]
+    },
+    {
+      "split": "ppl",
+      "frequency": 6,
+      "allRotationPrimaryGroups": [
+        "back",
+        "chest",
+        "legs",
+        "shoulders"
+      ],
+      "weekly": {
+        "week": 1,
+        "sets": 31,
+        "primaryGroupSets": {
+          "chest": 7,
+          "shoulders": 4,
+          "back": 8,
+          "legs": 12
+        }
+      },
+      "courses": [
+        {
+          "id": "equipment_ppl_6_0",
+          "title": "推力训练 A",
+          "groups": [
+            "chest",
+            "chest",
+            "shoulders"
+          ],
+          "sets": 4,
+          "minutes": 18
+        },
+        {
+          "id": "equipment_ppl_6_1",
+          "title": "拉力训练 A",
+          "groups": [
+            "back",
+            "back",
+            "shoulders"
+          ],
+          "sets": 5,
+          "minutes": 20
+        },
+        {
+          "id": "equipment_ppl_6_2",
+          "title": "下肢训练 A",
+          "groups": [
+            "legs",
+            "legs",
+            "legs"
+          ],
+          "sets": 6,
+          "minutes": 20
+        },
+        {
+          "id": "equipment_ppl_6_3",
+          "title": "推力训练 B",
+          "groups": [
+            "chest",
+            "chest",
+            "shoulders"
+          ],
+          "sets": 5,
+          "minutes": 19
+        },
+        {
+          "id": "equipment_ppl_6_4",
+          "title": "拉力训练 B",
+          "groups": [
+            "back",
+            "back",
+            "shoulders"
+          ],
+          "sets": 5,
+          "minutes": 20
+        },
+        {
+          "id": "equipment_ppl_6_5",
+          "title": "下肢训练 B",
+          "groups": [
+            "legs",
+            "legs",
+            "legs"
+          ],
+          "sets": 6,
+          "minutes": 20
+        }
+      ]
+    },
+    {
+      "split": "upper_lower",
+      "frequency": 2,
+      "allRotationPrimaryGroups": [
+        "back",
+        "chest",
+        "legs"
+      ],
+      "weekly": {
+        "week": 1,
+        "sets": 11,
+        "primaryGroupSets": {
+          "chest": 3,
+          "back": 2,
+          "legs": 6
+        }
+      },
+      "courses": [
+        {
+          "id": "equipment_upper_lower_2_0",
+          "title": "上肢训练 A",
+          "groups": [
+            "chest",
+            "back",
+            "chest"
+          ],
+          "sets": 5,
+          "minutes": 19
+        },
+        {
+          "id": "equipment_upper_lower_2_1",
+          "title": "下肢训练 A",
+          "groups": [
+            "legs",
+            "legs",
+            "legs"
+          ],
+          "sets": 6,
+          "minutes": 20
+        },
+        {
+          "id": "equipment_upper_lower_2_2",
+          "title": "上肢训练 B",
+          "groups": [
+            "chest",
+            "back",
+            "chest"
+          ],
+          "sets": 5,
+          "minutes": 20
+        },
+        {
+          "id": "equipment_upper_lower_2_3",
+          "title": "下肢训练 B",
+          "groups": [
+            "legs",
+            "legs",
+            "legs"
+          ],
+          "sets": 6,
+          "minutes": 20
+        }
+      ]
+    },
+    {
+      "split": "upper_lower",
+      "frequency": 3,
+      "allRotationPrimaryGroups": [
+        "back",
+        "chest",
+        "legs"
+      ],
+      "weekly": {
+        "week": 1,
+        "sets": 16,
+        "primaryGroupSets": {
+          "chest": 6,
+          "back": 4,
+          "legs": 6
+        }
+      },
+      "courses": [
+        {
+          "id": "equipment_upper_lower_3_0",
+          "title": "上肢训练 A",
+          "groups": [
+            "chest",
+            "back",
+            "chest"
+          ],
+          "sets": 5,
+          "minutes": 19
+        },
+        {
+          "id": "equipment_upper_lower_3_1",
+          "title": "下肢训练 A",
+          "groups": [
+            "legs",
+            "legs",
+            "legs"
+          ],
+          "sets": 6,
+          "minutes": 20
+        },
+        {
+          "id": "equipment_upper_lower_3_2",
+          "title": "上肢训练 B",
+          "groups": [
+            "chest",
+            "back",
+            "chest"
+          ],
+          "sets": 5,
+          "minutes": 20
+        },
+        {
+          "id": "equipment_upper_lower_3_3",
+          "title": "下肢训练 B",
+          "groups": [
+            "legs",
+            "legs",
+            "legs"
+          ],
+          "sets": 6,
+          "minutes": 20
+        }
+      ]
+    },
+    {
+      "split": "upper_lower",
+      "frequency": 4,
+      "allRotationPrimaryGroups": [
+        "back",
+        "chest",
+        "legs"
+      ],
+      "weekly": {
+        "week": 1,
+        "sets": 22,
+        "primaryGroupSets": {
+          "chest": 6,
+          "back": 4,
+          "legs": 12
+        }
+      },
+      "courses": [
+        {
+          "id": "equipment_upper_lower_4_0",
+          "title": "上肢训练 A",
+          "groups": [
+            "chest",
+            "back",
+            "chest"
+          ],
+          "sets": 5,
+          "minutes": 19
+        },
+        {
+          "id": "equipment_upper_lower_4_1",
+          "title": "下肢训练 A",
+          "groups": [
+            "legs",
+            "legs",
+            "legs"
+          ],
+          "sets": 6,
+          "minutes": 20
+        },
+        {
+          "id": "equipment_upper_lower_4_2",
+          "title": "上肢训练 B",
+          "groups": [
+            "chest",
+            "back",
+            "chest"
+          ],
+          "sets": 5,
+          "minutes": 20
+        },
+        {
+          "id": "equipment_upper_lower_4_3",
+          "title": "下肢训练 B",
+          "groups": [
+            "legs",
+            "legs",
+            "legs"
+          ],
+          "sets": 6,
+          "minutes": 20
+        }
+      ]
+    },
+    {
+      "split": "upper_lower",
+      "frequency": 5,
+      "allRotationPrimaryGroups": [
+        "back",
+        "chest",
+        "legs"
+      ],
+      "weekly": {
+        "week": 1,
+        "sets": 27,
+        "primaryGroupSets": {
+          "chest": 9,
+          "back": 6,
+          "legs": 12
+        }
+      },
+      "courses": [
+        {
+          "id": "equipment_upper_lower_5_0",
+          "title": "上肢训练 A",
+          "groups": [
+            "chest",
+            "back",
+            "chest"
+          ],
+          "sets": 5,
+          "minutes": 19
+        },
+        {
+          "id": "equipment_upper_lower_5_1",
+          "title": "下肢训练 A",
+          "groups": [
+            "legs",
+            "legs",
+            "legs"
+          ],
+          "sets": 6,
+          "minutes": 20
+        },
+        {
+          "id": "equipment_upper_lower_5_2",
+          "title": "上肢训练 B",
+          "groups": [
+            "chest",
+            "back",
+            "chest"
+          ],
+          "sets": 5,
+          "minutes": 20
+        },
+        {
+          "id": "equipment_upper_lower_5_3",
+          "title": "下肢训练 B",
+          "groups": [
+            "legs",
+            "legs",
+            "legs"
+          ],
+          "sets": 6,
+          "minutes": 20
+        }
+      ]
+    },
+    {
+      "split": "upper_lower",
+      "frequency": 6,
+      "allRotationPrimaryGroups": [
+        "back",
+        "chest",
+        "legs"
+      ],
+      "weekly": {
+        "week": 1,
+        "sets": 33,
+        "primaryGroupSets": {
+          "chest": 9,
+          "back": 6,
+          "legs": 18
+        }
+      },
+      "courses": [
+        {
+          "id": "equipment_upper_lower_6_0",
+          "title": "上肢训练 A",
+          "groups": [
+            "chest",
+            "back",
+            "chest"
+          ],
+          "sets": 5,
+          "minutes": 19
+        },
+        {
+          "id": "equipment_upper_lower_6_1",
+          "title": "下肢训练 A",
+          "groups": [
+            "legs",
+            "legs",
+            "legs",
+            "legs"
+          ],
+          "sets": 6,
+          "minutes": 20
+        },
+        {
+          "id": "equipment_upper_lower_6_2",
+          "title": "上肢训练 B",
+          "groups": [
+            "chest",
+            "back",
+            "chest"
+          ],
+          "sets": 5,
+          "minutes": 20
+        },
+        {
+          "id": "equipment_upper_lower_6_3",
+          "title": "下肢训练 B",
+          "groups": [
+            "legs",
+            "legs",
+            "legs"
+          ],
+          "sets": 6,
+          "minutes": 20
+        }
+      ]
+    }
+  ],
+  "volumes": [
+    {
+      "split": "bro",
+      "frequency": 1,
+      "spec": "mini",
+      "weeklySetsAverage": 4,
+      "primaryGroupAverage": {
+        "chest": 1,
+        "back": 1,
+        "shoulders": 0,
+        "legs": 2,
+        "arms": 0,
+        "core": 0
+      }
+    },
+    {
+      "split": "bro",
+      "frequency": 1,
+      "spec": "light",
+      "weeklySetsAverage": 6,
+      "primaryGroupAverage": {
+        "chest": 2,
+        "back": 2,
+        "shoulders": 0,
+        "legs": 2,
+        "arms": 0,
+        "core": 0
+      }
+    },
+    {
+      "split": "bro",
+      "frequency": 1,
+      "spec": "standard",
+      "weeklySetsAverage": 11,
+      "primaryGroupAverage": {
+        "chest": 3,
+        "back": 3,
+        "shoulders": 2,
+        "legs": 3,
+        "arms": 0,
+        "core": 0
+      }
+    },
+    {
+      "split": "bro",
+      "frequency": 1,
+      "spec": "pro",
+      "weeklySetsAverage": 17,
+      "primaryGroupAverage": {
+        "chest": 3,
+        "back": 3,
+        "shoulders": 2,
+        "legs": 5,
+        "arms": 4,
+        "core": 0
+      }
+    },
+    {
+      "split": "bro",
+      "frequency": 1,
+      "spec": "ultra",
+      "weeklySetsAverage": 17,
+      "primaryGroupAverage": {
+        "chest": 3,
+        "back": 3,
+        "shoulders": 2,
+        "legs": 5,
+        "arms": 4,
+        "core": 0
+      }
+    },
+    {
+      "split": "bro",
+      "frequency": 2,
+      "spec": "mini",
+      "weeklySetsAverage": 10,
+      "primaryGroupAverage": {
+        "chest": 4,
+        "back": 2,
+        "shoulders": 1,
+        "legs": 3,
+        "arms": 0,
+        "core": 0
+      }
+    },
+    {
+      "split": "bro",
+      "frequency": 2,
+      "spec": "light",
+      "weeklySetsAverage": 14,
+      "primaryGroupAverage": {
+        "chest": 4,
+        "back": 4,
+        "shoulders": 2,
+        "legs": 4,
+        "arms": 0,
+        "core": 0
+      }
+    },
+    {
+      "split": "bro",
+      "frequency": 2,
+      "spec": "standard",
+      "weeklySetsAverage": 22,
+      "primaryGroupAverage": {
+        "chest": 6,
+        "back": 5,
+        "shoulders": 2,
+        "legs": 5,
+        "arms": 4,
+        "core": 0
+      }
+    },
+    {
+      "split": "bro",
+      "frequency": 2,
+      "spec": "pro",
+      "weeklySetsAverage": 22,
+      "primaryGroupAverage": {
+        "chest": 6,
+        "back": 5,
+        "shoulders": 2,
+        "legs": 5,
+        "arms": 4,
+        "core": 0
+      }
+    },
+    {
+      "split": "bro",
+      "frequency": 2,
+      "spec": "ultra",
+      "weeklySetsAverage": 22,
+      "primaryGroupAverage": {
+        "chest": 6,
+        "back": 5,
+        "shoulders": 2,
+        "legs": 5,
+        "arms": 4,
+        "core": 0
+      }
+    },
+    {
+      "split": "bro",
+      "frequency": 3,
+      "spec": "mini",
+      "weeklySetsAverage": 15,
+      "primaryGroupAverage": {
+        "chest": 3,
+        "back": 4,
+        "shoulders": 2,
+        "legs": 6,
+        "arms": 0,
+        "core": 0
+      }
+    },
+    {
+      "split": "bro",
+      "frequency": 3,
+      "spec": "light",
+      "weeklySetsAverage": 22,
+      "primaryGroupAverage": {
+        "chest": 4,
+        "back": 4,
+        "shoulders": 4,
+        "legs": 8,
+        "arms": 2,
+        "core": 0
+      }
+    },
+    {
+      "split": "bro",
+      "frequency": 3,
+      "spec": "standard",
+      "weeklySetsAverage": 29,
+      "primaryGroupAverage": {
+        "chest": 5,
+        "back": 5,
+        "shoulders": 4,
+        "legs": 9,
+        "arms": 4,
+        "core": 2
+      }
+    },
+    {
+      "split": "bro",
+      "frequency": 3,
+      "spec": "pro",
+      "weeklySetsAverage": 29,
+      "primaryGroupAverage": {
+        "chest": 5,
+        "back": 5,
+        "shoulders": 4,
+        "legs": 9,
+        "arms": 4,
+        "core": 2
+      }
+    },
+    {
+      "split": "bro",
+      "frequency": 3,
+      "spec": "ultra",
+      "weeklySetsAverage": 29,
+      "primaryGroupAverage": {
+        "chest": 5,
+        "back": 5,
+        "shoulders": 4,
+        "legs": 9,
+        "arms": 4,
+        "core": 2
+      }
+    },
+    {
+      "split": "bro",
+      "frequency": 4,
+      "spec": "mini",
+      "weeklySetsAverage": 22,
+      "primaryGroupAverage": {
+        "chest": 3,
+        "back": 2,
+        "shoulders": 5,
+        "legs": 12,
+        "arms": 0,
+        "core": 0
+      }
+    },
+    {
+      "split": "bro",
+      "frequency": 4,
+      "spec": "light",
+      "weeklySetsAverage": 36,
+      "primaryGroupAverage": {
+        "chest": 4,
+        "back": 4,
+        "shoulders": 6,
+        "legs": 20,
+        "arms": 2,
+        "core": 0
+      }
+    },
+    {
+      "split": "bro",
+      "frequency": 4,
+      "spec": "standard",
+      "weeklySetsAverage": 48,
+      "primaryGroupAverage": {
+        "chest": 5,
+        "back": 5,
+        "shoulders": 7,
+        "legs": 25,
+        "arms": 4,
+        "core": 2
+      }
+    },
+    {
+      "split": "bro",
+      "frequency": 4,
+      "spec": "pro",
+      "weeklySetsAverage": 50,
+      "primaryGroupAverage": {
+        "chest": 5,
+        "back": 5,
+        "shoulders": 7,
+        "legs": 25,
+        "arms": 4,
+        "core": 4
+      }
+    },
+    {
+      "split": "bro",
+      "frequency": 4,
+      "spec": "ultra",
+      "weeklySetsAverage": 50,
+      "primaryGroupAverage": {
+        "chest": 5,
+        "back": 5,
+        "shoulders": 7,
+        "legs": 25,
+        "arms": 4,
+        "core": 4
+      }
+    },
+    {
+      "split": "bro",
+      "frequency": 5,
+      "spec": "mini",
+      "weeklySetsAverage": 30,
+      "primaryGroupAverage": {
+        "chest": 6,
+        "back": 6,
+        "shoulders": 6,
+        "legs": 6,
+        "arms": 6,
+        "core": 0
+      }
+    },
+    {
+      "split": "bro",
+      "frequency": 5,
+      "spec": "light",
+      "weeklySetsAverage": 38,
+      "primaryGroupAverage": {
+        "chest": 8,
+        "back": 8,
+        "shoulders": 6,
+        "legs": 8,
+        "arms": 8,
+        "core": 0
+      }
+    },
+    {
+      "split": "bro",
+      "frequency": 5,
+      "spec": "standard",
+      "weeklySetsAverage": 52,
+      "primaryGroupAverage": {
+        "chest": 10,
+        "back": 10,
+        "shoulders": 9,
+        "legs": 11,
+        "arms": 10,
+        "core": 2
+      }
+    },
+    {
+      "split": "bro",
+      "frequency": 5,
+      "spec": "pro",
+      "weeklySetsAverage": 52,
+      "primaryGroupAverage": {
+        "chest": 10,
+        "back": 10,
+        "shoulders": 9,
+        "legs": 11,
+        "arms": 10,
+        "core": 2
+      }
+    },
+    {
+      "split": "bro",
+      "frequency": 5,
+      "spec": "ultra",
+      "weeklySetsAverage": 53,
+      "primaryGroupAverage": {
+        "chest": 10,
+        "back": 10,
+        "shoulders": 10,
+        "legs": 11,
+        "arms": 10,
+        "core": 2
+      }
+    },
+    {
+      "split": "bro",
+      "frequency": 6,
+      "spec": "mini",
+      "weeklySetsAverage": 35,
+      "primaryGroupAverage": {
+        "chest": 7,
+        "back": 7,
+        "shoulders": 7,
+        "legs": 7,
+        "arms": 6,
+        "core": 1
+      }
+    },
+    {
+      "split": "bro",
+      "frequency": 6,
+      "spec": "light",
+      "weeklySetsAverage": 43,
+      "primaryGroupAverage": {
+        "chest": 9,
+        "back": 9,
+        "shoulders": 7,
+        "legs": 9,
+        "arms": 8,
+        "core": 1
+      }
+    },
+    {
+      "split": "bro",
+      "frequency": 6,
+      "spec": "standard",
+      "weeklySetsAverage": 57,
+      "primaryGroupAverage": {
+        "chest": 11,
+        "back": 11,
+        "shoulders": 10,
+        "legs": 12,
+        "arms": 10,
+        "core": 3
+      }
+    },
+    {
+      "split": "bro",
+      "frequency": 6,
+      "spec": "pro",
+      "weeklySetsAverage": 57,
+      "primaryGroupAverage": {
+        "chest": 11,
+        "back": 11,
+        "shoulders": 10,
+        "legs": 12,
+        "arms": 10,
+        "core": 3
+      }
+    },
+    {
+      "split": "bro",
+      "frequency": 6,
+      "spec": "ultra",
+      "weeklySetsAverage": 58,
+      "primaryGroupAverage": {
+        "chest": 11,
+        "back": 11,
+        "shoulders": 11,
+        "legs": 12,
+        "arms": 10,
+        "core": 3
+      }
+    },
+    {
+      "split": "ppl",
+      "frequency": 3,
+      "spec": "mini",
+      "weeklySetsAverage": 15.5,
+      "primaryGroupAverage": {
+        "chest": 3.5,
+        "back": 4,
+        "shoulders": 2,
+        "legs": 6,
+        "arms": 0,
+        "core": 0
+      }
+    },
+    {
+      "split": "ppl",
+      "frequency": 3,
+      "spec": "light",
+      "weeklySetsAverage": 24,
+      "primaryGroupAverage": {
+        "chest": 4,
+        "back": 4,
+        "shoulders": 4,
+        "legs": 9,
+        "arms": 3,
+        "core": 0
+      }
+    },
+    {
+      "split": "ppl",
+      "frequency": 3,
+      "spec": "standard",
+      "weeklySetsAverage": 30,
+      "primaryGroupAverage": {
+        "chest": 5,
+        "back": 5,
+        "shoulders": 4,
+        "legs": 10,
+        "arms": 4,
+        "core": 2
+      }
+    },
+    {
+      "split": "ppl",
+      "frequency": 3,
+      "spec": "pro",
+      "weeklySetsAverage": 30,
+      "primaryGroupAverage": {
+        "chest": 5,
+        "back": 5,
+        "shoulders": 4,
+        "legs": 10,
+        "arms": 4,
+        "core": 2
+      }
+    },
+    {
+      "split": "ppl",
+      "frequency": 3,
+      "spec": "ultra",
+      "weeklySetsAverage": 30,
+      "primaryGroupAverage": {
+        "chest": 5,
+        "back": 5,
+        "shoulders": 4,
+        "legs": 10,
+        "arms": 4,
+        "core": 2
+      }
+    },
+    {
+      "split": "ppl",
+      "frequency": 4,
+      "spec": "mini",
+      "weeklySetsAverage": 20.7,
+      "primaryGroupAverage": {
+        "chest": 4.7,
+        "back": 5.3,
+        "shoulders": 2.7,
+        "legs": 8,
+        "arms": 0,
+        "core": 0
+      }
+    },
+    {
+      "split": "ppl",
+      "frequency": 4,
+      "spec": "light",
+      "weeklySetsAverage": 32,
+      "primaryGroupAverage": {
+        "chest": 5.3,
+        "back": 5.3,
+        "shoulders": 5.3,
+        "legs": 12,
+        "arms": 4,
+        "core": 0
+      }
+    },
+    {
+      "split": "ppl",
+      "frequency": 4,
+      "spec": "standard",
+      "weeklySetsAverage": 40,
+      "primaryGroupAverage": {
+        "chest": 6.7,
+        "back": 6.7,
+        "shoulders": 5.3,
+        "legs": 13.3,
+        "arms": 5.3,
+        "core": 2.7
+      }
+    },
+    {
+      "split": "ppl",
+      "frequency": 4,
+      "spec": "pro",
+      "weeklySetsAverage": 40,
+      "primaryGroupAverage": {
+        "chest": 6.7,
+        "back": 6.7,
+        "shoulders": 5.3,
+        "legs": 13.3,
+        "arms": 5.3,
+        "core": 2.7
+      }
+    },
+    {
+      "split": "ppl",
+      "frequency": 4,
+      "spec": "ultra",
+      "weeklySetsAverage": 40,
+      "primaryGroupAverage": {
+        "chest": 6.7,
+        "back": 6.7,
+        "shoulders": 5.3,
+        "legs": 13.3,
+        "arms": 5.3,
+        "core": 2.7
+      }
+    },
+    {
+      "split": "ppl",
+      "frequency": 5,
+      "spec": "mini",
+      "weeklySetsAverage": 25.8,
+      "primaryGroupAverage": {
+        "chest": 5.8,
+        "back": 6.7,
+        "shoulders": 3.3,
+        "legs": 10,
+        "arms": 0,
+        "core": 0
+      }
+    },
+    {
+      "split": "ppl",
+      "frequency": 5,
+      "spec": "light",
+      "weeklySetsAverage": 40,
+      "primaryGroupAverage": {
+        "chest": 6.7,
+        "back": 6.7,
+        "shoulders": 6.7,
+        "legs": 15,
+        "arms": 5,
+        "core": 0
+      }
+    },
+    {
+      "split": "ppl",
+      "frequency": 5,
+      "spec": "standard",
+      "weeklySetsAverage": 50,
+      "primaryGroupAverage": {
+        "chest": 8.3,
+        "back": 8.3,
+        "shoulders": 6.7,
+        "legs": 16.7,
+        "arms": 6.7,
+        "core": 3.3
+      }
+    },
+    {
+      "split": "ppl",
+      "frequency": 5,
+      "spec": "pro",
+      "weeklySetsAverage": 50,
+      "primaryGroupAverage": {
+        "chest": 8.3,
+        "back": 8.3,
+        "shoulders": 6.7,
+        "legs": 16.7,
+        "arms": 6.7,
+        "core": 3.3
+      }
+    },
+    {
+      "split": "ppl",
+      "frequency": 5,
+      "spec": "ultra",
+      "weeklySetsAverage": 50,
+      "primaryGroupAverage": {
+        "chest": 8.3,
+        "back": 8.3,
+        "shoulders": 6.7,
+        "legs": 16.7,
+        "arms": 6.7,
+        "core": 3.3
+      }
+    },
+    {
+      "split": "ppl",
+      "frequency": 6,
+      "spec": "mini",
+      "weeklySetsAverage": 31,
+      "primaryGroupAverage": {
+        "chest": 7,
+        "back": 8,
+        "shoulders": 4,
+        "legs": 12,
+        "arms": 0,
+        "core": 0
+      }
+    },
+    {
+      "split": "ppl",
+      "frequency": 6,
+      "spec": "light",
+      "weeklySetsAverage": 48,
+      "primaryGroupAverage": {
+        "chest": 8,
+        "back": 8,
+        "shoulders": 8,
+        "legs": 18,
+        "arms": 6,
+        "core": 0
+      }
+    },
+    {
+      "split": "ppl",
+      "frequency": 6,
+      "spec": "standard",
+      "weeklySetsAverage": 60,
+      "primaryGroupAverage": {
+        "chest": 10,
+        "back": 10,
+        "shoulders": 8,
+        "legs": 20,
+        "arms": 8,
+        "core": 4
+      }
+    },
+    {
+      "split": "ppl",
+      "frequency": 6,
+      "spec": "pro",
+      "weeklySetsAverage": 60,
+      "primaryGroupAverage": {
+        "chest": 10,
+        "back": 10,
+        "shoulders": 8,
+        "legs": 20,
+        "arms": 8,
+        "core": 4
+      }
+    },
+    {
+      "split": "ppl",
+      "frequency": 6,
+      "spec": "ultra",
+      "weeklySetsAverage": 60,
+      "primaryGroupAverage": {
+        "chest": 10,
+        "back": 10,
+        "shoulders": 8,
+        "legs": 20,
+        "arms": 8,
+        "core": 4
+      }
+    },
+    {
+      "split": "upper_lower",
+      "frequency": 2,
+      "spec": "mini",
+      "weeklySetsAverage": 11,
+      "primaryGroupAverage": {
+        "chest": 3,
+        "back": 2,
+        "shoulders": 0,
+        "legs": 6,
+        "arms": 0,
+        "core": 0
+      }
+    },
+    {
+      "split": "upper_lower",
+      "frequency": 2,
+      "spec": "light",
+      "weeklySetsAverage": 18,
+      "primaryGroupAverage": {
+        "chest": 4,
+        "back": 4,
+        "shoulders": 0,
+        "legs": 10,
+        "arms": 0,
+        "core": 0
+      }
+    },
+    {
+      "split": "upper_lower",
+      "frequency": 2,
+      "spec": "standard",
+      "weeklySetsAverage": 25.5,
+      "primaryGroupAverage": {
+        "chest": 5,
+        "back": 5,
+        "shoulders": 2,
+        "legs": 12.5,
+        "arms": 0,
+        "core": 1
+      }
+    },
+    {
+      "split": "upper_lower",
+      "frequency": 2,
+      "spec": "pro",
+      "weeklySetsAverage": 31.5,
+      "primaryGroupAverage": {
+        "chest": 5,
+        "back": 5,
+        "shoulders": 3,
+        "legs": 12.5,
+        "arms": 4,
+        "core": 2
+      }
+    },
+    {
+      "split": "upper_lower",
+      "frequency": 2,
+      "spec": "ultra",
+      "weeklySetsAverage": 31.5,
+      "primaryGroupAverage": {
+        "chest": 5,
+        "back": 5,
+        "shoulders": 3,
+        "legs": 12.5,
+        "arms": 4,
+        "core": 2
+      }
+    },
+    {
+      "split": "upper_lower",
+      "frequency": 3,
+      "spec": "mini",
+      "weeklySetsAverage": 16.5,
+      "primaryGroupAverage": {
+        "chest": 4.5,
+        "back": 3,
+        "shoulders": 0,
+        "legs": 9,
+        "arms": 0,
+        "core": 0
+      }
+    },
+    {
+      "split": "upper_lower",
+      "frequency": 3,
+      "spec": "light",
+      "weeklySetsAverage": 27,
+      "primaryGroupAverage": {
+        "chest": 6,
+        "back": 6,
+        "shoulders": 0,
+        "legs": 15,
+        "arms": 0,
+        "core": 0
+      }
+    },
+    {
+      "split": "upper_lower",
+      "frequency": 3,
+      "spec": "standard",
+      "weeklySetsAverage": 38.3,
+      "primaryGroupAverage": {
+        "chest": 7.5,
+        "back": 7.5,
+        "shoulders": 3,
+        "legs": 18.8,
+        "arms": 0,
+        "core": 1.5
+      }
+    },
+    {
+      "split": "upper_lower",
+      "frequency": 3,
+      "spec": "pro",
+      "weeklySetsAverage": 47.3,
+      "primaryGroupAverage": {
+        "chest": 7.5,
+        "back": 7.5,
+        "shoulders": 4.5,
+        "legs": 18.8,
+        "arms": 6,
+        "core": 3
+      }
+    },
+    {
+      "split": "upper_lower",
+      "frequency": 3,
+      "spec": "ultra",
+      "weeklySetsAverage": 47.3,
+      "primaryGroupAverage": {
+        "chest": 7.5,
+        "back": 7.5,
+        "shoulders": 4.5,
+        "legs": 18.8,
+        "arms": 6,
+        "core": 3
+      }
+    },
+    {
+      "split": "upper_lower",
+      "frequency": 4,
+      "spec": "mini",
+      "weeklySetsAverage": 22,
+      "primaryGroupAverage": {
+        "chest": 6,
+        "back": 4,
+        "shoulders": 0,
+        "legs": 12,
+        "arms": 0,
+        "core": 0
+      }
+    },
+    {
+      "split": "upper_lower",
+      "frequency": 4,
+      "spec": "light",
+      "weeklySetsAverage": 36,
+      "primaryGroupAverage": {
+        "chest": 8,
+        "back": 8,
+        "shoulders": 0,
+        "legs": 20,
+        "arms": 0,
+        "core": 0
+      }
+    },
+    {
+      "split": "upper_lower",
+      "frequency": 4,
+      "spec": "standard",
+      "weeklySetsAverage": 51,
+      "primaryGroupAverage": {
+        "chest": 10,
+        "back": 10,
+        "shoulders": 4,
+        "legs": 25,
+        "arms": 0,
+        "core": 2
+      }
+    },
+    {
+      "split": "upper_lower",
+      "frequency": 4,
+      "spec": "pro",
+      "weeklySetsAverage": 63,
+      "primaryGroupAverage": {
+        "chest": 10,
+        "back": 10,
+        "shoulders": 6,
+        "legs": 25,
+        "arms": 8,
+        "core": 4
+      }
+    },
+    {
+      "split": "upper_lower",
+      "frequency": 4,
+      "spec": "ultra",
+      "weeklySetsAverage": 63,
+      "primaryGroupAverage": {
+        "chest": 10,
+        "back": 10,
+        "shoulders": 6,
+        "legs": 25,
+        "arms": 8,
+        "core": 4
+      }
+    },
+    {
+      "split": "upper_lower",
+      "frequency": 5,
+      "spec": "mini",
+      "weeklySetsAverage": 27.5,
+      "primaryGroupAverage": {
+        "chest": 7.5,
+        "back": 5,
+        "shoulders": 0,
+        "legs": 15,
+        "arms": 0,
+        "core": 0
+      }
+    },
+    {
+      "split": "upper_lower",
+      "frequency": 5,
+      "spec": "light",
+      "weeklySetsAverage": 45,
+      "primaryGroupAverage": {
+        "chest": 10,
+        "back": 10,
+        "shoulders": 0,
+        "legs": 25,
+        "arms": 0,
+        "core": 0
+      }
+    },
+    {
+      "split": "upper_lower",
+      "frequency": 5,
+      "spec": "standard",
+      "weeklySetsAverage": 62.5,
+      "primaryGroupAverage": {
+        "chest": 10,
+        "back": 10,
+        "shoulders": 7.5,
+        "legs": 25,
+        "arms": 5,
+        "core": 5
+      }
+    },
+    {
+      "split": "upper_lower",
+      "frequency": 5,
+      "spec": "pro",
+      "weeklySetsAverage": 67.5,
+      "primaryGroupAverage": {
+        "chest": 10,
+        "back": 10,
+        "shoulders": 7.5,
+        "legs": 25,
+        "arms": 10,
+        "core": 5
+      }
+    },
+    {
+      "split": "upper_lower",
+      "frequency": 5,
+      "spec": "ultra",
+      "weeklySetsAverage": 67.5,
+      "primaryGroupAverage": {
+        "chest": 10,
+        "back": 10,
+        "shoulders": 7.5,
+        "legs": 25,
+        "arms": 10,
+        "core": 5
+      }
+    },
+    {
+      "split": "upper_lower",
+      "frequency": 6,
+      "spec": "mini",
+      "weeklySetsAverage": 33,
+      "primaryGroupAverage": {
+        "chest": 9,
+        "back": 6,
+        "shoulders": 0,
+        "legs": 18,
+        "arms": 0,
+        "core": 0
+      }
+    },
+    {
+      "split": "upper_lower",
+      "frequency": 6,
+      "spec": "light",
+      "weeklySetsAverage": 49.5,
+      "primaryGroupAverage": {
+        "chest": 9,
+        "back": 9,
+        "shoulders": 4.5,
+        "legs": 22.5,
+        "arms": 1.5,
+        "core": 3
+      }
+    },
+    {
+      "split": "upper_lower",
+      "frequency": 6,
+      "spec": "standard",
+      "weeklySetsAverage": 54,
+      "primaryGroupAverage": {
+        "chest": 9,
+        "back": 9,
+        "shoulders": 4.5,
+        "legs": 22.5,
+        "arms": 6,
+        "core": 3
+      }
+    },
+    {
+      "split": "upper_lower",
+      "frequency": 6,
+      "spec": "pro",
+      "weeklySetsAverage": 54,
+      "primaryGroupAverage": {
+        "chest": 9,
+        "back": 9,
+        "shoulders": 4.5,
+        "legs": 22.5,
+        "arms": 6,
+        "core": 3
+      }
+    },
+    {
+      "split": "upper_lower",
+      "frequency": 6,
+      "spec": "ultra",
+      "weeklySetsAverage": 54,
+      "primaryGroupAverage": {
+        "chest": 9,
+        "back": 9,
+        "shoulders": 4.5,
+        "legs": 22.5,
+        "arms": 6,
+        "core": 3
+      }
+    }
+  ]
+}

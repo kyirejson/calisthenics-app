@@ -1,14 +1,13 @@
+const { readFeature } = require('./lib/project-features.cjs');
 const fs = require('node:fs');
 const path = require('node:path');
 const assert = require('node:assert/strict');
 const { test } = require('node:test');
 const ts = require('typescript');
-require.extensions['.ts'] = (module, filename) => module._compile(ts.transpileModule(fs.readFileSync(filename, 'utf8'), {
-  compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 },
-}).outputText, filename);
+require('./lib/register-typescript.cjs')({ compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 }, extensions: ['.ts'] });
 for (const ext of ['.png', '.jpeg', '.jpg']) require.extensions[ext] = (module, filename) => { module.exports = filename; };
-const { exercises, categories, selectExercise, getWorkoutExercises } = require('../src/data/catalog.ts');
-const { getProgressionStatus, getProgressionStageState, getAllProgressionStatuses, getFinalFormProgress, applyProgressionUnlock, progressionGroups, progressionSeries } = require('../src/data/progression.ts');
+const { exercises, categories, selectExercise, getWorkoutExercises } = require('../src/domain/training/catalog.ts');
+const { getProgressionStatus, getProgressionStageState, getAllProgressionStatuses, getFinalFormProgress, applyProgressionUnlock, progressionGroups, progressionSeries } = require('../src/domain/training/progression.ts');
 const { getExerciseArtwork, rejectedArtwork } = require('../src/data/exerciseArtwork.ts');
 const { getOriginalActionFrames, getOriginalActionImage } = require('../src/data/originalResources.ts');
 const { originalTexts } = require('../src/data/private/originalTexts.ts');
@@ -219,7 +218,7 @@ test('generated supplemental demos remain honest metadata and one photo each', (
   }
 });
 test('the progression screen has no old after-the-list verification card or forced exam inference', () => {
-  const ui = fs.readFileSync(path.join(__dirname, '../src/screens/ProgressScreen.tsx'), 'utf8');
+  const ui = readFeature('progression');
   assert.match(ui, /getProgressionStageState/); assert.match(ui, /<ExerciseMedia/);
   const media = fs.readFileSync(path.join(__dirname, '../src/components/ExerciseResource.tsx'), 'utf8');
   assert.match(media, /framing=\{framing\} resizeMode="contain"/);

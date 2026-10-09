@@ -1,12 +1,12 @@
 const assert = require('node:assert/strict'), { test } = require('node:test');
-const fs = require('node:fs'), ts = require('typescript');
-require.extensions['.ts'] = (m, f) => m._compile(ts.transpileModule(fs.readFileSync(f, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText, f);
-const { equipmentSessionPlan, equipmentReplacementIds, equipmentVolumeLedger, equipmentCoverage, equipmentProgressionSuggestion, EQUIPMENT_PLAN_ID } = require('../src/data/equipmentTraining.ts');
-const { equipmentPlanReview } = require('../src/data/equipmentPlanReview.ts');
-const { equipmentExecution } = require('../src/data/equipmentExecution.ts');
-const { equipmentRecoveryAfterSet, equipmentTransitionSeconds } = require('../src/data/equipmentTimeline.ts');
-const { getWeekSchedule } = require('../src/data/trainingPlans.ts');
-const { getDayTrainingState, localDateKey } = require('../src/data/planProgress.ts');
+const ts = require('typescript');
+require('./lib/register-typescript.cjs')({ compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 }, extensions: ['.ts'] });
+const { equipmentSessionPlan, equipmentReplacementIds, equipmentVolumeLedger, equipmentCoverage, equipmentProgressionSuggestion, EQUIPMENT_PLAN_ID } = require('../src/domain/training/equipment/equipmentTraining.ts');
+const { equipmentPlanReview } = require('../src/domain/training/equipment/equipmentPlanReview.ts');
+const { equipmentExecution } = require('../src/domain/training/equipment/equipmentExecution.ts');
+const { equipmentRecoveryAfterSet, equipmentTransitionSeconds } = require('../src/domain/training/equipment/equipmentTimeline.ts');
+const { getWeekSchedule } = require('../src/domain/training/trainingPlans.ts');
+const { getDayTrainingState, localDateKey } = require('../src/domain/training/planProgress.ts');
 const { getNutritionTrainingContext } = require('../src/nutrition/training.ts');
 const start = new Date(2026, 9, 1, 12);
 const profile = { name: 'QA', age: 30, sex: 'male', height: 175, weight: 75, goal: 'equipment', frequency: 6, equipmentSplit: 'ppl', experience: 'advanced', levels: {}, planStartedAt: start.toISOString(), planId: EQUIPMENT_PLAN_ID };
@@ -59,9 +59,9 @@ test('a conflicting replacement never silently substitutes a different source ro
 });
 
 test('unknown directions, unknown functions and invalid doses fail closed', () => {
-  const library = require('../src/data/equipmentLibrary.ts');
-  const { trainingFunctionLabels } = require('../src/data/equipmentExecution.ts');
-  const { equipmentFunctionTargets, equipmentRegionTargets } = require('../src/data/equipmentDosePolicy.ts');
+  const library = require('../src/domain/training/equipment/equipmentLibrary.ts');
+  const { trainingFunctionLabels } = require('../src/domain/training/equipment/equipmentExecution.ts');
+  const { equipmentFunctionTargets, equipmentRegionTargets } = require('../src/domain/training/equipment/equipmentDosePolicy.ts');
   const all = equipmentPlanReview(profile, start).courses.flatMap(course => course.items);
   library.equipmentMuscleRegions.push({ key: 'new_untrained_region', label: '未配置测试', group: 'core' });
   trainingFunctionLabels.new_function = '未配置功能';
@@ -89,7 +89,7 @@ test('unknown directions, unknown functions and invalid doses fail closed', () =
 });
 
 test('browsing emphasis changes cannot change training credit and standing calf trains soleus too', () => {
-  const { equipmentFocus } = require('../src/data/equipmentLibrary.ts');
+  const { equipmentFocus } = require('../src/domain/training/equipment/equipmentLibrary.ts');
   const original = equipmentExecution('equipment_chest_03');
   const regions = equipmentFocus.equipment_chest_03.regions;
   equipmentFocus.equipment_chest_03.regions = ['shoulders_side'];

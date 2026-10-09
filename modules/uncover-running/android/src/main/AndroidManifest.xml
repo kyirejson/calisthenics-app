@@ -1,0 +1,15 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+  <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+  <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+  <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+  <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />
+  <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
+  <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+  <uses-permission android:name="android.permission.ACTIVITY_RECOGNITION" />
+  <queries><intent><action android:name="android.intent.action.TTS_SERVICE" /></intent></queries>
+  <application>
+    <service android:name="uncover.running.RunningService" android:exported="false" android:foregroundServiceType="location|specialUse" android:stopWithTask="false">
+      <property android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE" android:value="User-started persistent workout stopwatch, with pause, recovery and local checkpoints; continues when no location permission or provider is available. Location tracking uses the location service type only when permitted." />
+    </service>
+  </application>
+</manifest>

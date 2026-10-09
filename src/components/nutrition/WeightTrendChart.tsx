@@ -1,8 +1,8 @@
 import React, { useId, useMemo, useState } from 'react';
 import { Animated, Pressable, StyleSheet, Text, View } from 'react-native';
 import Svg, { Circle, Defs, Line, LinearGradient, Path, Stop, Text as SvgText } from 'react-native-svg';
-import { buildWeightChart, shortWeightDate } from '../../data/weightChart';
-import { weightTrendWindow, type WeightPeriod } from '../../data/weightTrend';
+import { buildWeightChart, shortWeightDate } from '../../domain/weight/weightChart';
+import { weightTrendWindow, type WeightPeriod } from '../../domain/weight/weightTrend';
 import type { Profile } from '../../types';
 import { appPalette } from '../../theme';
 import { AppGlyph } from '../AppGlyph';
@@ -22,7 +22,7 @@ export function WeightTrendChart({ history, today }: { history: Profile['weightH
     <View style={styles.header}><View style={styles.flex}><Text style={styles.label}>近 {period} 天均重</Text><Text testID="weight-window-average" style={styles.average}>{window.average === undefined ? '—' : window.average.toFixed(1)}<Text style={styles.unit}> kg</Text></Text></View></View>
     <View style={styles.periods}>{([7, 30, 90] as const).map(days => <Pressable key={days} accessibilityRole="button" accessibilityLabel={'查看近' + days + '天体重趋势'} accessibilityState={{ selected: period === days }} onPress={() => setPeriod(days)} style={[styles.period, period === days && styles.periodActive]}><Text style={[styles.periodLabel, period === days && styles.periodLabelActive]}>{days} 天</Text></Pressable>)}</View>
     {!chart.points.length ? <View testID="weight-trend-empty" style={styles.empty}><AppGlyph name="calendar" color={appPalette.faint} size={28} /><Text style={styles.emptyTitle}>{history?.length ? '这个时段暂无记录' : '还没有体重记录'}</Text><Text style={styles.label}>记录体重后显示趋势</Text></View> : <Animated.View style={{ opacity: reveal, transform: [{ translateY: reveal.interpolate({ inputRange: [0, 1], outputRange: [6, 0] }) }] }}>
-      <View testID="weight-trend-plot" accessible accessibilityRole="image" accessibilityLabel={'近' + period + '天体重折线图，' + chart.points.length + '天记录，最新' + latest?.date + '，' + latest?.kg + '千克'} onLayout={event => { const nextWidth = event.nativeEvent.layout.width; if (nextWidth > 0 && Math.abs(nextWidth - width) > 1) setWidth(nextWidth); }} style={styles.plot}>
+      <View testID="weight-trend-plot" accessible accessibilityRole="image" accessibilityLabel={'近' + period + '天体重折线图，' + chart.points.length + '天记录，最新' + latest?.date + '，' + latest?.kg + '千克'} onLayout={event => { const nextWidth = event?.nativeEvent?.layout?.width; if (typeof nextWidth === 'number' && nextWidth > 0 && Math.abs(nextWidth - width) > 1) setWidth(nextWidth); }} style={styles.plot}>
         <Svg width="100%" height={chart.height} viewBox={`0 0 ${chart.width} ${chart.height}`} pointerEvents="none" accessible={false}>
           <Defs><LinearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1"><Stop offset="0" stopColor={appPalette.lime} stopOpacity={.18} /><Stop offset="1" stopColor={appPalette.lime} stopOpacity={0} /></LinearGradient></Defs>
           {chart.ticks.map(tick => <React.Fragment key={tick.kg}><Line x1={chart.left} x2={chart.right} y1={tick.y} y2={tick.y} stroke={appPalette.border} strokeWidth={1} strokeDasharray="3 5" /><SvgText x={chart.left - 8} y={tick.y + 3} textAnchor="end" fontSize={10} fill={appPalette.faint}>{tick.label}</SvgText></React.Fragment>)}

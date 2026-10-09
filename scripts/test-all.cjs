@@ -7,8 +7,13 @@ const root = path.resolve(__dirname, '..');
 const suites = fs.readdirSync(__dirname).filter(name => /^test-.*\.cjs$/.test(name) && name !== path.basename(__filename))
   .sort().map(name => path.join(__dirname, name));
 if (!suites.length) throw Error('No regression suites discovered');
-for (const name of fs.readdirSync(path.join(root, 'server')).filter(name => name.endsWith('.mjs')).sort()) {
-  const check = spawnSync(process.execPath, ['--check', path.join(root, 'server', name)], { cwd: root, stdio: 'inherit' });
+function libraryScripts(directory) {
+  return fs.readdirSync(directory, { withFileTypes: true }).flatMap(entry => entry.isDirectory()
+    ? libraryScripts(path.join(directory, entry.name))
+    : /\.(cjs|mjs)$/.test(entry.name) ? [path.join(directory, entry.name)] : []);
+}
+for (const file of libraryScripts(path.join(__dirname, 'lib')).sort()) {
+  const check = spawnSync(process.execPath, ['--check', file], { cwd: root, stdio: 'inherit' });
   if (check.error) throw check.error;
   if (check.status !== 0) process.exit(check.status ?? 1);
 }

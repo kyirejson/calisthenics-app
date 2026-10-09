@@ -1,14 +1,14 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { getWorkout, getWorkoutExercises, workoutDisplayTitle } from '../data/catalog';
-import type { ScheduledDay } from '../data/planProgress';
-import { getPlanDay, plannedCardioMinutes } from '../data/trainingPlans';
-import { estimateStrengthSession, preferredSessionMinutes } from '../data/trainingPrescription';
+import { getWorkout, getWorkoutExercises, workoutDisplayTitle } from '../domain/training/catalog';
+import type { ScheduledDay } from '../domain/training/planProgress';
+import { getPlanDay, plannedCardioMinutes } from '../domain/training/trainingPlans';
+import { estimateStrengthSession, preferredSessionMinutes } from '../domain/training/trainingPrescription';
 import { appPalette, fitnessColors as colors, radius } from '../theme';
 import type { Profile, TrainingSession } from '../types';
 import { ExerciseMedia } from './ExerciseResource';
 import { EquipmentPhoto } from './EquipmentPhoto';
 import { RecoveryDayContent } from './RecoveryGuide';
-import { dailyWorkoutKey, trainingDateKey } from '../data/sessionRecords';
+import { dailyWorkoutKey, trainingDateKey } from '../domain/training/sessionRecords';
 import { useAppStore } from '../store/AppStore';
 
 export function ScheduleDayDetail({ profile, day, sessions, onOpenExercise }: {
@@ -17,7 +17,7 @@ export function ScheduleDayDetail({ profile, day, sessions, onOpenExercise }: {
   sessions: TrainingSession[];
   onOpenExercise: (exerciseId: string) => void;
 }) {
-  const { dailyEdits } = useAppStore();
+  const { dailyEdits } = useAppStore(state => ({ dailyEdits: state.dailyEdits }));
   const editableWorkoutId = day.workoutId || 'custom_daily';
   const addedIds = dailyEdits[dailyWorkoutKey(trainingDateKey(day.date), editableWorkoutId)]?.exerciseIds || [];
   const workout = day.workoutId || addedIds.length ? getWorkout(editableWorkoutId) : null;

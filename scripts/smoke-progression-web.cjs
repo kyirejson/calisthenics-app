@@ -5,10 +5,8 @@ const path = require('node:path');
 const assert = require('node:assert/strict');
 const ts = require('typescript');
 const { chromium } = require(process.env.PLAYWRIGHT_PATH || 'playwright');
-require.extensions['.ts'] = (module, filename) => module._compile(ts.transpileModule(fs.readFileSync(filename, 'utf8'), {
-  compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 },
-}).outputText, filename);
-const { getProgressionStatus } = require('../src/data/progression.ts');
+require('./lib/register-typescript.cjs')({ compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 }, extensions: ['.ts'] });
+const { getProgressionStatus } = require('../src/domain/training/progression.ts');
 const profile = { name: '进阶隔离验证', age: 30, height: 175, weight: 75, sex: 'male', goal: 'street_mastery', nutritionGoal: 'maintain', dietPattern: 'balanced_cn',
   frequency: 3, levels: { push: 5 }, planLevels: { push: 5 }, experience: 'intermediate', sessionMinutes: 45, trainingRestSeconds: 180,
   planId: 'prisoner', planStartedAt: new Date().toISOString(), weightHistory: [] };

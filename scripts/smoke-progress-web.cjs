@@ -1,14 +1,24 @@
 // Real app browser QA using isolated localStorage and synthetic records only.
 const assert = require('node:assert/strict');
-const fs = require('node:fs');
+
 const path = require('node:path');
 const ts = require('typescript');
 const { chromium } = require(process.env.PLAYWRIGHT_PATH || 'playwright');
-require.extensions['.ts'] = (module, filename) => module._compile(ts.transpileModule(fs.readFileSync(filename, 'utf8'), {
-  compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 },
-}).outputText, filename);
-const { getSeriesExercises, parseMasteryCriteria } = require('../src/data/progression.ts');
-const { localDayKey } = require('../src/data/trainingHistory.ts');
+require('./lib/register-typescript.cjs')({ compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 }, extensions: ['.ts'] });
+const { getSeriesExercises, parseMasteryCriteria } = require('../src/domain/training/progression.ts');
+const { localDayKey } = require('../src/domain/training/trainingHistory.ts');
+
+async function assertPrunedUI(page) {
+  for (const id of ['history-personal-best', 'reviewed-training-streak', 'weekly-training-streak', 'month-training-count']) {
+    assert.equal(await page.getByTestId(id).count(), 0, id + ' should be removed');
+  }
+  assert.equal(await page.getByText('○ 当前选择　✓ 验收达标', { exact: true }).count(), 0);
+  assert.equal(await page.getByText('记录保存在本机 · 删除后图表同步重算', { exact: true }).count(), 0);
+  assert.equal(await page.getByRole('button', { name: '查看上一条成绩', exact: true }).count(), 0);
+  assert.equal(await page.getByRole('button', { name: '查看下一条成绩', exact: true }).count(), 0);
+  assert.equal(await page.getByText(/个有效组/).count(), 0);
+  assert.equal(await page.getByTestId('training-calendar-month').count(), 1);
+}
 
 const profile = { name: 'UI隔离验证', age: 30, height: 175, weight: 75, sex: 'male', goal: 'street_mastery', nutritionGoal: 'maintain', dietPattern: 'balanced_cn',
   frequency: 3, levels: { push: 5, hspu: 1 }, experience: 'intermediate', sessionMinutes: 45, trainingRestSeconds: 180,
@@ -31,7 +41,7 @@ function exam(id, offset) {
 }
 
 (async () => {
-  const browser = await chromium.launch({ headless: true });
+  const browser = await chromium.launch({ headless: true, ...(process.env.PLAYWRIGHT_EXECUTABLE ? { executablePath: process.env.PLAYWRIGHT_EXECUTABLE } : {}) });
   const errors = [];
   async function open(records, reducedMotion = 'no-preference') {
     const context = await browser.newContext({ viewport: { width: 390, height: 900 }, timezoneId: 'Asia/Shanghai', hasTouch: true, reducedMotion });
@@ -49,6 +59,8 @@ function exam(id, offset) {
     await page.goto('http://127.0.0.1:8081/', { waitUntil: 'domcontentloaded', timeout: 60000 });
     await page.getByText('数据', { exact: true }).click();
     await page.getByTestId('progress-plot').waitFor();
+    // This suite compares best-set values; the app now defaults to daily total.
+    await page.getByRole('button', { name: '查看单组最佳曲线', exact: true }).click();
     return { context, page };
   }
   const snapshot = async (page, name) => { if (process.env.PROGRESS_SCREENSHOT_DIR) await page.screenshot({ path: path.join(process.env.PROGRESS_SCREENSHOT_DIR, name + '.png'), animations: 'disabled' }); };
@@ -69,9 +81,7 @@ function exam(id, offset) {
     await empty.page.getByText('你的曲线，从第一组开始', { exact: true }).waitFor();
     assert.equal(await empty.page.getByTestId('performance-record-dot').count(), 0);
     assert.equal(await empty.page.getByTestId('performance-series-line').count(), 0);
-    assert.equal((await empty.page.getByTestId('history-personal-best').innerText()).trim(), '—');
-    assert.equal((await empty.page.getByTestId('reviewed-training-streak').innerText()).trim(), '—');
-    assert.equal((await empty.page.getByTestId('weekly-training-streak').innerText()).trim(), '0 周');
+    await assertPrunedUI(empty.page);
     await snapshot(empty.page, 'progress-empty-390');
     await empty.context.close();
     console.log('PASS empty state: no fabricated curve, achievement, symmetry, RIR or forty-eight-day streak');
@@ -116,16 +126,16 @@ function exam(id, offset) {
     assert.equal(await page.getByTestId('performance-series-line').count(), 1);
     assert.match(await page.getByTestId('performance-tooltip').innerText(), /18/);
     assert.match(await page.getByTestId('performance-tooltip').innerText(), /含未填写反馈/);
-    assert.match(await page.getByTestId('history-personal-best').innerText(), /75/);
-    assert.equal((await page.getByTestId('reviewed-training-streak').innerText()).trim(), '—');
+    await assertPrunedUI(page);
     await snapshot(page, 'progress-rise-final-390');
-    console.log('PASS baseline-to-actual animation / latest date selected / all-time PR / unknown feedback is not no pain');
+    console.log('PASS baseline-to-actual animation / latest date selected / removed cards and labels stay absent');
 
-    await page.getByRole('button', { name: '查看上一条成绩', exact: true }).click();
+    await page.getByTestId('performance-touch-surface').focus();
+    await page.keyboard.press('ArrowLeft');
     assert.match(await page.getByTestId('performance-tooltip').innerText(), /16/);
     const afterSelection = await page.getByTestId('progress-curve-rise').evaluate(element => new DOMMatrixReadOnly(getComputedStyle(element).transform).m22);
     assert.ok(afterSelection > 0.999, 'inspecting a point must not replay the entry animation');
-    await page.getByRole('button', { name: '查看下一条成绩', exact: true }).click();
+    await page.keyboard.press('ArrowRight');
     await page.getByRole('button', { name: '查看当日总量曲线', exact: true }).click();
     await settled(page);
     assert.match(await page.getByTestId('performance-tooltip').innerText(), /41/);
@@ -187,15 +197,19 @@ function exam(id, offset) {
     await page.setViewportSize({ width: 390, height: 900 });
     await top(page);
     const client = await main.context.newCDPSession(page);
+    // Today's summary can put the chart below the fold. Gestures need a visible target.
+    await page.getByTestId('performance-touch-surface').scrollIntoViewIfNeeded();
+    const scrollBeforeGesture = await page.getByTestId('training-data-list').evaluate(element => element.scrollTop);
     const plotBox = await page.getByTestId('performance-touch-surface').boundingBox();
     const x = plotBox.x + plotBox.width / 2, y = plotBox.y + 110;
     await client.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x, y }] });
     for (let index = 1; index <= 5; index++) await client.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x, y: y - index * 24 }] });
     await client.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
-    await page.waitForFunction(() => document.querySelector('[data-testid="training-data-list"]').scrollTop > 40);
+    await page.waitForFunction(before => document.querySelector('[data-testid="training-data-list"]').scrollTop > before + 40, scrollBeforeGesture);
     console.log('PASS 320 / 390 / 681 / 1280 layouts / vertical touch scrolling remains available on the chart');
 
     await top(page);
+    await page.getByTestId('performance-touch-surface').scrollIntoViewIfNeeded();
     const touchBox = await page.getByTestId('performance-touch-surface').boundingBox();
     const startX = touchBox.x + touchBox.width - 26, touchY = touchBox.y + 125;
     await client.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: startX, y: touchY }] });
@@ -205,10 +219,10 @@ function exam(id, offset) {
     }
     await client.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
     await page.waitForFunction(() => document.querySelector('[data-testid="performance-tooltip"]').innerText.includes('75'));
-    const nextPoint = page.getByRole('button', { name: '查看下一条成绩', exact: true });
-    await nextPoint.focus(); await page.keyboard.press('Enter');
+    await page.getByTestId('performance-touch-surface').focus();
+    await page.keyboard.press('ArrowRight');
     assert.match(await page.getByTestId('performance-tooltip').innerText(), /12\s*次/);
-    console.log('PASS horizontal touch selects actual points / keyboard-accessible inspection buttons');
+    console.log('PASS horizontal touch and keyboard arrows select actual points without the removed footer');
 
     await page.emulateMedia({ reducedMotion: 'reduce' });
     await page.getByRole('button', { name: '查看近30天训练曲线', exact: true }).click();

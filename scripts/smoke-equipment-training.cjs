@@ -44,19 +44,21 @@ const base = { name: 'Training QA', age: 30, sex: 'male', height: 175, weight: 7
    await page.getByTestId('equipment-today-screen').getByText('推力训练 A', { exact: true }).waitFor();
    await page.screenshot({ path: path.join(output, 'today-' + width + '.png'), animations: 'disabled' });
    assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth + 1), false);
-   await page.getByRole('button', { name: /^开始训练/ }).click();
+   await page.getByTestId('today-start-dock').getByRole('button').click();
    await page.getByTestId('training-screen-title').waitFor();
    await page.getByLabel('第1组重量kg', { exact: true }).fill('30');
    await page.getByLabel('第1组次', { exact: true }).fill('10');
-   await page.getByRole('checkbox', { name: '第1组完成', exact: true }).click();
+   await page.getByTestId('training-primary').click();
    await page.waitForFunction(() => JSON.parse(localStorage.getItem('sessions'))?.some(s => s.planSnapshot?.schemaVersion === 4));
    const snapshot = await page.evaluate(() => JSON.parse(localStorage.getItem('sessions')).find(s => s.planSnapshot?.schemaVersion === 4).planSnapshot);
    assert.equal(snapshot.spec, undefined); assert.equal(snapshot.budgetSeconds, undefined);
+   await page.getByRole('button', { name: '结束休息', exact: true }).click();
+   await page.getByRole('button', { name: '查看和修改训练组记录', exact: true }).click();
    await page.getByText('＋ 加一组', { exact: true }).click();
    assert.deepEqual(await page.evaluate(() => JSON.parse(localStorage.getItem('sessions')).find(s => s.planSnapshot?.schemaVersion === 4).planSnapshot), snapshot);
    await page.reload({ waitUntil: 'domcontentloaded' });
    await page.getByTestId('equipment-today-screen').waitFor();
-   await page.getByTestId('equipment-today-screen').getByText('部分完成', { exact: true }).waitFor();
+   await page.getByTestId('today-course-card').getByText(/部分完成/).waitFor();
    assert.equal(await page.evaluate(() => JSON.parse(localStorage.getItem('sessions')).some(s => s.id === 'historical')), true);
    await context.close();
   }

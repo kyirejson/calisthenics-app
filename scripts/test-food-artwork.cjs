@@ -1,10 +1,7 @@
 const { test } = require('node:test');
-const assert = require('node:assert/strict'), fs = require('node:fs'), path = require('node:path'), ts = require('typescript');
-require.extensions['.ts'] = (module, file) => module._compile(ts.transpileModule(fs.readFileSync(file, 'utf8'), {
-  compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 },
-}).outputText, file);
-const { FOODS } = require('../src/nutrition/catalog.ts');
-const { FOOD_ARTWORK_BY_ID, FOOD_ARTWORK_CATEGORIES, resolveFoodArtwork, mealFoodArtwork, isFoodArtworkCategory } = require('../src/nutrition/foodArtwork.ts');
+const assert = require('node:assert/strict'), path = require('node:path'), ts = require('typescript');
+require('./lib/register-typescript.cjs')({ compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 }, extensions: ['.ts'] });
+const { FOOD_ARTWORK_CATEGORIES, resolveFoodArtwork, mealFoodArtwork, isFoodArtworkCategory } = require('../src/nutrition/foodArtwork.ts');
 const { emptyNutritionJournal, normalizeCustomFood, createCustomFoodFromLabel, normalizeNutritionJournal } = require('../src/nutrition/engine.ts');
 const { withCustomFood, withoutCustomFood, withIntakeEntry, withoutIntakeEntry } = require('../src/nutrition/journal.ts');
 const { addPhotoFood, normalizePhotoEstimate } = require('../src/nutrition/vision.ts');
@@ -16,28 +13,13 @@ const food = () => ({ ...createCustomFoodFromLabel({ id: 'custom-artwork-test', 
 const intake = (patch = {}) => ({ id: 'artwork-intake', date: '2026-09-29', slot: 'lunch', name: '测试食品', source: 'manual',
   portions: [{ foodId: food().id, grams: 30 }], ...patch });
 const draft = () => ({ id: 'artwork-vision', model: 'offline', items: [], assumptions: [], warnings: [] });
-
-test('every curated food has an explicit category and packaged optimized asset', () => {
-  assert.equal(FOODS.length, 101);
-  assert.deepEqual(Object.keys(FOOD_ARTWORK_BY_ID).sort(), FOODS.map(food => food.id).sort());
-  for (const food of FOODS) {
-    const art = resolveFoodArtwork(food);
-    assert.ok(isFoodArtworkCategory(art.category));
-    const asset = path.join(__dirname, '../assets/nutrition-foods', art.asset + '-v1.jpg');
-    const bytes = fs.readFileSync(asset);
-    assert.equal(bytes.readUInt16BE(0), 0xffd8);
-    assert.ok(bytes.length < 50000, 'thumb is optimized, not a multi-megabyte generation');
-    assert.match(art.accessibilityLabel, /配图.*非本次实拍/);
-  }
-  for (const category of FOOD_ARTWORK_CATEGORIES) assert.ok(resolveFoodArtwork({ id: 'custom-food', artworkCategory: category }).asset);
-});
 test('unknown names never acquire a false specific photo or change nutrition', () => {
   assert.equal(resolveFoodArtwork({ id: 'unknown', name: '番茄炒鸡蛋' }).category, 'mixed');
   assert.equal(resolveFoodArtwork({ id: 'unknown', name: '盐焗腰果仁' }).category, 'mixed');
   assert.equal(resolveFoodArtwork({ id: 'custom-salt-cashew', artworkCategory: 'nuts' }).category, 'nuts');
-  assert.equal(resolveFoodArtwork({ id: 'egg-boiled' }).badge, '蛋类图');
-  assert.equal(resolveFoodArtwork({ id: 'tomato-raw' }).asset, 'tomato');
-  assert.equal(resolveFoodArtwork({ id: 'soy-milk' }).category, 'legumes');
+  assert.equal(resolveFoodArtwork({ id: 'custom-eggs', artworkCategory: 'eggs' }).badge, '蛋类图');
+  assert.equal(resolveFoodArtwork({ id: 'tomato-raw' }).asset, 'mixed');
+  assert.equal(resolveFoodArtwork({ id: 'soy-milk' }).category, 'mixed');
   const original = JSON.stringify(food()); resolveFoodArtwork(food()); assert.equal(JSON.stringify(food()), original);
 });
 test('personal food photo and category survive validation and journal reload without URI payloads', () => {
@@ -79,7 +61,7 @@ test('photo-based catalog snapshots keep personal images after removing the live
 test('meal artwork does not pass one ingredient photo off as a composite dish photograph', () => {
   const journal = withIntakeEntry(withCustomFood(emptyNutritionJournal(), food()), intake(), time);
   assert.deepEqual(mealFoodArtwork(journal.entries).photo, photo());
-  const mixed = withIntakeEntry(journal, intake({ id: 'rice-second', portions: [{ foodId: 'rice-cooked', grams: 100 }] }), time);
+  const mixed = withIntakeEntry(journal, intake({ id: 'rice-second', customFoods: [{ ...food(), id: 'custom-second', artworkCategory: 'staples' }], portions: [{ foodId: 'custom-second', grams: 100 }] }), time);
   assert.equal(mealFoodArtwork(mixed.entries).artworkCategory, 'mixed');
   assert.equal(mealFoodArtwork(mixed.entries).photo, undefined);
   const estimate = addPhotoFood(draft(), food(), { label: '半袋', grams: 30 });

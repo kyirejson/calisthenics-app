@@ -1,5 +1,4 @@
-import { FOOD_DATA_VERSION, FOODS, getFood } from './catalog';
-import { normalizeDishFood } from './dishEstimate';
+import { FOOD_DATA_VERSION } from './foodData';
 import type { Food, FoodArtworkCategory, NutritionPhoto, Nutrients } from './types';
 import { normalizeFoodImportOrigin } from './foodImport';
 import { normalizeNutritionPhoto } from './photoMetadata';
@@ -52,9 +51,7 @@ function normalizeProvenance(input: unknown, nutrients: Nutrients): PhotoItemPro
     || !keys.every(k => number((input.per100g as Record<string, unknown>)[k], k === 'calories' ? 1000 : 100))
     || !['title', 'foodCode', 'version', 'license'].every(k => text((input.source as Record<string, unknown>)[k], 500))) return null;
   const source = input.source;
-  const dish = source.kind === 'recipe_estimate' ? normalizeDishFood({ id: input.foodId, name: input.foodName, source }, FOODS) : null;
-  if (source.kind === 'recipe_estimate' && (!dish || !keys.every(k => dish.per100g[k] === (input.per100g as Nutrients)[k]))) return null;
-  if (source.kind !== undefined && !['user_label', 'recipe_estimate'].includes(String(source.kind))) return null;
+  if (source.kind !== undefined && !['user_label'].includes(String(source.kind))) return null;
   const custom = source.kind === 'user_label';
   const photo = input.photo === undefined ? undefined : normalizeNutritionPhoto(input.photo);
   if (photo === null || (input.artworkCategory !== undefined && !isFoodArtworkCategory(input.artworkCategory))) return null;
@@ -75,7 +72,7 @@ function normalizeProvenance(input: unknown, nutrients: Nutrients): PhotoItemPro
   if (!keys.every(k => Math.abs(calculated[k] - nutrients[k]) < 0.001)) return null;
   return { kind: 'catalog', foodId: input.foodId, foodName: input.foodName, state: input.state, foodDataVersion: input.foodDataVersion,
     grams: input.grams, servingLabel: input.servingLabel, per100g,
-    source: dish ? dish.source : { title: input.source.title as string, url: input.source.url as string, foodCode: input.source.foodCode as string,
+    source: { title: input.source.title as string, url: input.source.url as string, foodCode: input.source.foodCode as string,
       version: input.source.version as string, license: input.source.license as string,
       ...(custom ? { kind: 'user_label' as const } : {}), ...(origin ? { origin } : {}) },
     ...(input.fiberKnown !== undefined ? { fiberKnown: input.fiberKnown as boolean } : {}),
@@ -168,7 +165,7 @@ export function removePhotoItem(estimate: PhotoEstimate, index: number): PhotoEs
   return { ...valid, items: valid.items.filter((_, i) => i !== index) };
 }
 export function replacePhotoItemWithFood(estimate: PhotoEstimate, index: number, foodInput: string | Food, serving: { label: string; grams: number }): PhotoEstimate {
-  const food = typeof foodInput === 'string' ? getFood(foodInput) : foodInput;
+  const food = typeof foodInput === 'string' ? undefined : foodInput;
   if (!food || !text(serving.label, 100) || !number(serving.grams, 2000) || serving.grams <= 0) throw new Error('请选择有效的本地食物与参考份量。');
   return editItem(estimate, index, item => {
     const nutrients = nutrientsAt(food.per100g, serving.grams);
@@ -187,7 +184,7 @@ export function replacePhotoItemWithFood(estimate: PhotoEstimate, index: number,
 
 /** A missed ingredient uses an explicit reference portion, never an invented photo estimate. */
 export function addPhotoFood(estimate: PhotoEstimate, foodInput: string | Food, serving: { label: string; grams: number }): PhotoEstimate {
-  const food = typeof foodInput === 'string' ? getFood(foodInput) : foodInput;
+  const food = typeof foodInput === 'string' ? undefined : foodInput;
   if (!food || !text(serving.label, 100) || !number(serving.grams, 2000) || serving.grams <= 0) throw new Error('请选择有效的食物与参考份量。');
   if (estimate.items.length >= 12) throw new Error('一张照片最多记录 12 项食物，可另行添加饮食记录。');
   const nutrients = nutrientsAt(food.per100g, serving.grams);

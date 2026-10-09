@@ -2,7 +2,7 @@
   "expo": {
     "name": "Uncover",
     "slug": "uncover",
-    "version": "1.6.0",
+    "version": "1.7.8",
     "orientation": "portrait",
     "icon": "./assets/app-icon.png",
     "userInterfaceStyle": "light",
@@ -14,52 +14,18 @@
       }
     },
     "plugins": [
-      "./plugins/with-personal-agent.cjs",
-      "expo-secure-store",
-      "expo-sqlite",
-      [
-        "expo-camera",
-        {
-          "cameraPermission": "允许 Uncover 拍摄食物、营养标签及扫描商品条码，用于饮食记录。",
-          "microphonePermission": "允许 Uncover 使用麦克风，将饮食描述转为文字。",
-          "recordAudioAndroid": false,
-          "barcodeScannerEnabled": true
-        }
-      ],
-      [
-        "expo-image-picker",
-        {
-          "photosPermission": "允许 Uncover 选择食物或营养标签照片，用于饮食记录。",
-          "cameraPermission": "允许 Uncover 拍摄食物、营养标签及扫描商品条码，用于饮食记录。",
-          "microphonePermission": "允许 Uncover 使用麦克风，将饮食描述转为文字。"
-        }
-      ],
-      [
-        "expo-location",
-        {
-          "locationWhenInUsePermission": "允许 Uncover 在跑步记录页使用位置，以计算距离与配速。"
-        }
-      ],
-      [
-        "expo-speech-recognition",
-        {
-          "microphonePermission": "允许 Uncover 使用麦克风，将饮食描述转为文字。",
-          "speechRecognitionPermission": "允许 Uncover 使用系统语音识别进行语音记餐。"
-        }
-      ]
+      "expo-secure-store"
     ],
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.zizhong.jinjie",
-      "buildNumber": "8"
+      "buildNumber": "17"
     },
     "android": {
       "package": "com.zizhong.jinjie",
-      "versionCode": 8,
-      "permissions": [
-        "CAMERA",
-        "ACCESS_COARSE_LOCATION",
-        "ACCESS_FINE_LOCATION"
+      "versionCode": 17,
+      "blockedPermissions": [
+        "android.permission.CAMERA"
       ],
       "adaptiveIcon": {
         "backgroundColor": "#151712",

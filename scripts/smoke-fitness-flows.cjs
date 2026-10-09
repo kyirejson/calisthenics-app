@@ -70,41 +70,6 @@ async function prepare(browser, width, reducedMotion = 'reduce') {
         assert.deepEqual(await records(page), []);
         assert.deepEqual(await page.evaluate(() => JSON.parse(localStorage.getItem('user_profile'))), before);
 
-        if (width === 390) {
-          await page.getByRole('tab', { name: '切换到跑步', exact: true }).click(); await paneReady(page, 'today-running-page');
-          assert.deepEqual(await records(page), []); assert.equal(await distance(page), 0);
-          await page.getByRole('button', { name: '开始记录', exact: true }).click();
-          await page.waitForFunction(() => window.qaGps.count() === 1);
-          await page.evaluate(() => window.qaGps.emit(31.2304, 121.4737));
-          await page.evaluate(() => window.qaGps.emit(31.2314, 121.4737));
-          await page.waitForFunction(() => document.querySelector('[data-testid="running-distance"]').textContent.includes('0.11'));
-          assert.equal(await distance(page), 0.11, 'Actual coordinate segment is about 111m');
-          await page.evaluate(() => window.qaGps.emit(31.26, 121.48, 100));
-          assert.equal(await distance(page), 0.11, 'Reject low-accuracy location');
-          await page.getByRole('button', { name: '暂停记录', exact: true }).click();
-          await page.evaluate(() => window.qaGps.emit(31.25, 121.48));
-          assert.equal(await distance(page), 0.11, 'Paused movement is not counted');
-          await page.getByRole('button', { name: '继续记录', exact: true }).click();
-          await page.evaluate(() => window.qaGps.emit(31.2324, 121.4737));
-          assert.equal(await distance(page), 0.11, 'Resume starts a new segment, not a teleport');
-          await page.evaluate(() => window.qaGps.emit(31.2334, 121.4737));
-          await page.waitForFunction(() => document.querySelector('[data-testid="running-distance"]').textContent.includes('0.22'));
-          // Simulate storage rejection; the recorder must retain the real route and allow retry.
-          await page.evaluate(() => { window.qaSetItem = Storage.prototype.setItem; Storage.prototype.setItem = function(key, value) { if (key === 'sessions') throw new DOMException('QA quota', 'QuotaExceededError'); return window.qaSetItem.call(this, key, value); }; });
-          await page.getByRole('button', { name: '结束并保存', exact: true }).click();
-          await page.getByText(/保存失败 · 数据仍保留/).waitFor();
-          assert.equal(await distance(page), 0.22); assert.deepEqual(await records(page), []);
-          await page.evaluate(() => { Storage.prototype.setItem = window.qaSetItem; });
-          await page.getByRole('button', { name: '结束并保存', exact: true }).click();
-          await page.waitForFunction(() => JSON.parse(localStorage.getItem('sessions')).length === 1);
-          const saved = (await records(page))[0];
-          assert.equal(saved.kind, 'running'); assert.equal(saved.distanceKm, 0.22); assert.equal(saved.totalReps, 0);
-          assert.deepEqual(saved.exercises, []); assert.equal(saved.route.length, 4);
-          assert.ok(saved.durationSeconds >= 1); assert.equal(await page.evaluate(() => window.qaGps.count()), 0);
-          await page.getByRole('button', { name: '开始记录', exact: true }).waitFor();
-          assert.equal(await distance(page), 0);
-          console.log('PASS real-coordinate distance, pause/resume, accuracy filter, failed-save retry; no invented strength reps');
-        }
         console.log(`PASS ${width}px calendar pagination / future date actions / originals / unchanged profile`);
       } finally { await context.close(); }
     }
@@ -120,7 +85,7 @@ async function prepare(browser, width, reducedMotion = 'reduce') {
         const sample = () => { const element = document.querySelector('[data-testid="training-action-reveal"]'); if (element) window.qaMotion.push(Number(getComputedStyle(element).opacity)); if (performance.now() < end) requestAnimationFrame(sample); else window.qaMotionDone = true; };
         requestAnimationFrame(sample);
       });
-      await page.getByRole('button', { name: '下一个动作 →', exact: true }).click();
+      await page.getByRole('button', { name: '切换到下一个动作', exact: true }).click();
       await page.waitForFunction(() => window.qaMotionDone);
       const values = await page.evaluate(() => window.qaMotion);
       assert.ok(values.some(value => value > .05 && value < .95), 'Transition has intermediate frames');
@@ -128,7 +93,8 @@ async function prepare(browser, width, reducedMotion = 'reduce') {
       for (let index = start + 1; index < values.length; index++) assert.ok(values[index] + .002 >= values[index - 1], 'Opacity progresses monotonically');
       assert.ok(values.at(-1) > .99);
       await page.emulateMedia({ reducedMotion: 'reduce' });
-      await page.getByText('上一个', { exact: true }).click();
+      await page.getByRole('button', { name: '选择训练动作', exact: true }).click();
+      await page.getByRole('button', { name: /^切换动作：/ }).first().click();
       assert.equal(await page.getByTestId('training-action-reveal').evaluate(el => Number(getComputedStyle(el).opacity)), 1);
       assert.deepEqual(await records(page), []);
       console.log('PASS smooth action reveal and reduced-motion setting; switching actions does not create records');
