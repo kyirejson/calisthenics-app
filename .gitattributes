@@ -1,0 +1,3 @@
+# Knowledge hashes and the embedded seed use canonical LF on all platforms.
+knowledge/libraries/** text eol=lf
+src/knowledge/referenceBundle.ts text eol=lf
