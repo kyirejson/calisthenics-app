@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
 import { ExerciseDetailedGuide, ExerciseMedia } from '../components/ExerciseResource';
 import { UITheme } from '../components/ui';
 import { DetailAction, DetailMetrics, MovementDetail } from '../components/MovementDetail';
@@ -7,7 +6,6 @@ import { categoryMatches, exercises } from '../domain/training/catalog';
 import { progressionSeries } from '../domain/training/progression';
 import { useAppStore } from '../store/AppStore';
 import { confirmAction, showMessage } from '../utils/confirm';
-import { appPalette as p } from '../theme';
 
 export function ExerciseDetailScreen({ exerciseId, onBack, onStart }: { exerciseId: string; onBack: () => void; onStart: (exerciseId: string) => void }) {
   const { profile, patchProfile } = useAppStore(state => ({ profile: state.profile, patchProfile: state.patchProfile }));
@@ -52,12 +50,6 @@ export function ExerciseDetailScreen({ exerciseId, onBack, onStart }: { exercise
       { label: '组间休息', value: singleLegCalf ? '60 秒起' : `${Math.max(90, profile?.trainingRestSeconds || 120)} 秒起` },
       { label: '保留余力', value: `RIR ${exercise.defaultPrescription?.rirTarget ?? 2}` },
     ]} /></> : null}
-    {exercise.riskLevel && exercise.riskLevel !== 'low' ? <View style={[styles.risk, highRisk && styles.riskHigh]}><Text style={[styles.riskTitle, highRisk && styles.riskTitleHigh]}>{riskLabel(exercise.riskLevel)}风险动作</Text><Text style={styles.riskText}>{highRisk ? '请在专业教练、保护者和合适防护垫的条件下练习；不要在疲劳或疼痛时尝试。' : '先熟悉动作轨迹，保留余力；如出现关节不适请立即停止。'}</Text></View> : null}
     <ExerciseDetailedGuide key={exercise.id} exercise={exercise} selectedTab={guideTab} onTabChange={setGuideTab} />
   </MovementDetail></UITheme>;
 }
-
-function riskLabel(value: string) { return ({ low: '低', medium: '中', moderate: '中', high: '高' } as Record<string, string>)[value] || value; }
-const styles = StyleSheet.create({
-  risk: { backgroundColor: p.warningBackground, borderRadius: 10, borderLeftWidth: 2, borderLeftColor: p.warning, padding: 12, marginBottom: 12 }, riskHigh: { backgroundColor: '#302322', borderLeftColor: p.danger }, riskTitle: { color: p.warning, fontSize: 13, fontWeight: '800' }, riskTitleHigh: { color: p.danger }, riskText: { color: p.muted, fontSize: 12, lineHeight: 20, marginTop: 4 },
-});

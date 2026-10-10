@@ -2,7 +2,7 @@
 const assert = require('node:assert/strict'), fs = require('node:fs/promises'), path = require('node:path');
 const { chromium } = require(process.env.PLAYWRIGHT_PATH || 'playwright');
 const fixtures = require('./chat-file-fixtures.cjs');
-const output = process.env.CHAT_QA_OUTPUT || 'D:/UncoverBuildTools/temp/chat-ui-20261008';
+const output = process.env.CHAT_QA_OUTPUT || 'D:/UncoverBuildTools/temp/chat-ui-template';
 (async () => {
   const browser = await chromium.launch({ headless: true, channel: 'chrome' });
   await fs.mkdir(output, { recursive: true });
@@ -32,6 +32,34 @@ const output = process.env.CHAT_QA_OUTPUT || 'D:/UncoverBuildTools/temp/chat-ui-
       await page.getByLabel('聊天输入').waitFor();
       await page.waitForFunction(() => document.querySelector('[aria-label="关闭 DeepSeek 聊天"]').getBoundingClientRect().top <= 10);
       await page.screenshot({ path: path.join(output, `welcome-${width}.png`) });
+      const input = page.getByLabel('聊天输入');
+      const composer = page.getByTestId('chat-composer');
+      assert.equal(await page.getByText(/支持 PDF|PDF · DOCX · TXT · MD/).count(), 0);
+      assert.equal(await input.evaluate(node => getComputedStyle(node).fontSize), '16px', 'Phone-friendly input type does not trigger iOS small-font zoom');
+      assert.equal(await page.getByRole('button', { name: '发送聊天消息', exact: true }).isDisabled(), true);
+      await input.fill('第一行');
+      await input.press('Enter');
+      assert.equal(await input.inputValue(), '第一行\n', 'Enter inserts a newline, never sends or dismisses the input');
+      assert.equal(requests.length, 0);
+      assert.equal(await input.evaluate(node => document.activeElement === node), true);
+      await input.fill(Array.from({ length: 12 }, (_, index) => `手机多行输入第 ${index + 1} 行`).join('\n'));
+      await page.waitForFunction(() => document.querySelector('[aria-label="聊天输入"]').clientHeight >= 120);
+      assert.ok((await input.boundingBox()).height <= 133, 'Long drafts scroll within a bounded editor');
+      assert.equal(await input.evaluate(node => node.scrollHeight > node.clientHeight), true);
+      assert.equal(await input.evaluate(node => getComputedStyle(node).scrollbarWidth), 'none', 'No white scrollbar rail or arrows');
+      assert.equal(await input.evaluate(node => getComputedStyle(node).resize), 'none', 'No desktop resize handle');
+      assert.notEqual(await input.evaluate(node => getComputedStyle(node).overflowY), 'hidden', 'Long input must remain scrollable');
+      await page.setViewportSize({ width, height: 420 });
+      await page.waitForFunction(() => document.querySelector('[aria-label="聊天输入"]').clientHeight <= 106);
+      const keyboardBox = await composer.boundingBox();
+      assert.ok(keyboardBox.y >= 0 && keyboardBox.y + keyboardBox.height <= 420, 'Resized phone viewport keeps composer visible');
+      const sendBox = await page.getByRole('button', { name: '发送聊天消息', exact: true }).boundingBox();
+      assert.ok(sendBox.width >= 44 && sendBox.height >= 44, 'Send remains a comfortable touch target');
+      await page.screenshot({ path: path.join(output, `short-viewport-${width}.png`) });
+      await input.fill('短输入');
+      await page.waitForFunction(() => document.querySelector('[aria-label="聊天输入"]').clientHeight <= 50);
+      await input.fill('');
+      await page.setViewportSize({ width, height: 871 });
       await page.getByRole('button', { name: '添加聊天附件', exact: true }).click();
       const picker = page.waitForEvent('filechooser');
       await page.getByRole('button', { name: '选择附件文件', exact: true }).click();
@@ -47,6 +75,7 @@ const output = process.env.CHAT_QA_OUTPUT || 'D:/UncoverBuildTools/temp/chat-ui-
       await page.screenshot({ path: path.join(output, `files-${width}.png`) });
       await page.getByRole('button', { name: '移除附件 scan.pdf', exact: true }).click();
       await page.getByRole('button', { name: '完成附件选择', exact: true }).click();
+      assert.equal(await composer.getByText('训练记录.md', { exact: true }).count(), 1, 'Pending attachments stay inside the composer');
       await page.getByLabel('聊天输入').fill('请查看这些资料');
       await page.getByRole('button', { name: '打开服务设置', exact: true }).click();
       await page.getByRole('button', { name: '关闭服务设置', exact: true }).click();
@@ -58,6 +87,7 @@ const output = process.env.CHAT_QA_OUTPUT || 'D:/UncoverBuildTools/temp/chat-ui-
       await page.getByRole('button', { name: '发送聊天消息', exact: true }).click();
       await page.getByText('附件正文已进入这次消息。', { exact: true }).waitFor();
       assert.equal(await page.getByLabel('聊天输入').inputValue(), '');
+      assert.equal(await page.getByTestId('chat-pending-files').count(), 0, 'Successful send clears the pending attachment tray');
       const userMessage = requests[1].messages.find(message => message.role === 'user');
       assert.match(userMessage.content, /深蹲完成 4 组/);
       assert.match(userMessage.content, /附件测试：豆腐 & 鸡蛋/);
@@ -68,6 +98,7 @@ const output = process.env.CHAT_QA_OUTPUT || 'D:/UncoverBuildTools/temp/chat-ui-
       assert.equal(requests[1].model, 'deepseek-flash');
       await page.screenshot({ path: path.join(output, `conversation-${width}.png`) });
       assert.ok(await page.getByLabel('聊天输入').isVisible());
+      assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth + 1), false);
       assert.deepEqual(errors, []);
       console.log(`PASS chat UI + actual MD/DOCX/PDF + scanned rejection + failure/retry at ${width}px`);
       await context.close();

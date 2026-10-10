@@ -34,22 +34,23 @@ async function inspectDetail(page, goal, width) {
     assert.equal(await page.getByTestId('equipment-modern-guide').count(), 0);
     await page.getByRole('tab', { name: '动作指导', exact: true }).click();
   } else {
-    const standards = page.getByRole('button', { name: '初级标准', exact: true });
+    const standards = page.getByTestId('exercise-training-standards');
     if (await standards.count()) {
-      assert.equal(await standards.getAttribute('aria-expanded'), 'false');
-      await standards.click();
-      assert.equal(await standards.getAttribute('aria-expanded'), 'true');
-      const upgrade = page.getByRole('button', { name: '升级标准', exact: true });
-      if (await upgrade.count()) {
-        await upgrade.click();
-        assert.equal(await standards.getAttribute('aria-expanded'), 'false');
-        assert.equal(await upgrade.getAttribute('aria-expanded'), 'true');
+      assert.equal(await standards.getByRole('button').count(), 0, 'Standards are always readable, not disclosures');
+      for (const row of await standards.locator('[data-testid^="exercise-standard-"]').all()) {
+        assert.ok((await row.innerText()).split('\n').filter(Boolean).length >= 2, 'Every standard shows its label and actual value without a click');
       }
+      await standards.scrollIntoViewIfNeeded();
+      await page.screenshot({ path: `D:/UncoverBuildTools/temp/detail-standards-${goal}-${width}.png`, animations: 'disabled' });
     }
+    assert.equal(await page.getByText('资料来源', { exact: true }).count(), 0);
+    assert.equal(await page.getByText(/^来源：/).count(), 0);
+    assert.equal(await page.getByText(/^[低中高]风险动作$/).count(), 0);
     await page.getByRole('tab', { name: '资料原文与配图', exact: true }).click();
     await page.waitForFunction(() => document.querySelector('[data-testid="movement-detail-scroll"]').scrollTop === 0);
     assert.equal(await page.getByTestId('movement-detail-metrics').count(), 0, 'Original reading does not duplicate overview stats');
     assert.equal(await page.getByTestId('exercise-detail-original-photo').count(), 0);
+    assert.equal(await page.getByText(/^[低中高]风险动作$/).count(), 0);
     assert.ok(await scroll.innerText());
     await scroll.evaluate(node => { node.scrollTop = 0; });
     await page.screenshot({ path: `D:/UncoverBuildTools/temp/detail-original-${goal}-${width}.png` });

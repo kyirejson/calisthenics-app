@@ -44,3 +44,22 @@ test('UI upload path leaves personal tools, model, storage and system prompt unc
   assert.doesNotMatch(ui, /专属体能与营养私教|Flash 1M|正在思考并检索数据/);
   assert.doesNotMatch(fs.readFileSync(path.join(__dirname, '../src/integrations/chatAttachments.mjs'), 'utf8'), /localStorage|update_memory|writeMemory/);
 });
+
+test('mobile chat redesign keeps real controls, bounded multiline input and no format footer', () => {
+  const read = file => fs.readFileSync(path.join(__dirname, '..', file), 'utf8');
+  const composer = read('src/features/chat/ChatComposer.tsx');
+  assert.match(composer, /submitBehavior="newline" blurOnSubmit=\{false\}/);
+  assert.match(composer, /fontSize|s\.input/);
+  assert.match(composer, /onContentSizeChange/);
+  assert.match(composer, /node\.style\.height = '0px'/);
+  assert.match(composer, /Math\.min\(132, height \* \.25\)/);
+  assert.match(composer, /keyboardShouldPersistTaps="handled"/);
+  assert.match(composer, /busy \? stop : send/);
+  assert.doesNotMatch(composer, /onSubmitEditing|支持 PDF|DOCX|TXT|update_memory|personalChat/);
+  const modal = read('src/integrations/DeepseekChat.tsx');
+  assert.match(modal, /<ChatComposer/);
+  assert.match(modal, /behavior=\{Platform\.OS === 'ios' \? 'padding' : Platform\.OS === 'android' \? 'height' : undefined\}/);
+  assert.match(read('android/app/src/main/AndroidManifest.xml'), /windowSoftInputMode="adjustResize"/);
+  assert.doesNotMatch(modal, /s\.formats|s\.format\}|TextInput/);
+  assert.match(read('src/features/chat/styles.ts'), /fontSize: 16/);
+});

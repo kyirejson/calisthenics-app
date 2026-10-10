@@ -1,8 +1,11 @@
 import { s, lime, muted } from './styles';
+import { useState } from 'react';
 import { useChatSession, type Turn } from './useChatSession';
-import { ActivityIndicator, Pressable, ScrollView, Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, Text, View, useWindowDimensions } from 'react-native';
 
 import { AppGlyph } from '../../components/AppGlyph';
+import { ChatMark } from './ChatMark';
+import { LinearGradient } from 'expo-linear-gradient';
 
 import { MarkdownView } from '../../components/MarkdownView';
 import { fileSize } from '../../integrations/chatAttachments.mjs';
@@ -76,6 +79,8 @@ export function ChatMessages({
     | 'openFiles'
   >;
 }) {
+  const [readingHeight, setReadingHeight] = useState<number | null>(null);
+  const compact = useWindowDimensions().height < 560 || readingHeight !== null && readingHeight < 360;
   const {
     turns,
     setDraft,
@@ -89,23 +94,27 @@ export function ChatMessages({
   } = model;
   const renderUser = (turn: Turn, key: string) => (
     <View key={key} style={s.user}>
-      {turn.attachments?.map((file) => (
-        <FileTile key={file.id} file={file} />
-      ))}
       {turn.content ? (
         <Text selectable style={s.userText}>
           {turn.content}
         </Text>
       ) : null}
+      {turn.attachments?.map((file) => (
+        <FileTile key={file.id} file={file} />
+      ))}
     </View>
   );
 
   return (
     <ScrollView
+      testID="chat-messages"
       ref={scroll}
       style={s.history}
+      showsVerticalScrollIndicator={false}
+      onLayout={event => setReadingHeight(event.nativeEvent.layout.height)}
       contentContainerStyle={[s.content, !turns.length && !busy && s.emptyContent]}
       keyboardShouldPersistTaps="handled"
+      keyboardDismissMode="on-drag"
       scrollEventThrottle={64}
       onScroll={(event) => {
         const { layoutMeasurement, contentOffset, contentSize } = event.nativeEvent;
@@ -116,25 +125,26 @@ export function ChatMessages({
       }}
     >
       {!turns.length && !busy ? (
-        <View style={s.welcome}>
-          <View style={s.welcomeMark}>
-            <AppGlyph name="chat" size={27} color={lime} />
-          </View>
-          <Text style={s.eyebrow}>YOUR SPACE TO THINK</Text>
-          <Text style={s.welcomeTitle}>今天想聊些什么？</Text>
-          <Text style={s.welcomeDescription}>聊训练、饮食，也可以发一份资料。</Text>
-          <View style={s.suggestions}>
+        <View style={[s.welcome, compact && s.welcomeCompact]}>
+          {!compact ? <><LinearGradient pointerEvents="none" colors={['#202C1B', '#121A17', '#0D1114']} style={s.welcomeGlow} />
+          <View style={s.welcomeSymbol}><ChatMark size={88} /></View>
+          <Text style={s.eyebrow}>UNCOVER AI</Text></> : null}
+          <Text style={[s.welcomeTitle, compact && s.welcomeTitleCompact]}>{compact ? '把训练问题，聊明白。' : '把训练问题，\n聊明白。'}</Text>
+          {!compact ? <Text style={s.welcomeDescription}>训练、饮食、动作进阶，也可以上传资料一起讨论。</Text> : null}
+          <View style={[s.suggestions, compact && s.suggestionsCompact]}>
             <Pressable
               accessibilityRole="button"
               onPress={() => setDraft('看看今日训练')}
-              style={s.suggestion}
+              style={[s.suggestion, compact && s.suggestionCompact]}
             >
-              <AppGlyph name="dumbbell" size={17} color={muted} />
+              <AppGlyph name="dumbbell" size={22} color={muted} />
               <Text style={s.suggestionText}>看看今日训练</Text>
+              <AppGlyph name="chevron" size={16} color={muted} />
             </Pressable>
-            <Pressable accessibilityRole="button" onPress={openFiles} style={s.suggestion}>
-              <AppGlyph name="paperclip" size={17} color={muted} />
+            <Pressable accessibilityRole="button" onPress={openFiles} style={[s.suggestion, compact && s.suggestionCompact]}>
+              <AppGlyph name="document" size={22} color={muted} />
               <Text style={s.suggestionText}>分析一份资料</Text>
+              <AppGlyph name="chevron" size={16} color={muted} />
             </Pressable>
           </View>
         </View>
@@ -145,7 +155,7 @@ export function ChatMessages({
         ) : (
           <View key={index} style={s.assistant}>
             <View style={s.assistantHeader}>
-              <AppGlyph name="chat" size={18} color={lime} />
+              <ChatMark size={28} />
               <Text style={s.assistantName}>DeepSeek</Text>
             </View>
             {turn.toolsUsed?.length ? (
@@ -159,7 +169,7 @@ export function ChatMessages({
       {busy && streamContent ? (
         <View style={s.assistant}>
           <View style={s.assistantHeader}>
-            <AppGlyph name="chat" size={18} color={lime} />
+            <ChatMark size={28} />
             <Text style={s.assistantName}>DeepSeek</Text>
           </View>
           {activeTools.length ? <Text style={s.toolText}>{activeTools.join(' · ')}</Text> : null}

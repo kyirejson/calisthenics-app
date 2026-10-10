@@ -59,6 +59,22 @@ test('all Today goals reuse dates, typography, numbered prescription cards and s
   assert.ok(!task.includes('completed:'));
 });
 
+test('all bodyweight detail pages remove risk banners and redundant sources, and show standards directly', () => {
+  const screen = read('src/screens/ExerciseDetailScreen.tsx');
+  assert.doesNotMatch(screen, /riskLabel|styles\.risk|warningBackground|风险动作<\/Text>/);
+  // Only the repeated UI banner is removed; selecting high-risk exercises still requires confirmation.
+  assert.ok(screen.includes("confirmAction('高风险动作'"));
+  const guide = read('src/components/ExerciseResource.tsx');
+  const summary = guide.slice(guide.indexOf("{tab === 'summary' ?"), guide.indexOf('\n    </View> : <View>', guide.indexOf("{tab === 'summary' ?")));
+  assert.doesNotMatch(summary, /资料来源|来源：|exercise\.source/);
+  assert.ok(summary.includes('testID="exercise-training-standards"'));
+  const standards = summary.slice(summary.indexOf('{standards.length'));
+  assert.ok(standards.includes('standards.map(([name, value])'));
+  assert.ok(standards.includes('<Text style={d.body}>{value}</Text>'));
+  assert.doesNotMatch(standards, /DetailDisclosures|Pressable|initialOpen/);
+  assert.ok(guide.includes('<SourceMarkdown markdown={resource.markdown} />'));
+});
+
 test('nutrition has no obsolete rationale section and Today uses the draggable host dock', () => {
   assert.ok(!fs.existsSync(path.join(__dirname, '..', 'src/nutrition/knowledge.ts')));
   assert.ok(!/计算与知识依据|NUTRITION_KNOWLEDGE|OBJECTIVE_EXPLANATIONS|knowledgeToggle/.test(read('src/screens/NutritionScreen.tsx')));

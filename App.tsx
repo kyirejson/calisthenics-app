@@ -117,7 +117,7 @@ function AppShell() {
     {tab === 'progress' ? <ProgressScreen viewPreferences={progressView} onViewPreferences={updateProgressView} onOpen={(exerciseId) => setRoute({ name: 'exercise', exerciseId })} /> : null}
     {tab === 'data' ? <DataScreen savedSessionId={savedTrainingId} viewPreferences={dataView} onViewPreferences={setDataView} onOpenExercise={(exerciseId) => setRoute({ name: 'exercise', exerciseId })} /> : null}
     {tab === 'profile' ? <ProfileScreen /> : null}
-    <TabBar active={tab} onChange={setTab} appearance={tab === 'today' ? 'editorial' : 'default'} />
+    <TabBar active={tab} onChange={setTab} appearance={tab === 'today' ? 'editorial' : tab === 'profile' ? 'profile' : 'default'} />
   </View>;
 }
 

@@ -1,6 +1,8 @@
 import { ChatMessages, FileTile } from '../features/chat/ChatMessages';
 import { s, lime, muted } from '../features/chat/styles';
 import { useChatSession } from '../features/chat/useChatSession';
+import { ChatComposer } from '../features/chat/ChatComposer';
+import { ChatMark } from '../features/chat/ChatMark';
 
 import {
   ActivityIndicator,
@@ -12,7 +14,6 @@ import {
   SafeAreaView,
   ScrollView,
   Text,
-  TextInput,
   View,
 } from 'react-native';
 
@@ -69,13 +70,14 @@ export function DeepseekChat(props: { visible: boolean; onClose: () => void }) {
         <SafeAreaView style={s.root}>
           <KeyboardAvoidingView
             style={s.root}
-            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+            behavior={Platform.OS === 'ios' ? 'padding' : Platform.OS === 'android' ? 'height' : undefined}
           >
             <View style={s.header}>
               <View style={s.brand}>
-                <Text style={s.title}>DeepSeek</Text>
-                <View style={s.badge}>
-                  <Text style={s.badgeText}>Flash</Text>
+                <ChatMark size={32} />
+                <View style={s.brandCopy}>
+                  <Text style={s.title}>AI 助手</Text>
+                  <Text style={s.model}>DeepSeek · Flash</Text>
                 </View>
               </View>
               <View style={s.headerActions}>
@@ -129,68 +131,9 @@ export function DeepseekChat(props: { visible: boolean; onClose: () => void }) {
                 {error}
               </Text>
             ) : null}
-            <View style={s.composerOuter}>
-              {!filesOpen && !busy && files.length ? (
-                <ScrollView
-                  style={s.pendingFiles}
-                  horizontal
-                  showsHorizontalScrollIndicator={false}
-                  contentContainerStyle={s.pendingFilesContent}
-                >
-                  {files.map((file) => (
-                    <View key={file.id} style={s.pendingFile}>
-                      <FileTile file={file} remove={() => remove(file)} />
-                    </View>
-                  ))}
-                </ScrollView>
-              ) : null}
-              <View style={s.composer}>
-                <TextInput
-                  accessibilityLabel="聊天输入"
-                  multiline
-                  value={draft}
-                  onChangeText={setDraft}
-                  editable={!busy}
-                  placeholder="写下你的问题…"
-                  placeholderTextColor="#75807E"
-                  style={s.input}
-                />
-                <View style={s.composerActions}>
-                  <Pressable
-                    accessibilityRole="button"
-                    accessibilityLabel="添加聊天附件"
-                    disabled={busy}
-                    onPress={openFiles}
-                    style={[s.fileButton, busy && s.disabled]}
-                  >
-                    <AppGlyph name="paperclip" size={20} color={muted} />
-                    <Text style={s.fileButtonText}>
-                      文件{files.length ? ` · ${files.length}` : ''}
-                    </Text>
-                  </Pressable>
-                  {busy ? (
-                    <Pressable
-                      accessibilityRole="button"
-                      accessibilityLabel="停止回复"
-                      onPress={() => request.current?.abort()}
-                      style={s.send}
-                    >
-                      <AppGlyph name="stop" color="#0D1114" size={19} />
-                    </Pressable>
-                  ) : (
-                    <Pressable
-                      accessibilityRole="button"
-                      accessibilityLabel="发送聊天消息"
-                      disabled={!canSend}
-                      onPress={() => void send()}
-                      style={[s.send, !canSend && s.sendDisabled]}
-                    >
-                      <AppGlyph name="arrowUp" color={canSend ? '#0D1114' : '#74816F'} size={22} />
-                    </Pressable>
-                  )}
-                </View>
-              </View>
-            </View>
+            <ChatComposer draft={draft} setDraft={setDraft} busy={busy} canSend={canSend}
+              files={files} filesOpen={filesOpen} openFiles={openFiles} remove={remove}
+              send={() => void send()} stop={() => request.current?.abort()} />
             {filesOpen ? (
               <View style={s.sheetLayer}>
                 <Pressable
@@ -213,13 +156,6 @@ export function DeepseekChat(props: { visible: boolean; onClose: () => void }) {
                     </Pressable>
                   </View>
                   <Text style={s.sheetDescription}>提取文字后随消息发送给 DeepSeek</Text>
-                  <View style={s.formats}>
-                    {['PDF', 'DOCX', 'TXT', 'MD'].map((format) => (
-                      <Text key={format} style={s.format}>
-                        {format}
-                      </Text>
-                    ))}
-                  </View>
                   <ScrollView
                     style={s.sheetFiles}
                     contentContainerStyle={s.sheetFilesContent}

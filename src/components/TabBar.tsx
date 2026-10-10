@@ -38,8 +38,8 @@ function TabIcon({ tab, active, editorial }: { tab: TabKey; active: boolean; edi
   </View>;
 }
 
-export function TabBar({ active, onChange, appearance = 'default' }: { active: TabKey; onChange: (tab: TabKey) => void; appearance?: 'default' | 'editorial' }) {
-  const editorial = appearance === 'editorial';
+export function TabBar({ active, onChange, appearance = 'default' }: { active: TabKey; onChange: (tab: TabKey) => void; appearance?: 'default' | 'editorial' | 'profile' }) {
+  const editorial = appearance !== 'default';
   return (
     <View style={[styles.wrap, editorial && styles.editorialWrap]}>
       <View style={[styles.bar, editorial && styles.editorialBar]}>
@@ -47,7 +47,7 @@ export function TabBar({ active, onChange, appearance = 'default' }: { active: T
           const selected = active === tab.key;
           return (
             <Pressable key={tab.key} accessibilityRole="tab" accessibilityLabel={'切换到' + tab.label} accessibilityState={{ selected }} aria-selected={selected} onPress={() => onChange(tab.key)} style={styles.item}>
-              <View style={[styles.icon, selected && !editorial && styles.iconActive]}><TabIcon tab={tab.key} active={selected} editorial={editorial} /></View>
+              <View style={[styles.icon, selected && !editorial && styles.iconActive, selected && appearance === 'profile' && styles.profileIconActive]}><TabIcon tab={tab.key} active={selected} editorial={editorial} /></View>
               <Text style={[styles.label, selected && styles.labelActive, selected && editorial && styles.editorialActive]}>{tab.label}</Text>
             </Pressable>
           );
@@ -68,6 +68,7 @@ const styles = StyleSheet.create({
   editorialWrap: { bottom: 0, paddingHorizontal: 0 },
   editorialBar: { maxWidth: 440, height: 68, borderRadius: 0, borderWidth: 0, borderTopWidth: 1, borderTopColor: '#25312C', backgroundColor: '#0D1114', shadowOpacity: 0, elevation: 0 },
   editorialActive: { color: colors.lime },
+  profileIconActive: { width: 56, borderRadius: 20, backgroundColor: '#242E20' },
 
   iconBox: { width: 15, height: 15, borderWidth: 2, borderRadius: 4, alignItems: 'center' },
   iconBar: { width: 9, height: 2, borderRadius: 1, marginTop: 1.5 },

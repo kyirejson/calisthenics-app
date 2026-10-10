@@ -106,9 +106,8 @@ export function ExerciseDetailedGuide({ exercise, initialTab = 'summary', select
     ]} />
 
     {tab === 'summary' ? <View>
-      {exercise.purpose || exercise.source ? <View style={d.intro}>
-        {exercise.purpose ? <><Text style={d.introTitle}>训练目的</Text><Text style={d.body}>{exercise.purpose}</Text></> : null}
-        {exercise.source ? <Text style={d.source}>来源：{exercise.source}</Text> : null}
+      {exercise.purpose ? <View style={d.intro}>
+        <Text style={d.introTitle}>训练目的</Text><Text style={d.body}>{exercise.purpose}</Text>
       </View> : null}
       {supplementalDemo ? <View style={styles.demoGuide}>
       <Image source={supplementalDemo.source} style={styles.demoGuideImage} resizeMode="contain" />
@@ -118,8 +117,7 @@ export function ExerciseDetailedGuide({ exercise, initialTab = 'summary', select
       </View> : null}
       {points.length ? <View style={d.section}><Text style={d.sectionTitle}>动作要点</Text><DetailSteps items={points.map(text => ({ text }))} /></View> : null}
       {issues.length ? <View style={d.section}><Text style={d.sectionTitle}>易错与纠正</Text><DetailDisclosures warning initialOpen="issue-0" items={issues.map((issue, index) => ({ id: `issue-${index}`, title: issue.problem, content: <Text style={d.body}>{issue.fix}</Text> }))} /></View> : null}
-      {standards.length ? <View style={d.section}><Text style={d.sectionTitle}>训练标准</Text><DetailDisclosures items={standards.map(([name, value]) => ({ id: name, title: standardName(name) + '标准', content: <Text style={d.body}>{value}</Text> }))} /></View> : null}
-      {exercise.source ? <View style={d.section}><Text style={d.sectionTitle}>资料来源</Text><DetailDisclosures items={[{ id: 'source', title: exercise.source, content: <Text style={d.muted}>{resource ? resource.kind === 'book' ? '对应书籍资料可在“原文与配图”中阅读。' : '小程序补充资料，未在所指书籍章节核实。' : '此项来源以动作说明为准，暂无可核对的原文资料。'}</Text> }]} /></View> : null}
+      {standards.length ? <View testID="exercise-training-standards" style={d.section}><Text style={d.sectionTitle}>训练标准</Text>{standards.map(([name, value]) => <View key={name} testID={'exercise-standard-' + name} style={styles.standardRow}><Text style={styles.standardLabel}>{standardName(name)}标准</Text><Text style={d.body}>{value}</Text></View>)}</View> : null}
     </View> : <View>
       {resource ? <>
         <View style={[styles.sourceInfo, resource.kind === 'mini_program' && styles.supplementInfo]}>
@@ -184,6 +182,8 @@ function standardName(key: string) {
 }
 
 const styles = StyleSheet.create({
+  standardRow: { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: appPalette.border, paddingVertical: 14, gap: 6 },
+  standardLabel: { color: appPalette.muted, fontSize: 12, lineHeight: 20, fontWeight: '700' },
   media: { position: 'relative', overflow: 'hidden', borderRadius: 12, backgroundColor: '#171C22', flexShrink: 0 },
   demoGuide: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 12, backgroundColor: appPalette.raised, borderRadius: radius.md, marginBottom: 12 },
   demoGuideImage: { width: 108, height: 144, borderRadius: 8 },
