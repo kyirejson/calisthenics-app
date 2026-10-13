@@ -94,9 +94,10 @@ async function emit(page, distance, seconds = 3, accuracy = 5) { await page.eval
       await page.getByRole('button', { name: '关闭跑步总结', exact: true }).click();
       const saved = (await records(page))[0]; assert.equal(saved.kind, 'running'); assert.ok(Math.abs(saved.distanceKm - .15) < .01); assert.equal(saved.runSegments.length, 2); assert.ok(saved.durationSeconds < 70, 'Pause never enters duration');
       await page.getByRole('tab', { name: '切换到数据', exact: true }).click();
+      await page.getByRole('tab', { name: '切换到我的', exact: true }).click();
       const date = new Date(saved.startedAt).toLocaleDateString('en-CA', { timeZone: 'Asia/Shanghai' });
       const day = page.getByTestId('history-day-' + date); await day.getByRole('button', { name: '展开' + date + '训练历史', exact: true }).click();
-      await page.getByTestId('history-run-' + saved.id).waitFor(); assert.ok(!(await day.innerText()).includes('0 组')); console.log('PASS real mileage/pace, pause exclusion, page changes, offline GPS, save failure/retry and data history');
+      await page.getByTestId('history-run-' + saved.id).waitFor(); assert.ok(!(await day.innerText()).includes('0 组')); console.log('PASS real mileage/pace, pause exclusion, page changes, offline GPS, save failure/retry and My history');
       await page.getByRole('tab', { name: '切换到今日', exact: true }).click(); await page.getByRole('tab', { name: '切换到跑步', exact: true }).click(); await waitRunPane(page);
       await start(page); await emit(page, 0, 3); await emit(page, 20, 4); await page.waitForTimeout(1100);
       await page.reload({ waitUntil: 'domcontentloaded', timeout: 60000 }); await page.getByText('跑步已暂停', { exact: true }).waitFor();
@@ -146,7 +147,7 @@ async function emit(page, distance, seconds = 3, accuracy = 5) { await page.eval
       await page.getByText('保存室内跑', { exact: true }).waitFor({ state: 'hidden' });
       await page.getByRole('button', { name: '关闭跑步总结', exact: true }).click();
       const saved = (await records(page))[0]; assert.equal(saved.runMode, 'indoor'); assert.equal(saved.distanceKm, 2.5); assert.equal(saved.distanceSource, 'manual'); assert.deepEqual(saved.route, []);
-      await page.getByRole('button', { name: '查看跑步记录', exact: true }).click(); await page.getByText('手动填写距离', { exact: true }).waitFor();
+      await page.getByRole('tab', { name: '切换到我的', exact: true }).click(); await page.getByRole('button', { name: /^展开.*训练历史$/ }).click(); await page.getByTestId('profile-latest-history').getByText(/手动填写距离/).waitFor();
       await page.screenshot({ path: output + '/indoor-history.png' }); assert.deepEqual(indoor.errors, []);
       console.log('PASS indoor mode: no GPS request, short-screen controls, distance validation and labeled manual distance in history');
     } finally { await indoor.context.close(); }

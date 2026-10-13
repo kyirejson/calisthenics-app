@@ -8,9 +8,10 @@ const { spawnSync } = require('node:child_process');
 const { zipSync } = require('fflate');
 
 function fixture() {
-  const symbols = ['GpsDiagnostics', 'GpsSubscription', 'MotionGate', 'MotionSources', 'RunSteps', 'StepEvidence', 'RunVoice'].map(name => `Luncover/running/${name};`);
-  symbols.push('mapLocation', 'mapPosition', 'auxiliaryProviders', 'networkAvailable', 'autoPaused', 'stepCount');
+  const symbols = ['GpsDiagnostics', 'GpsSubscription', 'MotionGate', 'MotionSources', 'RunSteps', 'StepEvidence', 'RunVoice', 'KilometreAnnouncement'].map(name => `Luncover/running/${name};`);
+  symbols.push('setVoice', 'mapLocation', 'mapPosition', 'auxiliaryProviders', 'networkAvailable', 'autoPaused', 'stepCount');
   const entries = { 'classes.dex': Buffer.from(symbols.join('\n')) };
+  entries['assets/index.android.bundle'] = Buffer.from(['running-data-section', 'running-mileage-chart', 'running-milestone', 'profile-latest-history', 'all-training-history', 'bottom-navigation'].join('\n'));
   const assets = Array.from({ length: 100 }, (_, index) => {
     const bytes = Buffer.from(`synthetic image hash fixture ${index}`);
     entries[`res/${index}.jpeg`] = bytes;
@@ -48,4 +49,16 @@ test('release resource verification requires the embedded asset manifest', t => 
   const result = inspect(t, entries);
   assert.notEqual(result.status, 0);
   assert.match(result.stderr, /Embedded asset manifest missing/);
+});
+test('release verification rejects a stale native recorder without kilometre speech', t => {
+  const entries = fixture(); entries['classes.dex'] = Buffer.from(entries['classes.dex'].toString().replace('Luncover/running/KilometreAnnouncement;', ''));
+  const result = inspect(t, entries);
+  assert.notEqual(result.status, 0);
+  assert.match(result.stderr, /GPS repair missing from APK: Luncover\/running\/KilometreAnnouncement/);
+});
+test('release verification rejects an old embedded UI even when native and resources are new', t => {
+  const entries = fixture(); entries['assets/index.android.bundle'] = Buffer.from('outdated UI');
+  const result = inspect(t, entries);
+  assert.notEqual(result.status, 0);
+  assert.match(result.stderr, /Running\/history UI missing from embedded bundle: running-data-section/);
 });

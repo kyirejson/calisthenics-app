@@ -17,6 +17,12 @@ export async function configureRunOptions(value: RunOptions) {
   if (!module.configure) throw Error('当前安装包不支持这些跑步设置，请安装新版 APK。');
   await module.configure(JSON.stringify(value));
 }
+export async function setRunVoice(enabled: boolean) {
+  if (!native) { await browserRunning.setVoice(enabled); return; }
+  const module = native as AndroidRunning & { setVoice?: (value: boolean) => Promise<void> };
+  if (!module.setVoice) throw Error('当前安装包尚不支持跑步中的喇叭开关，请安装新版 APK。');
+  await module.setVoice(enabled);
+}
 export const runningTransport = native ? {
   ...native,
   snapshot: async (after: number): Promise<RunSnapshot> => ({ ...emptyRun(), ...JSON.parse(await native.snapshot(after)) }),

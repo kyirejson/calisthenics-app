@@ -3,10 +3,10 @@ import { AppState, PermissionsAndroid, Platform, View } from 'react-native';
 import { useAppStore } from '../store/AppStore';
 import { useUpdateBlock } from '../components/AppUpdates';
 import { analyseRun, cleanRunOptions, emptyRun, toRunSession, type RunOptions, type RunSnapshot, type RunMode } from './model';
-import { configureRunOptions, runningInsets, runningSupported, runningTransport as transport } from './transport';
+import { configureRunOptions, setRunVoice, runningInsets, runningSupported, runningTransport as transport } from './transport';
 import { locationStatus } from './locationStatus';
 
-type RunContext = { snapshot: RunSnapshot; analysis: ReturnType<typeof analyseRun>; busy: boolean; ready: boolean; error: string; location: ReturnType<typeof locationStatus>; locate: () => Promise<void>; stopPreview: () => void; configure: (options: RunOptions) => Promise<boolean>; start: (mode?: RunMode) => Promise<void>; pause: () => Promise<boolean>; resume: () => Promise<void>; save: (distance?: number) => Promise<void> };
+type RunContext = { snapshot: RunSnapshot; analysis: ReturnType<typeof analyseRun>; busy: boolean; ready: boolean; error: string; location: ReturnType<typeof locationStatus>; locate: () => Promise<void>; stopPreview: () => void; configure: (options: RunOptions) => Promise<boolean>; setVoice: (enabled: boolean) => Promise<void>; start: (mode?: RunMode) => Promise<void>; pause: () => Promise<boolean>; resume: () => Promise<void>; save: (distance?: number) => Promise<void> };
 const Context = createContext<RunContext | null>(null);
 export function useRunRecorder() { const value = useContext(Context); if (!value) throw Error('Missing RunRecorderHost'); return value; }
 export function RunRecorderHost({ children }: { children: React.ReactNode }) {
@@ -119,7 +119,8 @@ export function RunRecorderHost({ children }: { children: React.ReactNode }) {
     if (finished.mode !== 'indoor') await requestPreview().catch(() => undefined);
   });
   const analysis = useMemo(() => analyseRun(snapshot.samples), [snapshot.samples]);
+  const setVoice = (enabled: boolean) => action(() => setRunVoice(enabled));
   const stopPreview = useCallback(() => { previewWanted.current = false; void transport.stopPreview().catch(() => undefined); }, []);
   const location = locationStatus(snapshot, previewWanted.current, previewStarted.current ? Date.now() - previewStarted.current : 0);
-  return <Context.Provider value={{ snapshot, analysis, error: error || snapshot.error || snapshot.featureIssue || '', location, busy, ready, locate, stopPreview, configure, start, pause, resume, save }}>{Platform.OS === 'android' ? <View style={{ flex: 1, backgroundColor: '#0D1114', paddingTop: insets.top, paddingBottom: insets.bottom }}><View style={{ flex: 1 }}>{children}</View></View> : children}</Context.Provider>;
+  return <Context.Provider value={{ snapshot, analysis, error: error || snapshot.error || snapshot.featureIssue || '', location, busy, ready, locate, stopPreview, configure, setVoice, start, pause, resume, save }}>{Platform.OS === 'android' ? <View style={{ flex: 1, backgroundColor: '#0D1114', paddingTop: insets.top, paddingBottom: insets.bottom }}><View style={{ flex: 1 }}>{children}</View></View> : children}</Context.Provider>;
 }

@@ -14,9 +14,10 @@ import { appPalette as palette } from '../theme';
 import { confirmAction, showMessage } from '../utils/confirm';
 import { useAppUpdates, useUpdateBlock } from '../components/AppUpdates';
 import type { Goal } from '../types';
-import { useOpenDeepseekChat } from '../integrations/DeepseekChatHost';
+import { TrainingRecords } from '../features/history/TrainingRecords';
+import type { RecordsProps } from '../features/history/useTrainingRecords';
 
-export function ProfileScreen() {
+export function ProfileScreen({ onOpenExercise, savedSessionId }: Partial<RecordsProps> = {}) {
   const { width, height } = useWindowDimensions();
   const compact = width < 360 || height < 740;
   const { profile, sessions, switchTrainingGoal, clearData } = useAppStore(state => ({ profile: state.profile, sessions: state.sessions, switchTrainingGoal: state.switchTrainingGoal, clearData: state.clearData }));
@@ -25,12 +26,11 @@ export function ProfileScreen() {
   const [savingGoal, setSavingGoal] = useState(false);
   const [goalError, setGoalError] = useState('');
   const [showProfileEdit, setShowProfileEdit] = useState(false);
-  const openChat = useOpenDeepseekChat();
   useUpdateBlock(showGoalPicker || showProfileEdit || savingGoal);
   const now = useMemo(() => new Date(), [sessions]);
   const valid = useMemo(() => validHistorySessions(sessions, now), [sessions, now]);
   const days = useMemo(() => groupHistoryByDay(valid, now).length, [valid, now]);
-  if (!profile) return <Page tone="dark" testID="profile-content" style={styles.content}><Text style={styles.title}>我的</Text><MenuRow icon="edit" title="建立个人档案" onPress={() => setShowProfileEdit(true)} /><ProfileSection title="服务"><MenuRow icon="chat" title="DeepSeek 聊天" onPress={openChat} last /></ProfileSection>{showProfileEdit ? <PersonalProfileForm onClose={() => setShowProfileEdit(false)} /> : null}</Page>;
+  if (!profile) return <Page tone="dark" testID="profile-content" style={styles.content}><Text style={styles.title}>我的</Text><MenuRow icon="edit" title="建立个人档案" onPress={() => setShowProfileEdit(true)} />{showProfileEdit ? <PersonalProfileForm onClose={() => setShowProfileEdit(false)} /> : null}</Page>;
   const currentGoalInfo = trainingGoals.find((item) => item.key === profile.goal) || trainingGoals[0];
 
   const selectGoal = async (goal: Goal) => {
@@ -66,9 +66,9 @@ export function ProfileScreen() {
     </LinearGradient>
 
     <ProfileSection title="训练" compact={compact}><MenuRow icon="dumbbell" title="训练专题" trailing={currentGoalInfo.label} accent compact={compact} onPress={() => setShowGoalPicker(true)} last /></ProfileSection>
+    {onOpenExercise ? <TrainingRecords onOpenExercise={onOpenExercise} savedSessionId={savedSessionId} /> : null}
     <ProfileSection title="应用与隐私" compact={compact}>
       <MenuRow icon="refresh" title="检查更新" trailing={`v${appConfig.expo.version}`} hint={appUpdates.status} compact={compact} onPress={appUpdates.open} />
-      <MenuRow icon="chat" title="DeepSeek 助手" accessibilityLabel="DeepSeek 聊天" trailing="打开聊天" compact={compact} onPress={openChat} />
       <MenuRow icon="trash" title="清除本机数据" sub="删除档案与全部记录" danger compact={compact} onPress={confirmClear} last />
     </ProfileSection>
     <View testID="profile-footer" style={[styles.footer, compact && styles.compactFooter]}><Text style={styles.version}>Uncover · v{appConfig.expo.version}</Text><Text style={styles.privacy}>记录保存在本机 · 联网处理须先确认</Text></View>

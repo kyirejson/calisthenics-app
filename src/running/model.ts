@@ -5,7 +5,7 @@ export type RunMode = 'outdoor' | 'indoor';
 export type RunPoint = { latitude: number; longitude: number; accuracy: number; timestamp: number; elapsedMs: number; segment: number; ageMs?: number; monotonicNanos?: number; provider?: string; cached?: boolean };
 export type LocationDiagnostics = { permission: boolean; providerAvailable: boolean; enabled: boolean; listening: boolean; waitMs: number; satellites: number | null; usedSatellites: number | null; satelliteAgeMs: number | null; rejection: string; requestError: string; gpsListening?: boolean; systemEnabled?: boolean; auxiliaryProviders?: string[]; providerErrors?: Record<string, string>; networkAvailable?: boolean; networkEnabled?: boolean };
 export type RunOptions = { autoPause: boolean; voice: boolean; stepTracking: boolean; stepLengthM?: number };
-export const defaultRunOptions = (): RunOptions => ({ autoPause: false, voice: false, stepTracking: false });
+export const defaultRunOptions = (): RunOptions => ({ autoPause: false, voice: true, stepTracking: false });
 export function cleanRunOptions(value: RunOptions): RunOptions {
   if (!value || ['autoPause', 'voice', 'stepTracking'].some(key => typeof value[key as keyof RunOptions] !== 'boolean')) throw Error('跑步设置无效。');
   if (value.stepLengthM !== undefined && (!Number.isFinite(value.stepLengthM) || value.stepLengthM < .3 || value.stepLengthM > 2)) throw Error('校准步长应为 0.3–2 米/步。');

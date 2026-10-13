@@ -38,6 +38,7 @@ async function finish(page, actual) {
     assert.equal(first.length, 1);
     const exercised = first[0].exercises.find(item => item.category === 'pull');
     const firstTotal = exercised.sets.reduce((sum, set) => sum + set.reps, 0);
+    await page.getByRole('tab', { name: '切换到数据', exact: true }).click();
     await page.getByRole('button', { name: '查看引体向上进步记录', exact: true }).click();
     await page.getByRole('button', { name: '查看当日总量曲线', exact: true }).click();
     assert.match(await page.getByTestId('performance-tooltip').innerText(), new RegExp(`\\b${firstTotal} 次`));
@@ -51,11 +52,14 @@ async function finish(page, actual) {
     assert.notEqual(second[0].id, second[1].id);
     const total = second.flatMap(session => session.exercises).filter(item => item.exerciseId === exercised.exerciseId).flatMap(item => item.sets).reduce((sum, set) => sum + set.reps, 0);
     console.log('Saved sessions and expected total:', second.length, total);
+    await page.getByRole('tab', { name: '切换到数据', exact: true }).click();
     // Must return to the same action and daily-total metric, not silently reset to best.
     assert.equal(await page.getByRole('button', { name: '查看引体向上进步记录', exact: true }).getAttribute('aria-pressed'), 'true');
     assert.match(await page.getByTestId('performance-tooltip').innerText(), new RegExp(`\\b${total} 次`));
     assert.ok(!(await page.getByTestId('unified-progress-card').innerText()).includes('2 次训练'));
+    await page.getByRole('tab', { name: '切换到我的', exact: true }).click();
     const summary = page.getByTestId(/^training-day-summary-/);
+    await summary.getByRole('button', { name: /^展开.*训练历史$/ }).click();
     assert.match(await summary.innerText(), /2 次训练/);
     const actionTotal = summary.getByTestId(`training-day-total-${exercised.exerciseId}:reps:false:none`);
     assert.equal(await actionTotal.innerText(), `${total} 次`);
@@ -69,8 +73,11 @@ async function finish(page, actual) {
     await page.getByRole('button', { name: '记录已完成组', exact: true }).click();
     await page.getByTestId(/^training-day-summary-/).waitFor();
     await page.getByRole('button', { name: /^展开.*训练历史$/ }).click();
-    assert.match(await page.getByTestId('performance-tooltip').innerText(), new RegExp(`\\b${total + 5} 次`));
     assert.equal(await actionTotal.innerText(), `${total + 5} 次`);
+    await page.getByRole('tab', { name: '切换到数据', exact: true }).click();
+    assert.match(await page.getByTestId('performance-tooltip').innerText(), new RegExp(`\\b${total + 5} 次`));
+    await page.getByRole('tab', { name: '切换到我的', exact: true }).click();
+    await summary.getByRole('button', { name: /^展开.*训练历史$/ }).click();
     const third = (await page.evaluate(() => JSON.parse(localStorage.getItem('sessions')))).find(session => !first.some(old => old.id === session.id) && !second.some(old => old.id === session.id));
     assert.ok(third && third.completion === 'partial');
     const summaryDate = (await summary.getAttribute('data-testid')).replace('training-day-summary-', '');
@@ -79,8 +86,11 @@ async function finish(page, actual) {
     await page.getByRole('button', { name: '删除训练记录' + third.id, exact: true }).click();
     await page.getByRole('button', { name: '删除记录', exact: true }).click();
     await page.waitForFunction(() => JSON.parse(localStorage.getItem('sessions')).length === 2);
-    assert.match(await page.getByTestId('performance-tooltip').innerText(), new RegExp(`\\b${total} 次`));
     assert.equal(await actionTotal.innerText(), `${total} 次`);
+    await page.getByRole('button', { name: '关闭全部训练历史', exact: true }).click();
+    await page.getByTestId('all-training-history').waitFor({ state: 'hidden' });
+    await page.getByRole('tab', { name: '切换到数据', exact: true }).click();
+    assert.match(await page.getByTestId('performance-tooltip').innerText(), new RegExp(`\\b${total} 次`));
     await page.reload({ waitUntil: 'domcontentloaded', timeout: 60000 }); await page.getByRole('tab', { name: '切换到数据', exact: true }).click();
     await page.getByRole('button', { name: '查看引体向上进步记录', exact: true }).click();
     await page.getByRole('button', { name: '查看当日总量曲线', exact: true }).click();

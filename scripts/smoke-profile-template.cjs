@@ -14,7 +14,7 @@ const { chromium, prepare } = vm.runInNewContext(prefix + ';({chromium,prepare})
       const before = await page.evaluate(() => ({ profile: localStorage.getItem('user_profile'), sessions: localStorage.getItem('sessions') }));
       assert.equal(await page.getByText('应用与隐私', { exact: true }).count(), 1);
       assert.equal(await page.getByText('累计训练', { exact: true }).count(), 1);
-      assert.equal(await page.getByText('DeepSeek 助手', { exact: true }).count(), 1);
+      assert.equal(await page.getByText('DeepSeek 助手', { exact: true }).count(), 0);
       assert.equal(await page.getByText('数据与隐私', { exact: true }).count(), 0);
       assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false);
       const identity = await page.getByTestId('profile-identity-panel').boundingBox();
@@ -23,12 +23,14 @@ const { chromium, prepare } = vm.runInNewContext(prefix + ';({chromium,prepare})
       const footer = await page.getByTestId('profile-footer').boundingBox();
       const nav = await page.getByRole('tab', { name: '切换到我的', exact: true }).boundingBox();
       await page.screenshot({ path: `D:/UncoverBuildTools/temp/profile-template-${width}-${height}.png` });
-      if (height >= 780) assert.ok(footer.y + footer.height < nav.y, 'Full profile fits above the fixed navigation: ' + JSON.stringify({ footer, nav, identity }));
+      await page.getByTestId('profile-footer').scrollIntoViewIfNeeded();
+      const visibleFooter = await page.getByTestId('profile-footer').boundingBox();
+      assert.ok(visibleFooter.y + visibleFooter.height < nav.y, 'Scrolled content clears the unified navigation: ' + JSON.stringify({ visibleFooter, nav, identity, footer }));
       await page.getByRole('button', { name: '编辑个人档案', exact: true }).click();
       await page.getByLabel('年龄', { exact: true }).waitFor(); await page.getByRole('button', { name: '取消', exact: true }).click();
       await page.getByRole('button', { name: '训练专题', exact: true }).click();
       await page.getByTestId('profile-goal-sheet').waitFor(); await page.getByRole('button', { name: '关闭训练专题选择', exact: true }).click();
-      await page.getByRole('button', { name: 'DeepSeek 聊天', exact: true }).click();
+      await page.getByRole('button', { name: '打开 DeepSeek 聊天', exact: true }).click();
       await page.getByRole('button', { name: '关闭 DeepSeek 聊天', exact: true }).click();
       await page.getByRole('button', { name: '清除本机数据', exact: true }).click();
       await page.getByRole('button', { name: '取消', exact: true }).click();

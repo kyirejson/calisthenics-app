@@ -75,6 +75,7 @@ test('history and progress bottom bars are removed while action details and cale
   for (const text of ['styles.inspection', 'onSelectRecord', '查看上一条成绩', '查看下一条成绩', 'styles.emptyFoot']) assert.ok(!progress.includes(text));
   assert.ok(card.includes('<ActionSets item={item}'));
   assert.ok(progress.includes('onKeyDown')); assert.ok(progress.includes('gestures.panHandlers'));
-  assert.ok(screen.includes('onPress={() => selectDate(cell.key, true)}'));
+  assert.ok(screen.includes('onPress={() => selectDate(cell.key)}'));
+  assert.ok(screen.includes('setAllOpen(true)'));
   assert.ok(screen.includes('dayExpanded && detailsDay === day.key'));
 });

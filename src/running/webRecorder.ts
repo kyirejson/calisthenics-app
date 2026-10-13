@@ -3,18 +3,19 @@ import { emptyRun, usablePoint, analyseRun, cleanRunOptions, defaultRunOptions, 
 import { MotionGate } from './motionGate';
 import { webRunVoice, stopWebRunVoice } from './webVoice';
 import { browserLocationError, browserPositionValid } from './browserLocation';
+import { kilometreAnnouncement } from './kilometreAnnouncement';
 
 // Browser-only adapter. Refresh restores a pause; it never counts a closed page.
 const KEY = 'uncover.running.web-journal.v2';
 const OPTIONS = 'uncover.running.options.v1';
 const motion = new MotionGate();
-let options = defaultRunOptions(), spokenKm = 0, spokenMinutes = 0;
+let options = defaultRunOptions(), spokenKm = 0;
 let state = emptyRun(), loaded = false, storageCorrupt = false, watch: number | null = null, base = 0, activeSince = 0, segment = 0, lastTimestamp = 0, generation = 0, lastCheckpoint = 0;
 let pending: Promise<unknown> = Promise.resolve();
 const monotonic = () => typeof performance === 'undefined' ? Date.now() : performance.now();
 const elapsed = () => base + (activeSince ? Math.max(0, monotonic() - activeSince) : 0);
 async function persist() {
-  const serialized = JSON.stringify({ ...state, elapsedMs: elapsed() });
+  const serialized = JSON.stringify({ ...state, elapsedMs: elapsed(), spokenKm });
   const operation = pending.catch(() => undefined).then(() => AsyncStorage.setItem(KEY, serialized));
   pending = operation; await operation;
 }
@@ -25,11 +26,14 @@ async function load() {
   const raw = await AsyncStorage.getItem(KEY);
   if (raw) {
     try {
-      const saved = JSON.parse(raw) as RunSnapshot;
+      const saved = JSON.parse(raw) as RunSnapshot & { spokenKm?: number };
       if (!saved.id || !Array.isArray(saved.samples) || !Number.isFinite(saved.elapsedMs) || !['running', 'paused', 'finished'].includes(saved.phase)) throw Error();
       if (saved.mode !== undefined && !['outdoor', 'indoor'].includes(saved.mode)) throw Error();
       if (saved.manualDistanceKm !== undefined && (!Number.isFinite(saved.manualDistanceKm) || saved.manualDistanceKm < 0 || saved.manualDistanceKm > 1000)) throw Error();
-      state = { ...saved, phase: saved.phase === 'running' ? 'paused' : saved.phase, interrupted: saved.phase === 'running' || saved.autoPaused, autoPaused: false, preview: null, mapPosition: null, locationError: '' };
+      const { spokenKm: savedSpokenKm, ...restored } = saved;
+      state = { ...restored, phase: saved.phase === 'running' ? 'paused' : saved.phase, interrupted: saved.phase === 'running' || saved.autoPaused, autoPaused: false, preview: null, mapPosition: null, locationError: '' };
+      const distanceKm = Math.floor(analyseRun(saved.samples).distanceM / 1000);
+      spokenKm = Number.isSafeInteger(savedSpokenKm) && savedSpokenKm! >= 0 ? Math.min(savedSpokenKm!, distanceKm) : distanceKm;
       base = Math.max(0, saved.elapsedMs); segment = (saved.samples.at(-1)?.segment || 0) + 1;
     } catch { storageCorrupt = true; state.error = '本机跑步草稿无法读取，未覆盖原文件。'; }
   }
@@ -45,9 +49,10 @@ function automaticMotion(point: RunPoint, speed: number | null | undefined) {
 }
 function announceProgress() {
   if (state.phase !== 'running' || !state.options?.voice) return;
-  const minutes = Math.floor(elapsed() / 60000), analysis = analyseRun(state.samples), km = Math.floor(analysis.distanceM / 1000);
-  if (km > spokenKm) { if (speak(`已定位路段 ${km} 公里，用时 ${minutes} 分钟`)) { spokenKm = km; spokenMinutes = minutes; } }
-  else if (Math.floor(minutes / 5) > Math.floor(spokenMinutes / 5) && speak(`已跑步 ${minutes} 分钟`)) spokenMinutes = minutes;
+  const elapsedMs = elapsed(), analysis = analyseRun(state.samples);
+  const partial = elapsedMs - analysis.trackedMs > Math.max(15000, elapsedMs * .1);
+  const announcement = kilometreAnnouncement(analysis.distanceM, elapsedMs, spokenKm, 'location', partial);
+  if (announcement && speak(announcement.text)) spokenKm = announcement.km;
 }
 function stopPreview() { generation++; if (watch !== null && typeof navigator !== 'undefined') navigator.geolocation?.clearWatch(watch); watch = null; }
 async function preview() {
@@ -108,6 +113,22 @@ export const browserRunning = {
     const next = cleanRunOptions(value); if (next.stepTracking) throw Error('浏览器不提供可靠的计步传感器，请使用 Android 安装包。');
     await AsyncStorage.setItem(OPTIONS, JSON.stringify(next)); options = next;
   },
+  setVoice: async (enabled: boolean) => {
+    await load();
+    if (storageCorrupt) throw Error(state.error);
+    if (typeof enabled !== 'boolean') throw Error('语音开关无效。');
+    const previousOptions = options, previousState = state, previousSpoken = spokenKm;
+    const next = { ...options, voice: enabled };
+    await AsyncStorage.setItem(OPTIONS, JSON.stringify(next));
+    options = next;
+    if (state.phase !== 'idle') {
+      const wasEnabled = state.options?.voice;
+      state = { ...state, options: { ...(state.options ?? previousOptions), voice: enabled } };
+      if (enabled && !wasEnabled) spokenKm = Math.max(spokenKm, Math.floor(analyseRun(state.samples).distanceM / 1000));
+      try { await persist(); } catch (failure) { options = previousOptions; state = previousState; spokenKm = previousSpoken; await AsyncStorage.setItem(OPTIONS, JSON.stringify(previousOptions)); throw failure; }
+    }
+    if (!enabled) { stopWebRunVoice(); state.featureIssue = ''; }
+  },
   preview, stopPreview: async () => { if (state.phase !== 'running' && !state.autoPaused) stopPreview(); },
   start: async (id: string, mode: RunMode = 'outdoor') => {
     await load();
@@ -115,7 +136,7 @@ export const browserRunning = {
     if (!['outdoor', 'indoor'].includes(mode)) throw Error('跑步模式无效。');
     const first = state.preview, firstMap = state.mapPosition;
     stopPreview();
-    state = { ...emptyRun(), options, id, mode, startedAt: Date.now(), phase: 'running', preview: mode === 'outdoor' ? first : null, mapPosition: mode === 'outdoor' ? firstMap : null }; base = 0; activeSince = monotonic(); segment = 0; motion.reset(); spokenKm = 0; spokenMinutes = 0;
+    state = { ...emptyRun(), options, id, mode, startedAt: Date.now(), phase: 'running', preview: mode === 'outdoor' ? first : null, mapPosition: mode === 'outdoor' ? firstMap : null }; base = 0; activeSince = monotonic(); segment = 0; motion.reset(); spokenKm = 0;
     if (mode === 'outdoor' && usablePoint(first) && Date.now() - first!.timestamp >= 0 && Date.now() - first!.timestamp <= 15000) state.samples.push({ ...first!, elapsedMs: 0, segment });
     try { await persist(); } catch (error) { base = elapsed(); activeSince = 0; state.phase = 'paused'; throw error; }
     speak('开始跑步');

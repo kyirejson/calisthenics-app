@@ -39,7 +39,7 @@ test('unknown duration stays explicit rather than becoming an estimated workout 
 test('completion navigation is downstream of successful persistence', () => {
   const app = fs.readFileSync(require.resolve('../App.tsx'), 'utf8');
   const screen = readFeature('training');
-  assert.ok(app.includes("setSavedTrainingId(sessionId); setTab('data')"));
+  assert.ok(app.includes("setSavedTrainingId(sessionId); setTab('profile')"));
   assert.ok(screen.indexOf('await saveSession(createRecord(quality, true))') < screen.indexOf('onComplete(sessionId.current)'));
   assert.match(screen, /finishing\.current = false;\s*setSaving\(false\)/);
 });

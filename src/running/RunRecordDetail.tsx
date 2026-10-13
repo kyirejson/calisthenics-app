@@ -4,7 +4,7 @@ import { appPalette as c } from '../theme';
 import { paceLabel, runClock, runRecordMeasurement } from './model';
 import { RunMap } from './RunMap';
 
-/** One receipt for the finish screen, running history and the Data calendar. */
+/** One receipt for the finish screen and the profile's running history/calendar. */
 export function RunRecordDetail({ session }: { session: TrainingSession }) {
   const metrics = runRecordMeasurement(session);
   return <View testID="run-record-detail" style={s.root}>

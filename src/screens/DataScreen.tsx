@@ -1,10 +1,11 @@
-import { TrainingHistoryDay, Method, LegendDot } from '../features/history/TrainingHistoryDay';
+import { Method } from '../features/history/TrainingHistoryDay';
 import { styles } from '../features/history/styles';
 import { useTrainingHistory, type Props } from '../features/history/useTrainingHistory';
 
-import { FlatList, Modal, Pressable, SafeAreaView, ScrollView, Text, View } from 'react-native';
+import { Modal, Pressable, SafeAreaView, ScrollView, Text, View } from 'react-native';
 
 import { UnifiedProgressCard } from '../components/UnifiedProgressCard';
+import { RunningMileageCard } from '../running/RunningMileageCard';
 
 import { useAppStore } from '../store/AppStore';
 import type { Profile } from '../types';
@@ -19,7 +20,6 @@ const seriesOptions = [
   { key: 'hspu', label: '倒立撑' },
   { key: 'flag_clutch', label: '抓旗' },
 ];
-const weekdayLabels = ['一', '二', '三', '四', '五', '六', '日'];
 
 export function DataScreen(props: Props) {
   const { profile } = useAppStore((state) => ({ profile: state.profile }));
@@ -29,57 +29,28 @@ export function DataScreen(props: Props) {
 function DataContent(props: Props & { profile: Profile }) {
   const {
     onOpenExercise,
-    savedSessionId,
     sessions,
     now,
-    deleteError,
-    deleting,
-    monthOffset,
-    setMonthOffset,
     selectedSeries,
     metric,
     range,
     updateView,
     setSelectedLevel,
-    selectedDate,
-    setSelectedDate,
-    expandedDay,
-    setExpandedDay,
-    detailsDay,
-    setDetailsDay,
-    expandedSession,
-    setExpandedSession,
     showSteps,
     setShowSteps,
     showMethods,
     setShowMethods,
-    list,
-    headerHeight,
     reduced,
     valid,
-    allGroups,
-    dayGroups,
     allSteps,
     activeLevel,
     activeExercise,
     criteria,
     staircase,
     performance,
-    calendarDate,
-    grid,
-    monthDays,
-    selectDate,
-    requestDelete,
-    requestDeleteDay,
   } = useTrainingHistory(props);
   const header = (
-    <View
-      testID="training-data-header"
-      onLayout={(event) => {
-        const h = event?.nativeEvent?.layout?.height;
-        if (typeof h === 'number') headerHeight.current = h;
-      }}
-    >
+    <View testID="training-data-header">
       <View style={styles.header}>
         <Text style={styles.title}>进步记录</Text>
         <Pressable
@@ -91,11 +62,6 @@ function DataContent(props: Props & { profile: Profile }) {
           <Text style={styles.methodText}>统计口径 ⓘ</Text>
         </Pressable>
       </View>
-      {deleteError ? (
-        <Text accessibilityRole="alert" style={styles.error}>
-          {deleteError}
-        </Text>
-      ) : null}
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
@@ -161,153 +127,13 @@ function DataContent(props: Props & { profile: Profile }) {
         </View>
       )}
 
-      <View style={styles.calendar}>
-        <View style={styles.calendarNav}>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="上一个月"
-            onPress={() => setMonthOffset((value) => value - 1)}
-            style={styles.calendarNavButton}
-          >
-            <Text style={styles.calendarArrow}>‹</Text>
-          </Pressable>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="回到本月训练日历"
-            onPress={() => setMonthOffset(0)}
-            style={styles.calendarTitleButton}
-          >
-            <Text style={styles.calendarTitle} testID="training-calendar-month">
-              {calendarDate.getFullYear()}年{calendarDate.getMonth() + 1}月
-            </Text>
-            <Text style={styles.caption}>{monthDays} 天有训练</Text>
-          </Pressable>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="下一个月"
-            disabled={monthOffset >= 0}
-            onPress={() => setMonthOffset((value) => Math.min(0, value + 1))}
-            style={[styles.calendarNavButton, monthOffset >= 0 && styles.disabled]}
-          >
-            <Text style={styles.calendarArrow}>›</Text>
-          </Pressable>
-        </View>
-        <View style={styles.calendarWeekRow}>
-          {weekdayLabels.map((label) => (
-            <Text key={label} style={styles.calendarWeekLabel}>
-              {label}
-            </Text>
-          ))}
-        </View>
-        <View style={styles.calendarGrid}>
-          {grid.map((cell, index) =>
-            cell ? (
-              <Pressable
-                key={cell.key}
-                accessibilityRole="button"
-                accessibilityLabel={'查看' + cell.key + '训练记录'}
-                accessibilityState={{ selected: selectedDate === cell.key }}
-                onPress={() => selectDate(cell.key, true)}
-                style={[
-                  styles.calendarCell,
-                  cell.isToday && styles.calendarToday,
-                  selectedDate === cell.key && styles.calendarSelected,
-                ]}
-              >
-                <Text
-                  style={[
-                    styles.calendarDay,
-                    cell.isToday && styles.green,
-                    selectedDate === cell.key && styles.selectedDay,
-                  ]}
-                >
-                  {cell.day}
-                </Text>
-                <View
-                  style={[
-                    styles.calendarDot,
-                    cell.state === 'complete' && styles.completeDot,
-                    cell.state === 'partial' && styles.partialDot,
-                  ]}
-                />
-              </Pressable>
-            ) : (
-              <View key={'blank-' + index} style={styles.calendarCell} />
-            ),
-          )}
-        </View>
-        <View style={styles.legendRow}>
-          <LegendDot complete label="完成" />
-          <LegendDot label="部分完成" />
-          <Text style={styles.caption}>点日期查看记录</Text>
-        </View>
-      </View>
-      <View style={styles.historyTitleRow}>
-        <Text style={styles.sectionTitle}>
-          {selectedDate ? selectedDate + ' 记录' : '训练历史'}
-        </Text>
-        {selectedDate ? (
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="查看全部训练历史"
-            onPress={() => {
-              setSelectedDate(null);
-              setExpandedDay(null);
-            }}
-            style={styles.clearButton}
-          >
-            <Text style={styles.clearText}>全部记录</Text>
-          </Pressable>
-        ) : (
-          <Text style={styles.caption}>{allGroups.length} 个训练日</Text>
-        )}
-      </View>
+      <RunningMileageCard sessions={sessions} now={now} />
     </View>
   );
 
   return (
     <SafeAreaView style={styles.root}>
-      <FlatList
-        ref={list}
-        testID="training-data-list"
-        data={dayGroups}
-        keyExtractor={(day) => day.key}
-        ListHeaderComponent={header}
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.content}
-        initialNumToRender={6}
-        maxToRenderPerBatch={6}
-        windowSize={7}
-        extraData={[expandedDay, detailsDay, expandedSession, deleting]}
-        ListEmptyComponent={
-          <View style={styles.emptyCard}>
-            <Text style={styles.emptyTitle}>
-              {selectedDate ? '这天没有有效训练记录' : '还没有训练历史'}
-            </Text>
-            <Text style={styles.emptyBody}>仅打开训练不会产生记录；完成一组后再回来。</Text>
-          </View>
-        }
-        renderItem={({ item: day }) => (
-          <TrainingHistoryDay
-            day={day}
-            model={{
-              onOpenExercise,
-              savedSessionId,
-              now,
-              deleting,
-              expandedDay,
-              setExpandedDay,
-              detailsDay,
-              setDetailsDay,
-              expandedSession,
-              setExpandedSession,
-              valid,
-              requestDelete,
-    requestDeleteDay,
-            }}
-          />
-        )}
-      />
+      <ScrollView testID="training-data-list" showsVerticalScrollIndicator={false} contentContainerStyle={styles.content}>{header}</ScrollView>
       <Modal
         visible={showSteps}
         transparent

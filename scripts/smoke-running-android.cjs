@@ -184,9 +184,7 @@ function seed() {
   assert.ok(analysis.distanceM >= 30 && analysis.distanceM <= 120, `Measured ${analysis.distanceM} m must exclude kilometre jumps during pause/restart`);
   assert.ok(analysis.segments.length >= 3, 'Restart and pause must break the route');
   await tap('结束并保存跑步'); await tap('结束并保存'); await waitFor(/跑步已保存/); await tap('关闭跑步总结'); await waitFor(/开始跑步/);
-  await tap('查看跑步记录'); await waitFor(/户外跑/); screenshot('history');
-  await tap('展开跑步记录' + original.id); await waitFor(/已保存的定位轨迹/); await sleep(800); screenshot('history-expanded');
-  await tap('关闭跑步记录'); await tap('切换到数据');
+  await tap('切换到我的');
   await scrollFor(/今日跑步|\d{4}-\d{2}-\d{2} 跑步/); screenshot('data');
   const savedDate = new Date(original.startedAt), savedDay = [savedDate.getFullYear(), String(savedDate.getMonth() + 1).padStart(2, '0'), String(savedDate.getDate()).padStart(2, '0')].join('-');
   await tap('展开' + savedDay + '训练历史'); await scrollFor(/用时 · 不含暂停/); await waitFor(/用时 · 不含暂停/); await scrollFor(/已保存的定位轨迹/); await sleep(800); screenshot('data-expanded');
@@ -198,7 +196,7 @@ function seed() {
   assert.equal(outdoor.kind, 'running'); assert.ok(outdoor.distanceKm >= .03 && outdoor.distanceKm <= .12);
   assert.ok(outdoor.runSegments.length >= 3); assert.ok(outdoor.durationSeconds > 0); assert.equal(outdoor.calories, undefined);
   adb('shell', 'run-as', app, 'test', '!', '-f', 'files/running-journal-v2.json');
-  adb('shell', 'am', 'start', '-n', app + '/.MainActivity'); await waitFor(/切换到数据/); await tap('切换到数据'); await scrollFor(/今日跑步|\d{4}-\d{2}-\d{2} 跑步/);
+  adb('shell', 'am', 'start', '-n', app + '/.MainActivity'); await waitFor(/切换到我的/); await tap('切换到我的'); await scrollFor(/今日跑步|\d{4}-\d{2}-\d{2} 跑步/);
   assert.equal(savedSessions().length, 3, 'App restart cannot duplicate the completed run');
   const log = adb('logcat', '-d', '-s', 'AndroidRuntime:E', 'ReactNativeJS:E');
   fs.writeFileSync(output + '/error-log.txt', log); assert.ok(!/FATAL EXCEPTION|TypeError|ReferenceError/.test(log), log);

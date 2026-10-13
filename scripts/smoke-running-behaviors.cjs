@@ -16,7 +16,7 @@ const { chromium, prepare, emit, finish } = vm.runInNewContext(prefix + ';({chro
       });
       await page.getByRole('button', { name: '打开跑步设置', exact: true }).click();
       await page.getByRole('switch', { name: '自动暂停', exact: true }).click();
-      await page.getByRole('switch', { name: '语音播报', exact: true }).click();
+      assert.equal(await page.getByRole('switch', { name: '语音播报', exact: true }).getAttribute('aria-checked'), 'true');
       assert.equal(await page.getByRole('switch', { name: '室内计步', exact: true }).isDisabled(), true);
       await page.getByRole('button', { name: '保存跑步设置', exact: true }).click();
       await page.getByRole('button', { name: '开始跑步', exact: true }).click();

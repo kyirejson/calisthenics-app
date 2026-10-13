@@ -85,8 +85,7 @@ class RunningService : Service() {
   }
   private fun setupFeatures() {
     val options = RunStore.options(this)
-    if (options.optBoolean("voice") && voice == null) try { voice = RunVoice(this).also { it.start() } }
-      catch (_: Exception) { RunStore.speechIssue = "语音引擎启动失败，跑步记录不受影响。" }
+    setupVoice()
     if (RunStore.mode() == "indoor" && options.optBoolean("stepTracking")) {
       try {
         if (steps == null) steps = RunSteps(this, handler, RunStore::addSteps)
@@ -94,6 +93,12 @@ class RunningService : Service() {
       } catch (_: Exception) { RunStore.stepIssue = "计步传感器不可用，仍可计时并手动填写距离。" }
     }
   }
+  private fun setupVoice() {
+    if (!RunStore.options(this).optBoolean("voice") || RunStore.phase() == "finished") { voice?.stop(); voice = null; return }
+    if (voice == null) try { voice = RunVoice(this).also { it.start() } }
+      catch (_: Exception) { RunStore.speechIssue = "语音引擎启动失败，跑步记录不受影响。" }
+  }
+  internal fun refreshVoice() { if (::handler.isInitialized) handler.post { setupVoice() } }
   private fun motionFix(location: Location, provider: String) {
     if (RunStore.error.isNotEmpty()) return
     if (!RunStore.options(this).optBoolean("autoPause") || RunStore.mode() != "outdoor" || provider !in listOf("gps", "fused")) return
@@ -109,19 +114,13 @@ class RunningService : Service() {
     // Auto-pause deliberately retains GPS updates; manual pause unsubscribes.
   }
   private fun announceProgress() {
-    if (RunStore.phase() != "running" || voice?.isReady() != true) return
+    if (RunStore.phase() != "running" || !RunStore.options(this).optBoolean("voice") || voice?.isReady() != true) return
     val elapsed = RunStore.elapsed()
     val metrics = RunStore.liveMetrics()
     val distance = if (RunStore.mode() == "indoor") RunStore.stepDistance() else metrics.first
-    val km = ((distance ?: 0.0) / 1000).toInt()
-    val minutes = (elapsed / 60000).toInt()
     val partial = if (RunStore.mode() == "indoor") RunStore.stepPartial() else elapsed - metrics.second > maxOf(15000, elapsed / 10)
-    val text = if (km > RunStore.spokenKm()) {
-      val prefix = if (RunStore.mode() == "indoor") "计步估算" else if (partial) "已定位路段" else "已跑"
-      val pace = if (!partial && distance != null && distance > 0) (elapsed / distance).toInt() else 0
-      "$prefix $km 公里，用时 $minutes 分钟" + if (pace > 0) "，${if (RunStore.mode() == "indoor") "估算" else "平均"}配速 ${pace / 60} 分 ${pace % 60} 秒每公里" else "，部分距离未测得"
-    } else if (minutes / 5 > RunStore.spokenMinutes() / 5) "已跑步 $minutes 分钟" else return
-    if (voice!!.say(text)) RunStore.markSpoken(km, minutes)
+    val announcement = KilometreAnnouncement.next(distance, elapsed, RunStore.spokenKm(), RunStore.mode() == "indoor", partial) ?: return
+    if (voice!!.say(announcement.text)) RunStore.markSpoken(announcement.km)
   }
   private fun safelyPause() { unsubscribe(); steps?.stop(); motion.reset(); try { RunStore.pause(this) } catch (_: Exception) {} }
   internal fun finish(distance: Double) { if (::handler.isInitialized) handler.post { unsubscribe(); steps?.stop(); try { RunStore.finish(this, distance) } catch (exception: Exception) { RunStore.problem(exception.message ?: "结束失败。") }; stopSelf() } }

@@ -107,7 +107,7 @@ function AppShell() {
   if (!profile) return <><StatusBar style="light" />{Object.keys(storageIssues).length ? <StorageRecovery full /> : <FirstUseHome />}</>;
 
   if (route.name === 'exercise') return <><StatusBar style="light" />{route.exerciseId.startsWith('equipment_') ? <EquipmentDetailScreen exerciseId={route.exerciseId} onBack={returnToTabs} /> : <ExerciseDetailScreen exerciseId={route.exerciseId} onBack={returnToTabs} onStart={(exerciseId) => setRoute({ name: 'training', workoutId: `single_${exerciseId}`, exerciseId })} />}</>;
-  if (route.name === 'training') return <><StatusBar style="light" /><TrainingScreen workoutId={route.workoutId} exerciseId={route.exerciseId} setMultiplier={route.setMultiplier} rirTarget={route.rirTarget} equipmentPlan={route.equipmentPlan} onBack={returnFromActiveSession} onComplete={sessionId => { setSavedTrainingId(sessionId); setTab('data'); returnToTabs(); }} /></>;
+  if (route.name === 'training') return <><StatusBar style="light" /><TrainingScreen workoutId={route.workoutId} exerciseId={route.exerciseId} setMultiplier={route.setMultiplier} rirTarget={route.rirTarget} equipmentPlan={route.equipmentPlan} onBack={returnFromActiveSession} onComplete={sessionId => { setSavedTrainingId(sessionId); setTab('profile'); returnToTabs(); }} /></>;
   if (route.name === 'nutrition') return <><StatusBar style="light" /><NutritionScreen onBack={returnToTabs} /></>;
 
   return <View style={[styles.root, { backgroundColor: progressPageLayout.background }]}>
@@ -115,9 +115,9 @@ function AppShell() {
     <StorageRecovery />
     {tab === 'today' ? <TodayScreen viewDate={todayViewDate} onViewDateChange={setTodayViewDate} onStart={(workoutId, setMultiplier, rirTarget, equipmentPlan) => setRoute({ name: 'training', workoutId, setMultiplier, rirTarget, equipmentPlan })} onOpenExercise={(exerciseId) => setRoute({ name: 'exercise', exerciseId })} /> : null}
     {tab === 'progress' ? <ProgressScreen viewPreferences={progressView} onViewPreferences={updateProgressView} onOpen={(exerciseId) => setRoute({ name: 'exercise', exerciseId })} /> : null}
-    {tab === 'data' ? <DataScreen savedSessionId={savedTrainingId} viewPreferences={dataView} onViewPreferences={setDataView} onOpenExercise={(exerciseId) => setRoute({ name: 'exercise', exerciseId })} /> : null}
-    {tab === 'profile' ? <ProfileScreen /> : null}
-    <TabBar active={tab} onChange={setTab} appearance={tab === 'today' ? 'editorial' : tab === 'profile' ? 'profile' : 'default'} />
+    {tab === 'data' ? <DataScreen viewPreferences={dataView} onViewPreferences={setDataView} onOpenExercise={(exerciseId) => setRoute({ name: 'exercise', exerciseId })} /> : null}
+    {tab === 'profile' ? <ProfileScreen savedSessionId={savedTrainingId} onOpenExercise={(exerciseId) => setRoute({ name: 'exercise', exerciseId })} /> : null}
+    <TabBar active={tab} onChange={setTab} />
   </View>;
 }
 

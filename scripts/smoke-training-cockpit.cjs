@@ -71,11 +71,11 @@ const noOverflow = async page => assert.equal(await page.evaluate(() => document
         await page.getByRole('button', { name: '展开训练记录' + saved[0].id, exact: true }).click();
             await page.getByRole('button', { name: '删除训练记录' + saved[0].id, exact: true }).waitFor();
         await noOverflow(page);
-        await page.reload({ waitUntil: 'domcontentloaded', timeout: 60000 }); await page.getByRole('tab', { name: '切换到数据', exact: true }).click();
+        await page.reload({ waitUntil: 'domcontentloaded', timeout: 60000 }); await page.getByRole('tab', { name: '切换到我的', exact: true }).click();
         await page.getByRole('button', { name: /^展开.*训练历史$/ }).click();
         assert.match(await page.getByTestId(/^training-day-summary-/).innerText(), /13 次/);
         assert.deepEqual(errors, []);
-        console.log(`PASS ${width}px: actual edit/reset/confirm, rest controls, save to Data, today summary/detail and reload persistence`);
+        console.log(`PASS ${width}px: actual edit/reset/confirm, rest controls, save to My, latest summary/detail and reload persistence`);
       } finally { await context.close(); }
     }
     const { context, page, errors } = await prepare(browser, 390);
@@ -127,7 +127,7 @@ const noOverflow = async page => assert.equal(await page.evaluate(() => document
       await p.getByTestId(/^training-day-summary-/).waitFor();
       assert.equal((await records(p)).length, 1, 'Retry overwrites one stable record, no duplicate');
       assert.deepEqual(failure.errors, []);
-      console.log('PASS persistence failure: stays in training, keeps actual sets, retry saves once and navigates to Data');
+      console.log('PASS persistence failure: stays in training, keeps actual sets, retry saves once and navigates to My');
     } finally { await failure.context.close(); }
   } finally { await browser.close(); }
 })().catch(error => { console.error(error); process.exitCode = 1; });

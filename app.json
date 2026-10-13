@@ -2,7 +2,7 @@
   "expo": {
     "name": "Uncover",
     "slug": "uncover",
-    "version": "1.7.11",
+    "version": "1.7.12",
     "orientation": "portrait",
     "icon": "./assets/app-icon.png",
     "userInterfaceStyle": "light",
@@ -20,11 +20,11 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.zizhong.jinjie",
-      "buildNumber": "20"
+      "buildNumber": "21"
     },
     "android": {
       "package": "com.zizhong.jinjie",
-      "versionCode": 20,
+      "versionCode": 21,
       "blockedPermissions": [
         "android.permission.CAMERA"
       ],

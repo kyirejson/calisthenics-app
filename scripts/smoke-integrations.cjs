@@ -31,7 +31,7 @@ const { chromium } = require(process.env.PLAYWRIGHT_PATH || 'playwright');
       assert.equal(await page.getByRole('button', { name: '问营养助手', exact: true }).count(),0);
       await page.getByRole('tab', { name: '切换到我的', exact: true }).click();
       assert.equal(await page.getByRole('button', { name: '服务设置', exact: true }).count(), 0);
-      await page.getByRole('button', { name: 'DeepSeek 聊天', exact: true }).click();
+      await page.getByRole('button', { name: '打开 DeepSeek 聊天', exact: true }).click();
       await page.getByLabel('聊天输入', { exact: true }).fill('未发送的草稿');
       await page.getByRole('button', { name: '打开服务设置', exact: true }).click();
       await page.getByLabel('个人 DeepSeek 密钥', { exact: true }).fill('sk-isolated-ui-fixture');

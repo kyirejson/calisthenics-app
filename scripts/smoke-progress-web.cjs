@@ -17,7 +17,7 @@ async function assertPrunedUI(page) {
   assert.equal(await page.getByRole('button', { name: '查看上一条成绩', exact: true }).count(), 0);
   assert.equal(await page.getByRole('button', { name: '查看下一条成绩', exact: true }).count(), 0);
   assert.equal(await page.getByText(/个有效组/).count(), 0);
-  assert.equal(await page.getByTestId('training-calendar-month').count(), 1);
+  assert.equal(await page.getByTestId('training-calendar-month').count(), 0);
 }
 
 const profile = { name: 'UI隔离验证', age: 30, height: 175, weight: 75, sex: 'male', goal: 'street_mastery', nutritionGoal: 'maintain', dietPattern: 'balanced_cn',
@@ -147,7 +147,7 @@ function exam(id, offset) {
     await page.getByRole('button', { name: '查看全部训练曲线', exact: true }).click();
     await settled(page);
     assert.equal(await page.getByTestId('performance-record-dot').count(), 4);
-    await page.getByText('100', { exact: true }).waitFor();
+    await page.getByTestId('unified-progress-card').getByText('100', { exact: true }).waitFor();
     const dots = await page.getByTestId('performance-record-dot').evaluateAll(nodes => nodes.map(node => ({ x: Number(node.getAttribute('cx')), y: Number(node.getAttribute('cy')) })));
     assert.ok(dots.every(dot => dot.x >= 12 && dot.y >= 0 && dot.y <= 166));
     console.log('PASS real calendar spacing / old records retained / Y scale includes genuine highs');
@@ -166,7 +166,7 @@ function exam(id, offset) {
     await settled(page);
     console.log('PASS all-step selection does not change profile / seconds are never displayed as repetitions');
 
-    await top(page);
+    await page.getByRole('tab', { name: '切换到我的', exact: true }).click();
     await page.getByRole('button', { name: '上一个月', exact: true }).scrollIntoViewIfNeeded();
     const expected = new Date(); expected.setDate(1); expected.setMonth(expected.getMonth() - 12);
     for (let index = 0; index < 12; index++) await page.getByRole('button', { name: '上一个月', exact: true }).click();
@@ -179,7 +179,8 @@ function exam(id, offset) {
     await page.getByRole('button', { name: '删除训练记录latest', exact: true }).click();
     await page.getByRole('button', { name: '删除记录', exact: true }).click();
     await page.waitForFunction(() => !JSON.parse(localStorage.getItem('sessions')).some(session => session.id === 'latest'));
-    await page.getByRole('button', { name: '查看全部训练历史', exact: true }).click();
+    await page.getByRole('button', { name: '关闭全部训练历史', exact: true }).click();
+    await page.getByRole('tab', { name: '切换到数据', exact: true }).click();
     await top(page);
     await settled(page);
     assert.match(await page.getByTestId('performance-tooltip').innerText(), /9\s*次/);

@@ -63,8 +63,31 @@ internal object RunStore {
   @Synchronized fun options(context: Context): JSONObject = journal?.optJSONObject("options") ?: RunPreferences.read(context)
   @Synchronized fun liveMetrics(): Pair<Double, Long> = Pair(metrics.metres, metrics.trackedMs)
   @Synchronized fun spokenKm(): Int = journal?.optInt("spokenKm") ?: 0
-  @Synchronized fun spokenMinutes(): Int = journal?.optInt("spokenMinutes") ?: 0
-  @Synchronized fun markSpoken(km: Int, minutes: Int) { journal?.put("spokenKm", km)?.put("spokenMinutes", minutes) }
+  @Synchronized fun markSpoken(km: Int) { journal?.put("spokenKm", km) }
+  @Synchronized fun setVoice(context: Context, enabled: Boolean) {
+    load(context)
+    check(!storageCorrupt) { "本机跑步草稿无法读取，未覆盖原文件。" }
+    val previousPreferences = RunPreferences.read(context)
+    val previousOptions = journal?.optJSONObject("options")
+    val previousSpoken = spokenKm()
+    val nextPreferences = JSONObject(previousPreferences.toString()).put("voice", enabled)
+    RunPreferences.store(context, nextPreferences)
+    journal?.let { data ->
+      val nextOptions = JSONObject((previousOptions ?: previousPreferences).toString()).put("voice", enabled)
+      data.put("options", nextOptions)
+      if (enabled && !(previousOptions ?: previousPreferences).optBoolean("voice")) {
+        val distance = if (mode() == "indoor") stepDistance() else metrics.metres
+        markSpoken(maxOf(previousSpoken, ((distance ?: 0.0) / 1000).toInt()))
+      }
+      try { persist(context) } catch (failure: Exception) {
+        if (previousOptions == null) data.remove("options") else data.put("options", previousOptions)
+        markSpoken(previousSpoken)
+        RunPreferences.store(context, previousPreferences)
+        throw failure
+      }
+    }
+    speechIssue = ""
+  }
   @Synchronized fun steps(): Int = journal?.optInt("stepCount") ?: 0
   @Synchronized fun stepPartial(): Boolean = journal?.optBoolean("stepPartial") ?: false
   @Synchronized fun stepDistance(): Double? = journal?.let { data -> data.optJSONObject("options")?.let { options ->

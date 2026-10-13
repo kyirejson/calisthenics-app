@@ -44,9 +44,12 @@ async function scrollFor(pattern) {
   await tap('退出跑步全屏，继续记录'); await tap('结束并保存跑步'); await waitFor(/保存室内跑/);
   await tap('室内跑距离（公里，可选）'); adb('shell', 'input', 'text', '2.5'); adb('shell', 'input', 'keyevent', '4');
   await tap('保存室内跑'); await waitFor(/跑步已保存/); screenshot('production-receipt'); await tap('关闭跑步总结');
-  await tap('查看跑步记录'); await waitFor(/2.50/); screenshot('production-history'); await tap('关闭跑步记录');
+  await tap('切换到我的'); await scrollFor(/训练日历/);
+  await tap('查看' + new Date().toLocaleDateString('sv-SE') + '训练记录');
+  await waitFor(/2.50/); screenshot('production-history'); await tap('关闭全部训练历史');
   adb('shell', 'am', 'force-stop', 'com.zizhong.jinjie'); adb('shell', 'am', 'start', '-n', 'com.zizhong.jinjie/.MainActivity');
-  await tap('切换到跑步'); await tap('查看跑步记录'); await waitFor(/2.50/); await tap('关闭跑步记录');
+  await tap('切换到我的'); await scrollFor(/训练历史/); await tap('查看' + new Date().toLocaleDateString('sv-SE') + '训练记录');
+  await waitFor(/2.50/); await tap('关闭全部训练历史');
   await tap('切换到我的'); await scrollFor(new RegExp(appVersion.replace(/\./g, '\\.'))); screenshot('production-profile');
   assert.ok(!dump().includes('知识库管理'));
   console.log('PASS signed production APK startup, profile creation, sensor-unavailable fallback, native fullscreen/pause/resume, indoor save and history after restart; version ' + appVersion);

@@ -1,5 +1,5 @@
 import { styles } from './styles';
-import type { useTrainingHistory, Props } from './useTrainingHistory';
+import type { useTrainingRecords, RecordsProps } from './useTrainingRecords';
 import { Pressable, Text, View } from 'react-native';
 import { RunRecordDetail } from '../../running/RunRecordDetail';
 import { TrainingDaySummary } from '../../components/TrainingDaySummary';
@@ -23,7 +23,7 @@ export function TrainingHistoryDay({
 }: {
   day: DayGroup;
   model: Pick<
-    ReturnType<typeof useTrainingHistory>,
+    ReturnType<typeof useTrainingRecords>,
     | 'onOpenExercise'
     | 'savedSessionId'
     | 'now'
@@ -221,7 +221,7 @@ function ComparisonRow({
   onOpenExercise,
 }: {
   row: SessionComparisonRow;
-  onOpenExercise: Props['onOpenExercise'];
+  onOpenExercise: RecordsProps['onOpenExercise'];
 }) {
   const equipment = row.exercise.exerciseId.startsWith('equipment_');
   return (

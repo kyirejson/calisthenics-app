@@ -26,7 +26,10 @@ const records = [session('first', today, [squat(2), push(2), pull(1), grip], 108
         const header = page.getByTestId('training-data-header');
         assert.equal(await header.getByTestId(/^training-day-chart-/).count(), 0);
         assert.equal(await page.getByTestId('today-training-summary').count(), 0);
-        assert.equal(await page.getByTestId(/^training-day-chart-/).count(), 0, 'All days default to collapsed');
+        assert.equal(await page.getByTestId('profile-training-calendar').count(), 0, 'Records no longer live in Data');
+        await page.getByRole('tab', { name: '切换到我的', exact: true }).click();
+        assert.equal(await page.getByTestId(/^training-day-chart-/).count(), 0, 'Latest day defaults to collapsed');
+        assert.equal(await page.getByTestId('history-day-' + yesterday).count(), 0, 'Older days require View all');
         const chart = page.getByTestId('training-day-summary-' + today);
         await chart.getByRole('button', { name: '展开' + today + '训练历史', exact: true }).click();
         await chart.scrollIntoViewIfNeeded();
@@ -45,6 +48,7 @@ const records = [session('first', today, [squat(2), push(2), pull(1), grip], 108
         const before = await page.evaluate(() => localStorage.getItem('sessions'));
         await chart.getByRole('button', { name: '展开悬挂握力当日组次明细', exact: true }).click();
         assert.match(await chart.getByTestId('training-day-details-hang_grip_01:seconds:false:none').innerText(), /40 秒/);
+        await page.getByRole('button', { name: '查看全部训练历史', exact: true }).click();
         const older = page.getByTestId('training-day-summary-' + yesterday);
         await older.getByRole('button', { name: '展开' + yesterday + '训练历史', exact: true }).click();
         assert.equal(await chart.getByTestId(/^training-day-chart-/).count(), 0, 'Opening another day collapses the previous day');
@@ -53,6 +57,8 @@ const records = [session('first', today, [squat(2), push(2), pull(1), grip], 108
         assert.equal(await page.getByTestId(/^training-day-chart-/).count(), 0);
         await chart.getByRole('button', { name: '展开' + today + '训练历史', exact: true }).click();
         assert.equal(await chart.getByTestId(/^training-day-details-/).count(), 0, 'Reopening does not restore stale action expansion');
+        await page.getByRole('button', { name: '关闭全部训练历史', exact: true }).click();
+        await page.getByTestId('all-training-history').waitFor({ state: 'hidden' });
         await page.getByRole('button', { name: '查看' + today + '训练记录', exact: true }).click();
         await page.getByRole('button', { name: '展开训练记录first', exact: true }).click();
         await page.getByRole('button', { name: '删除训练记录first', exact: true }).waitFor();
@@ -63,12 +69,12 @@ const records = [session('first', today, [squat(2), push(2), pull(1), grip], 108
         assert.equal(await chart.getByTestId('training-day-sets-' + today).innerText(), '4 组');
         assert.equal(await chart.getByTestId(/^training-day-segment-/).count(), 3);
         assert.equal(await chart.getByTestId('training-day-total-squat_05:reps:false:none').innerText(), '24 次');
-        await page.getByRole('button', { name: '查看全部训练历史', exact: true }).click();
+        await page.getByRole('button', { name: '显示所有训练日期', exact: true }).click();
         await older.getByRole('button', { name: '展开' + yesterday + '训练历史', exact: true }).click();
         assert.ok(!(await older.innerText()).includes('今日训练'));
         assert.equal(await older.getByTestId('training-day-duration-' + yesterday).innerText(), '未记时');
         assert.equal(await older.getByTestId('training-day-sets-' + yesterday).innerText(), '1 组');
-        await page.reload(); await page.getByRole('tab', { name: '切换到数据', exact: true }).click();
+        await page.reload(); await page.getByRole('tab', { name: '切换到我的', exact: true }).click();
         assert.equal(await page.getByTestId(/^training-day-chart-/).count(), 0, 'Reload defaults to collapsed');
         await page.getByRole('button', { name: '展开' + today + '训练历史', exact: true }).click();
         assert.equal(await page.getByTestId('training-day-sets-' + today).innerText(), '4 组');
