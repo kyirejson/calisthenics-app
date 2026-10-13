@@ -34,6 +34,7 @@ export function DeepseekChat(props: { visible: boolean; onClose: () => void }) {
     activeTools,
     busy,
     error,
+    contextNotice,
     settingsOpen,
     setSettingsOpen,
     memoryOpen,
@@ -126,6 +127,7 @@ export function DeepseekChat(props: { visible: boolean; onClose: () => void }) {
                 openFiles,
               }}
             />
+            {contextNotice ? <Text testID="chat-context-notice" accessibilityLiveRegion="polite" style={s.contextNotice}>{contextNotice}</Text> : null}
             {error ? (
               <Text accessibilityRole="alert" style={s.error}>
                 {error}

@@ -23,6 +23,7 @@ export const s = StyleSheet.create({
   hit: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
   close: { fontSize: 28, lineHeight: 30, color: muted, fontWeight: '300' },
   history: { flex: 1, minHeight: 0 },
+  contextNotice: { color: muted, fontSize: 12, lineHeight: 18, paddingHorizontal: 20, paddingVertical: 8, width: '100%', maxWidth: 740, alignSelf: 'center' },
   content: {
     alignSelf: 'center',
     width: '100%',

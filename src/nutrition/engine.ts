@@ -6,6 +6,7 @@ import { isValidDateKey, validTimestamp } from './validation';
 import { normalizeFoodImportOrigin } from './foodImport';
 import { normalizeNutritionPhoto, normalizeNutritionPhotos } from './photoMetadata';
 import { isFoodArtworkCategory } from './foodArtwork';
+import { normalizeAgentFood, agentNutrientSnapshot, normalizeMealReceipts } from './agentFood';
 import { normalizeNutritionDays, TRAINING_TIMES } from './state';
 import type {
   Allergen, FoodPortion, IntakeEntry, MealSlot, Nutrients,
@@ -136,10 +137,10 @@ export function nutritionRevisionKey(date: string, slot: MealSlot): string {
 
 export function createIntakeEntry(args: {
   id: string; date: string; slot: MealSlot; name: string; portions: FoodPortion[];
-  source: IntakeEntry['source']; sourceKey?: string; now?: string; photoEstimate?: PhotoEstimate; customFoods?: import('./types').Food[]; photos?: IntakeEntry['photos'];
+  source: IntakeEntry['source']; sourceKey?: string; now?: string; photoEstimate?: PhotoEstimate; agentFood?: import('./types').AgentFood; customFoods?: import('./types').Food[]; photos?: IntakeEntry['photos'];
 }): IntakeEntry {
   if (!validId(args.id) || !isValidDateKey(args.date) || !isSlot(args.slot) || !validText(args.name)) throw new Error('记录名称、日期、餐次或编号无效。');
-  if (!['manual', 'planned_meal', 'photo_estimate'].includes(args.source)) throw new Error('记录来源无效。');
+  if (!['manual', 'planned_meal', 'photo_estimate', 'agent'].includes(args.source)) throw new Error('记录来源无效。');
   if (args.source === 'planned_meal' && !validId(args.sourceKey)) throw new Error('计划餐记录缺少有效来源编号。');
   if (args.sourceKey !== undefined && !validId(args.sourceKey)) throw new Error('来源编号无效。');
   const now = args.now ?? new Date().toISOString();
@@ -147,6 +148,14 @@ export function createIntakeEntry(args: {
   const photos = normalizeNutritionPhotos(args.photos);
   if (!photos) throw new Error('照片引用无效，请重新保存。');
   const attachments = photos.length ? { photos } : {};
+  if (args.source === 'agent') {
+    const food = normalizeAgentFood(args.agentFood);
+    if (!food) throw new Error('模型饮食数据格式无效。');
+    return { id: args.id, date: args.date, slot: args.slot, name: args.name.trim(), portions: [],
+      nutrients: agentNutrientSnapshot(food), source: 'agent', agentFood: food, ...attachments,
+      ...(food.values.fiber === null ? { fiberIncomplete: true } : {}),
+      createdAt: now, updatedAt: now, foodDataVersion: 'agent-reported-v1' };
+  }
   if (args.source === 'photo_estimate') {
     const estimate = normalizePhotoEstimate(args.photoEstimate);
     if (!estimate) throw new Error('照片营养估算无效，请重新识别。');
@@ -233,12 +242,21 @@ export function normalizeIntakeEntry(input: unknown): IntakeEntry | null {
     || !validText(input.name) || !validText(input.foodDataVersion, 120)
     || !validTimestamp(input.createdAt) || !validTimestamp(input.updatedAt)
     || Date.parse(input.updatedAt) < Date.parse(input.createdAt)
-    || !['manual', 'planned_meal', 'photo_estimate'].includes(input.source as string)
+    || !['manual', 'planned_meal', 'photo_estimate', 'agent'].includes(input.source as string)
     || (input.source === 'planned_meal' && !validId(input.sourceKey))
     || (input.sourceKey !== undefined && !validId(input.sourceKey)) || !isRecord(input.nutrients)) return null;
   const photos = normalizeNutritionPhotos(input.photos);
   if (!photos) return null;
   const attachments = photos.length ? { photos } : {};
+  if (input.source === 'agent') {
+    const food = normalizeAgentFood(input.agentFood);
+    if (!food || input.foodDataVersion !== 'agent-reported-v1' || !Array.isArray(input.portions) || input.portions.length) return null;
+    const nutrients = agentNutrientSnapshot(food);
+    if (!NUTRIENTS.every(key => (input.nutrients as Record<string, unknown>)[key] === nutrients[key])) return null;
+    return { id: input.id, date: input.date, slot: input.slot, name: input.name.trim(), portions: [], nutrients,
+      source: 'agent', agentFood: food, foodDataVersion: 'agent-reported-v1', ...attachments,
+      ...(food.values.fiber === null ? { fiberIncomplete: true } : {}), createdAt: input.createdAt, updatedAt: input.updatedAt };
+  }
   if (input.source === 'photo_estimate') {
     const estimate = normalizePhotoEstimate(input.photoEstimate);
     if (!estimate || input.foodDataVersion !== 'vision-estimate-v1' || !Array.isArray(input.portions) || input.portions.length) return null;
@@ -282,6 +300,8 @@ export function normalizeNutritionJournal(input: unknown): NutritionJournal {
     ? ALLERGENS.filter(a => manual.includes(a)) : result.preferences?.allergens ?? [];
   result.trainingTime = TRAINING_TIMES.includes(input.trainingTime as TrainingTime) ? input.trainingTime as TrainingTime : 'unspecified';
   result.days = normalizeNutritionDays(input.days);
+  const receipts = normalizeMealReceipts(input.mealOperationReceipts);
+  if (receipts.length) result.mealOperationReceipts = receipts;
   const ids = new Set<string>();
   const sources = new Set<string>();
   if (Array.isArray(input.entries)) for (const value of input.entries) {

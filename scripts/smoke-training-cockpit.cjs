@@ -25,7 +25,7 @@ const noOverflow = async page => assert.equal(await page.evaluate(() => document
       const { context, page, errors } = await prepare(browser, width);
       try {
         assert.equal((await records(page)).length, 0, 'Opening training never creates a record');
-        assert.equal(await page.getByRole('button', { name: '打开 DeepSeek 聊天', exact: true }).count(), 1, 'Only header chat, no covering floating orb');
+        assert.equal(await page.getByRole('button', { name: '打开 DeepSeek 聊天', exact: true }).count(), 0, 'Training has no header chat or floating assistant');
         await page.getByTestId('training-actual-input').fill('8');
         await page.screenshot({ path: `D:/UncoverBuildTools/temp/training-cockpit-active-${width}.png` });
         await page.getByTestId('training-primary').click();
@@ -52,7 +52,6 @@ const noOverflow = async page => assert.equal(await page.evaluate(() => document
         await noOverflow(page);
         await page.getByRole('button', { name: '结束训练', exact: true }).click();
         await page.getByRole('button', { name: '记录已完成组', exact: true }).click();
-        await page.getByRole('button', { name: '按动作稳定保存训练', exact: true }).click();
         const summary = page.getByTestId(/^training-day-summary-/); await summary.waitFor();
         assert.equal(await page.getByTestId(/^training-day-chart-/).count(), 0);
         await summary.getByRole('button', { name: /^展开.*训练历史$/ }).click();
@@ -63,6 +62,8 @@ const noOverflow = async page => assert.equal(await page.evaluate(() => document
         assert.match(await summary.innerText(), /7 次/); assert.match(await summary.innerText(), /6 次/);
         const saved = await records(page);
         assert.equal(saved.length, 1); assert.equal(saved[0].completion, 'partial');
+        assert.equal(saved[0].quality, undefined, 'No subjective quality is invented after removing feedback');
+        assert.equal(await page.getByText('训练感觉如何？', { exact: true }).count(), 0);
         assert.equal(saved[0].exercises[0].sets.length, 2); assert.equal(saved[0].totalReps, 13);
         await page.screenshot({ path: `D:/UncoverBuildTools/temp/training-cockpit-data-${width}.png` });
         const summaryDate = (await summary.getAttribute('data-testid')).replace('training-day-summary-', '');
@@ -94,10 +95,11 @@ const noOverflow = async page => assert.equal(await page.evaluate(() => document
         await primary.click();
       }
       await page.getByTestId('training-primary').click();
-      await page.getByRole('button', { name: '按动作稳定保存训练', exact: true }).click();
       await page.getByTestId(/^training-day-summary-/).waitFor();
       const [session] = await records(page);
       assert.equal(session.completion, 'complete');
+      assert.equal(session.quality, undefined);
+      assert.equal(await page.getByText('训练感觉如何？', { exact: true }).count(), 0);
       const sets = session.exercises.flatMap(item => item.sets);
       assert.ok(sets.length > 2); assert.ok(sets.every(set => set.completed && set.reps === 9));
       await page.getByTestId(/^training-day-summary-/).getByRole('button', { name: /^展开.*训练历史$/ }).click();
@@ -116,14 +118,12 @@ const noOverflow = async page => assert.equal(await page.evaluate(() => document
       await p.evaluate(() => { window.originalStorageWrite = Storage.prototype.setItem; Storage.prototype.setItem = function(key, value) { if (key === 'sessions') throw new DOMException('Isolated persistence failure', 'QuotaExceededError'); return window.originalStorageWrite.call(this, key, value); }; });
       await p.getByRole('button', { name: '结束训练', exact: true }).click();
       await p.getByRole('button', { name: '记录已完成组', exact: true }).click();
-      await p.getByRole('button', { name: '按动作稳定保存训练', exact: true }).click();
       await p.getByRole('alert').getByText('保存失败，已完成内容仍在本页，请重试。', { exact: true }).waitFor();
       assert.equal(await p.getByTestId(/^training-day-summary-/).count(), 0, 'No navigation before persistence succeeds');
       assert.equal((await records(p))[0].exercises[0].sets[0].reps, 8);
       await p.evaluate(() => { Storage.prototype.setItem = window.originalStorageWrite; });
       await p.getByRole('button', { name: '结束训练', exact: true }).click();
       await p.getByRole('button', { name: '记录已完成组', exact: true }).click();
-      await p.getByRole('button', { name: '按动作稳定保存训练', exact: true }).click();
       await p.getByTestId(/^training-day-summary-/).waitFor();
       assert.equal((await records(p)).length, 1, 'Retry overwrites one stable record, no duplicate');
       assert.deepEqual(failure.errors, []);

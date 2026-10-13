@@ -6,6 +6,7 @@ import { currentConnection, loadConnection, saveConnection } from './credentials
 import { connectionSummary, resetConnection, setModelConnectionVerified, subscribeConnection } from './connectionRuntime.mjs';
 import { createDeepseekClient } from './deepseekClient.mjs';
 import { confirmAction } from '../utils/confirm';
+import { MusicSettings } from '../music/MusicSettings';
 
 export function ServiceSettings({ onClose }: { onClose: () => void }) {
   const [summary, setSummary] = useState(connectionSummary), [key, setKey] = useState('');
@@ -60,6 +61,7 @@ export function ServiceSettings({ onClose }: { onClose: () => void }) {
           </> : null}
           {message ? <Text accessibilityRole="alert" style={s.notice}>{message}</Text> : null}
         </View>
+        <MusicSettings />
         <Pressable accessibilityRole="button" accessibilityLabel="清除 API Key" disabled={!ready || busy || !summary.hasDeepseek} onPress={clearKey} style={s.clear}><Text style={s.danger}>清除 API Key</Text></Pressable>
       </ScrollView>
     </KeyboardAvoidingView>;

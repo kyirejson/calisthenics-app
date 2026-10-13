@@ -37,10 +37,10 @@ test('local PDF worker matches installed version and PDF text is actual selectab
   } finally { await task.destroy(); }
   assert.equal(fs.readFileSync(path.join(__dirname, '../public/chat-pdf/pdf.worker.min.mjs')).equals(fs.readFileSync(path.join(__dirname, '../node_modules/pdfjs-dist/legacy/build/pdf.worker.min.mjs'))), true);
 });
-test('UI upload path leaves personal tools, model, storage and system prompt unchanged', () => {
+test('UI upload path preserves attachments independently of personal data tools', () => {
   const ui = readFeature('chat');
   assert.match(ui, /messages: messages\.map\(attachmentMessage\)/);
-  assert.match(ui, /setDraft\(''\);\s*setFiles\(\[\]\)/);
+  assert.match(ui, /setDraft\(''\);[\s\S]*?setFiles\(\[\]\)/);
   assert.doesNotMatch(ui, /专属体能与营养私教|Flash 1M|正在思考并检索数据/);
   assert.doesNotMatch(fs.readFileSync(path.join(__dirname, '../src/integrations/chatAttachments.mjs'), 'utf8'), /localStorage|update_memory|writeMemory/);
 });

@@ -17,6 +17,7 @@ import {
 export type RepositoryEffects = {
   clearRetired(): Promise<void>;
   clearRunning(): Promise<void>;
+  clearMusic(): Promise<void>;
   resetConnection(): Promise<void>;
   clearMemory(): Promise<void>;
   deletePhotos(ids: string[]): Promise<void>;
@@ -154,6 +155,7 @@ export function createAppRepository(storage: AppStorage, effects: RepositoryEffe
       await drain();
       await effects.clearRunning();
       await effects.resetConnection();
+      await effects.clearMusic();
       const photos = referencedPhotoIds(state.getSnapshot().nutritionJournal);
       await storage.multiRemove(Object.values(keys));
       recoveryRaw = {};

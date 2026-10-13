@@ -17,10 +17,7 @@ export function TrainingDialogs({
     | 'profile'
     | 'plan'
     | 'logInteraction'
-    | 'selectedExercise'
-    | 'mastery'
     | 'items'
-    | 'saving'
     | 'showGuide'
     | 'setShowGuide'
     | 'showWarmup'
@@ -31,16 +28,10 @@ export function TrainingDialogs({
     | 'setShowPrehab'
     | 'showPicker'
     | 'setShowPicker'
-    | 'showQuality'
-    | 'setShowQuality'
-    | 'constraintsConfirmed'
-    | 'setConstraintsConfirmed'
     | 'setWarmupDone'
     | 'current'
     | 'equipment'
-    | 'completedCount'
     | 'estimate'
-    | 'save'
     | 'addExercise'
   >;
 }) {
@@ -48,10 +39,7 @@ export function TrainingDialogs({
     profile,
     plan,
     logInteraction,
-    selectedExercise,
-    mastery,
     items,
-    saving,
     showGuide,
     setShowGuide,
     showWarmup,
@@ -62,16 +50,10 @@ export function TrainingDialogs({
     setShowPrehab,
     showPicker,
     setShowPicker,
-    showQuality,
-    setShowQuality,
-    constraintsConfirmed,
-    setConstraintsConfirmed,
     setWarmupDone,
     current,
     equipment,
-    completedCount,
     estimate,
-    save,
     addExercise,
   } = model;
   if (!profile || !current) return null;
@@ -141,83 +123,6 @@ export function TrainingDialogs({
         onClose={() => setShowPrehab(false)}
         profile={profile}
       />
-      <Modal
-        transparent
-        visible={showQuality}
-        animationType="fade"
-        onRequestClose={() => {
-          if (!saving) setShowQuality(false);
-        }}
-      >
-        <View style={styles.shade}>
-          <View style={[styles.sheet, styles.qualitySheet]}>
-            <Text style={styles.eyebrow}>本次记录 · {completedCount} 组</Text>
-            <Text style={[styles.modalTitle, { flex: 0 }]}>训练感觉如何？</Text>
-            <Text style={styles.helper}>
-              {selectedExercise && items.length === 1
-                ? '动作稳定且满足专项标准的完整记录，才能计入进阶。'
-                : '尚未完成的组和未练的动作不会写入记录。'}
-            </Text>
-            {selectedExercise && mastery?.manual && items.length === 1 ? (
-              <Pressable
-                disabled={saving}
-                onPress={() => setConstraintsConfirmed((value) => !value)}
-                style={styles.criteria}
-              >
-                <Text style={styles.secondaryText}>
-                  {constraintsConfirmed ? '☑' : '□'} 已按完整标准完成
-                </Text>
-                <Text style={styles.note}>
-                  {mastery.display}
-                  {mastery.confirmationHint ? ' · ' + mastery.confirmationHint : ''}
-                </Text>
-              </Pressable>
-            ) : null}
-            {(
-              [
-                { value: 'solid', title: '动作稳定', detail: '可控完成，仍有余力' },
-                { value: 'hard', title: '有些勉强', detail: '后续需要调整难度或训练量' },
-                { value: 'pain', title: '出现不适', detail: '停止相关动作，优先处理疼痛' },
-              ] as const
-            ).map((option) => (
-              <Pressable
-                key={option.value}
-                accessibilityRole="button"
-                accessibilityLabel={'按' + option.title + '保存训练'}
-                disabled={
-                  saving ||
-                  (option.value === 'solid' &&
-                    !!selectedExercise &&
-                    items.length === 1 &&
-                    !!mastery?.manual &&
-                    !constraintsConfirmed)
-                }
-                onPress={() => void save(option.value)}
-                style={[
-                  styles.qualityOption,
-                  option.value === 'pain' && styles.qualityPain,
-                  (saving ||
-                    (option.value === 'solid' &&
-                      !!selectedExercise &&
-                      items.length === 1 &&
-                      !!mastery?.manual &&
-                      !constraintsConfirmed)) && { opacity: 0.4 },
-                ]}
-              >
-                <Text style={styles.secondaryText}>{option.title}</Text>
-                <Text style={styles.note}>{option.detail}</Text>
-              </Pressable>
-            ))}
-            <Pressable
-              disabled={saving}
-              onPress={() => setShowQuality(false)}
-              style={styles.cooldownLink}
-            >
-              <Text style={styles.linkText}>{saving ? '保存中…' : '返回训练'}</Text>
-            </Pressable>
-          </View>
-        </View>
-      </Modal>
     </>
   );
 }

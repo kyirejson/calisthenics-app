@@ -20,6 +20,7 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
     createAppRepository(AsyncStorage, {
       clearRetired: clearRetiredAssistantStorage,
       clearRunning: async () => (await import('../running/transport')).runningTransport.clear(),
+      clearMusic: async () => (await import('../music/transport')).musicTransport.clear(),
       resetConnection: async () => {
         await (await import('../integrations/credentials')).loadConnection();
         await resetConnection();

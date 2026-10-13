@@ -14,7 +14,8 @@ const { waitForNutritionPage } = require('./nutrition-smoke-utils.cjs');
   const enter=async()=>{await page.getByRole('tab',{name:'切换到饮食',exact:true}).click();await waitForNutritionPage(page);};
   await enter();
   for (const name of ['拍照记餐','管理当日饮食记录','添加饮食记录']) assert.equal(await page.getByRole('button',{name,exact:true}).count(),0);
-  await page.getByText('暂无饮食记录',{exact:true}).waitFor();
+  await page.getByTestId('nutrition-empty-meals').waitFor();
+  assert.equal(await page.getByTestId('nutrition-empty-meals').getByText('暂无记录',{exact:true}).count(),4);
   const stored=await page.evaluate(()=>JSON.parse(localStorage.getItem('nutrition_journal_v1')));
   await page.reload();await enter();assert.deepEqual(await page.evaluate(()=>JSON.parse(localStorage.getItem('nutrition_journal_v1')).entries),stored.entries);assert.deepEqual(errors,[]);console.log('PASS read-only nutrition',width);await context.close();
  }}finally{await browser.close();}

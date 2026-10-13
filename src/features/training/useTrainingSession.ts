@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from 'react';
 import { BackHandler, Platform } from 'react-native';
 
 import { type CockpitSet, type RestReceipt } from '../../components/TrainingCockpit';
-import { useHideDeepseekDock, useOpenDeepseekChat } from '../../integrations/DeepseekChatHost';
+import { useHideDeepseekDock } from '../../integrations/DeepseekChatHost';
 
 import {
   equipmentSessionPlan,
@@ -34,13 +34,11 @@ import { useAppStore } from '../../store/AppStore';
 import type {
   Exercise,
   SessionExercise,
-  TrainingSession,
   TrainingInteractionEvent,
 } from '../../types';
 import { confirmAction } from '../../utils/confirm';
 import { resumableSession, restoreCourseSets } from '../../domain/training/sessionResume';
 export type SetState = CockpitSet;
-export type SessionQuality = NonNullable<TrainingSession['quality']>;
 export type TrainingProps = {
   workoutId: string;
   exerciseId?: string;
@@ -87,7 +85,6 @@ export function useTrainingSession({
       deleteSession: state.deleteSession,
     }));
   useHideDeepseekDock();
-  const openChat = useOpenDeepseekChat();
   const [selectedSet, setSelectedSet] = useState<number | null>(null);
   const [timerDuration, setTimerDuration] = useState(0);
   const [receipt, setReceipt] = useState<RestReceipt | null>(null);
@@ -160,6 +157,7 @@ export function useTrainingSession({
   const [index, setIndex] = useState(() => Math.max(0, items.findIndex(item => sets[item.id]?.some(set => !set.completed))));
   const [elapsed, setElapsed] = useState(carriedSeconds);
   const [timerKind, setTimerKind] = useState<'rest' | 'transition' | 'hold' | null>(null);
+  const [holdTiming, setHoldTiming] = useState({ run: 0, finished: false });
   const [remaining, setRemaining] = useState(0);
   const [paused, setPaused] = useState(false);
   const deadline = useRef(0);
@@ -173,8 +171,6 @@ export function useTrainingSession({
   const [showCooldown, setShowCooldown] = useState(false);
   const [showPrehab, setShowPrehab] = useState(false);
   const [showPicker, setShowPicker] = useState(false);
-  const [showQuality, setShowQuality] = useState(false);
-  const [constraintsConfirmed, setConstraintsConfirmed] = useState(false);
   const [warmupDone, setWarmupDone] = useState(resumed?.resumeState?.warmupDone || false);
   const current = items[index];
   const equipment = !!current?.loadBasis;
@@ -220,6 +216,7 @@ export function useTrainingSession({
       deadline.current = 0;
       advanceAfterRest();
       setTimerKind(null);
+      if (timerKind === 'hold') setHoldTiming(value => ({ ...value, finished: true }));
       if (plan && timerKind !== 'hold') logInteraction('timer_finished');
       if (settings.vibration)
         void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(
@@ -243,6 +240,7 @@ export function useTrainingSession({
     setTimerDuration(duration);
     setPaused(false);
     setTimerKind(kind);
+    setHoldTiming(value => ({ run: value.run + (kind === 'hold' ? 1 : 0), finished: false }));
     if (plan && kind !== 'hold')
       logInteraction(
         kind === 'transition' ? 'transition_started' : 'rest_started',
@@ -254,6 +252,7 @@ export function useTrainingSession({
     if (plan && timerKind) logInteraction('timer_skipped', current?.id, remaining);
     deadline.current = 0;
     setTimerKind(null);
+    setHoldTiming(value => ({ ...value, finished: false }));
     setRemaining(0);
     setPaused(false);
   };
@@ -281,7 +280,7 @@ export function useTrainingSession({
       ),
     );
 
-  const createRecord = (quality?: SessionQuality, finalized = false, continuing = true) => {
+  const createRecord = (finalized = false, continuing = true) => {
     const sessionExercises: SessionExercise[] = items.map((item) => ({
       exerciseId: item.id,
       name: item.name,
@@ -313,7 +312,7 @@ export function useTrainingSession({
       },
       constraintsConfirmed:
         selectedExercise && items.length === 1
-          ? !mastery?.manual || constraintsConfirmed
+          ? !mastery?.manual
           : undefined,
     }));
     return cleanSession({
@@ -327,7 +326,6 @@ export function useTrainingSession({
       exercises: sessionExercises,
       totalReps: 0,
       kind: 'strength',
-      quality,
       completion: finalized && completedCount === allSetCount ? 'complete' : 'partial',
       inProgress: continuing && (!finalized || completedCount < allSetCount),
       resumeState: continuing && (!finalized || completedCount < allSetCount) ? { items, sets, warmupDone } : undefined,
@@ -366,7 +364,7 @@ export function useTrainingSession({
     });
   }, [sets, items, interactionRevision, saveSession, deleteSession]);
 
-  const save = async (quality?: SessionQuality, leave = false) => {
+  const save = async (leave = false) => {
     if (finishing.current) return;
     if (!completedCount) {
       if (!leave) {
@@ -394,14 +392,13 @@ export function useTrainingSession({
     setSaving(true);
     setError('');
     try {
-      await saveSession(createRecord(quality, true, leave));
+      await saveSession(createRecord(true, leave));
       stopTimer();
       if (leave) onBack();
       else onComplete(sessionId.current);
     } catch {
       finishing.current = false;
       setSaving(false);
-      setShowQuality(false);
       setError('保存失败，已完成内容仍在本页，请重试。');
     }
   };
@@ -413,7 +410,7 @@ export function useTrainingSession({
         ? '已完成的 ' + completedCount + ' 组会保留，返回今日页后可以从剩余动作继续。'
         : '尚未完成任何组，退出不会产生空记录。',
       () => {
-        void save(undefined, true);
+        void save(true);
       },
       { confirmLabel: completedCount ? '保存并退出' : '退出', cancelLabel: '继续训练' },
     );
@@ -541,6 +538,7 @@ export function useTrainingSession({
     setSets((old) => ({ ...old, [item.id]: initialSets(item) }));
   };
   const requestFinish = () => {
+    if (saving || finishing.current) return;
     if (!completedCount) {
       setError('请先完成至少一组。');
       return;
@@ -557,10 +555,10 @@ export function useTrainingSession({
           ' 组，剩余 ' +
           (allSetCount - completedCount) +
           ' 组不会记入。',
-        () => setShowQuality(true),
+        () => { void save(); },
         { confirmLabel: '记录已完成组' },
       );
-    else setShowQuality(true);
+    else void save();
   };
 
   return {
@@ -569,15 +567,12 @@ export function useTrainingSession({
     onBack,
     onComplete,
     profile,
-    openChat,
     setSelectedSet,
     timerDuration,
     receipt,
     setReceipt,
     plan,
     logInteraction,
-    selectedExercise,
-    mastery,
     workout,
     items,
     sets,
@@ -585,6 +580,7 @@ export function useTrainingSession({
     index,
     elapsed,
     timerKind,
+    holdTiming,
     remaining,
     paused,
     saving,
@@ -599,10 +595,6 @@ export function useTrainingSession({
     setShowPrehab,
     showPicker,
     setShowPicker,
-    showQuality,
-    setShowQuality,
-    constraintsConfirmed,
-    setConstraintsConfirmed,
     warmupDone,
     setWarmupDone,
     current,
@@ -615,7 +607,6 @@ export function useTrainingSession({
     startTimer,
     togglePause,
     extendRest,
-    save,
     confirmExit,
     toggleSet,
     editSet,

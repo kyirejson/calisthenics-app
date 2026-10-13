@@ -71,6 +71,9 @@ export async function loadDomains(
             const normalized = normalizeNutritionJournal(input);
             if (normalized.entries.length !== input.entries.length)
               throw Error('饮食记录存在无法安全加载的条目。');
+            if (input.mealOperationReceipts !== undefined && (!Array.isArray(input.mealOperationReceipts)
+              || (normalized.mealOperationReceipts?.length ?? 0) !== input.mealOperationReceipts.length))
+              throw Error('饮食操作记录无法完整加载，已保留原始文件。');
             return normalized;
           },
           { migrate: false },

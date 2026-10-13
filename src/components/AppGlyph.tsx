@@ -1,8 +1,13 @@
 import Svg, { Circle, Path } from 'react-native-svg';
 import { appPalette } from '../theme';
 
-export type GlyphName = 'key' | 'eye' | 'help' | 'camera' | 'search' | 'chevron' | 'back' | 'flame' | 'chat' | 'run' | 'clock' | 'pace' | 'pause' | 'stop' | 'plus' | 'check' | 'expand' | 'calendar' | 'settings' | 'edit' | 'shield' | 'download' | 'trash' | 'refresh' | 'vibrate' | 'utensils' | 'dumbbell' | 'info' | 'image' | 'flash' | 'microphone' | 'send' | 'chart' | 'paperclip' | 'book' | 'document' | 'arrowUp';
+export type GlyphName = 'key' | 'eye' | 'help' | 'camera' | 'search' | 'chevron' | 'back' | 'flame' | 'chat' | 'run' | 'clock' | 'pace' | 'pause' | 'stop' | 'plus' | 'check' | 'expand' | 'calendar' | 'settings' | 'edit' | 'shield' | 'download' | 'trash' | 'refresh' | 'vibrate' | 'utensils' | 'dumbbell' | 'info' | 'image' | 'flash' | 'microphone' | 'send' | 'chart' | 'paperclip' | 'book' | 'document' | 'arrowUp' | 'sun' | 'moon' | 'cup' | 'speaker' | 'speakerOff';
 const paths: Record<GlyphName, string> = {
+  speaker: 'M3 9h4l5-5v16l-5-5H3V9zm12-1a6 6 0 0 1 0 8m3-11a10 10 0 0 1 0 14',
+  speakerOff: 'M3 9h4l5-5v16l-5-5H3V9zm13 0l5 6m0-6l-5 6',
+  sun: 'M12 2v2m0 16v2M2 12h2m16 0h2M5 5l1.5 1.5m11 11L19 19M5 19l1.5-1.5m11-11L19 5M17 12a5 5 0 1 1-10 0 5 5 0 0 1 10 0',
+  moon: 'M20 15A9 9 0 0 1 9 4a9 9 0 1 0 11 11z',
+  cup: 'M4 7h13v11a3 3 0 0 1-3 3H7a3 3 0 0 1-3-3V7zm13 2h2a3 3 0 0 1 0 6h-2M7 2v2m4-2v2',
   paperclip: 'M8 12l7-7a4 4 0 0 1 6 6l-9 9a6 6 0 0 1-8-8l9-9M8 12l7-7m-7 7a2 2 0 0 0 3 3l7-7',
   book: 'M12 5v16M3 3l9 2 9-2v16l-9 2-9-2V3z',
   document: 'M5 2h9l5 5v15H5V2zm9 0v5h5M8 12h8m-8 4h6',

@@ -34,6 +34,7 @@ export type StoreActions = {
   setPhotoConsent(consent: boolean): Promise<void>;
   saveNutritionPreferences(preferences: NutritionPreferences): Promise<void>;
   saveIntakeEntry(input: IntakeInput): Promise<void>;
+  applyMealOperations(input: unknown, requestId: string, signal?: AbortSignal): Promise<import('../nutrition/mealOperations').MealWriteResult>;
   deleteIntakeEntry(id: string): Promise<void>;
   saveCustomFood(food: Food): Promise<void>;
   deleteCustomFood(id: string): Promise<void>;

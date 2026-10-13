@@ -49,6 +49,13 @@ export type FoodLabelDraft = {
   packageGrams?: number | null;
 };
 export type FoodPortion = { foodId: string; grams: number };
+/** Model-reported values are explicitly nullable, never disguised as measured catalogue data. */
+export type AgentFood = {
+  amount: string | null;
+  values: { [K in keyof Nutrients]: number | null };
+  estimated: boolean;
+};
+export type MealOperationReceipt = { id: string; requestId: string; entryIds: string[] };
 export type NutritionTargets = {
   calories: number;
   protein: number;
@@ -82,7 +89,8 @@ export type IntakeEntry = {
   name: string;
   portions: FoodPortion[];
   nutrients: Nutrients;
-  source: 'manual' | 'planned_meal' | 'photo_estimate';
+  source: 'manual' | 'planned_meal' | 'photo_estimate' | 'agent';
+  agentFood?: AgentFood;
   photoEstimate?: import('./vision').PhotoEstimate;
   sourceKey?: string;
   createdAt: string;
@@ -104,6 +112,7 @@ export type NutritionJournal = {
   savedMeals: IntakeEntry[];
   trainingTime: TrainingTime;
   days: Record<string, NutritionDayState>;
+  mealOperationReceipts?: MealOperationReceipt[];
 };
 
 export type CustomFoodLabelInput = {

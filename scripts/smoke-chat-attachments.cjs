@@ -94,7 +94,8 @@ const output = process.env.CHAT_QA_OUTPUT || 'D:/UncoverBuildTools/temp/chat-ui-
       assert.match(userMessage.content, /Actual PDF attachment text/);
       assert.doesNotMatch(userMessage.content, /scan\.pdf/);
       assert.deepEqual(requests[0].messages, requests[1].messages);
-      assert.equal(requests[1].tools.length, 9);
+      assert.ok(requests[1].tools.some(tool => tool.function.name === 'read_music_settings'));
+      assert.ok(requests[1].tools.some(tool => tool.function.name === 'write_meal_records'));
       assert.equal(requests[1].model, 'deepseek-flash');
       await page.screenshot({ path: path.join(output, `conversation-${width}.png`) });
       assert.ok(await page.getByLabel('聊天输入').isVisible());

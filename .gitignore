@@ -44,6 +44,10 @@ yarn-error.*
 /modules/uncover-running/android/.gradle/
 /modules/uncover-chat-files/android/build/
 /modules/uncover-chat-files/android/.gradle/
+/modules/uncover-music/android/build/
+/modules/uncover-music/android/.gradle/
+/modules/uncover-music/android/.cxx/
+/output/
 /public/chat-pdf/
 
 # User-supplied book excerpts and attachments for local debugging only.

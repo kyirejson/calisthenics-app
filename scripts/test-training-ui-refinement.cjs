@@ -60,4 +60,15 @@ test('cockpit primary and rest controls stay outside scrolling content', () => {
   assert.ok(screen.includes('实际'));
   assert.ok(!screen.includes('tableHeader'));
   assert.ok(readFeature('training').includes('useHideDeepseekDock()'));
+  assert.doesNotMatch(screen, /onChat|name="chat"|打开 DeepSeek 聊天/);
+  assert.doesNotMatch(readFeature('training'), /useOpenDeepseekChat|openChat|onChat=/);
+});
+test('finishing training saves without a subjective feedback modal or invented quality', () => {
+  const dialogs = read('src/features/training/TrainingDialogs.tsx');
+  const session = read('src/features/training/useTrainingSession.ts');
+  assert.doesNotMatch(dialogs, /训练感觉如何|qualityOption|showQuality|按动作稳定/);
+  assert.doesNotMatch(session, /setShowQuality|SessionQuality|quality:\s*'solid'/);
+  assert.match(session, /else void save\(\)/);
+  assert.match(session, /saveSession\(createRecord\(true, leave\)\)/);
+  assert.match(session, /保存失败，已完成内容仍在本页，请重试/);
 });

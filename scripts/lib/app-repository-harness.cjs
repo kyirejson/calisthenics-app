@@ -30,6 +30,7 @@ function repositoryHarness({
   const repository = createAppRepository(storage, {
     clearRetired: async () => {},
     clearRunning: async () => {},
+    clearMusic: async () => {},
     resetConnection: async () => {},
     clearMemory: async () => {},
     deletePhotos: deletePhotos || (async () => {}),

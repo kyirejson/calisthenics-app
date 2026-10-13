@@ -144,6 +144,8 @@ export type DailyWorkoutEdits = Record<string, { date: string; workoutId: string
 export type Settings = {
   vibration: boolean;
   restSeconds: number;
+  voiceCountInterval?: number;
+  music?: import('./music/preferences').MusicPreferences;
 };
 
 export type Route =

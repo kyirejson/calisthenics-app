@@ -3,6 +3,7 @@ import { localWeightDate, summarizeWeightTrend } from '../domain/weight/weightTr
 import { calculateTargets, normalizeNutritionPreferences, sumNutrients } from './engine';
 import { meaningfulTrainingSessions } from './training';
 import { photoUsesOnlyLabels } from './vision';
+import { hasUnknownNutrition } from './agentFood';
 import { emptyNutritionDay, MEAL_SLOTS, normalizeTargetSnapshot } from './state';
 import { isValidDateKey, offsetDate, validTimestamp, dateAtNoon } from './validation';
 import type { MealSlot, Nutrients, NutritionDayState, NutritionJournal, NutritionTargetSnapshot, NutritionTrainingContext } from './types';
@@ -86,7 +87,7 @@ export function summarizeNutritionWeek(journal: NutritionJournal, profile: Profi
   const dates = Array.from({ length: 7 }, (_, i) => offsetDate(end, i - 6));
   const items = dates.map(date => {
     const entries = journal.entries.filter(entry => entry.date === date);
-    const complete = Boolean(journal.days[date]?.completedAt);
+    const complete = Boolean(journal.days[date]?.completedAt) && !entries.some(hasUnknownNutrition);
     return { date, state: complete ? 'complete' as const : entries.length || journal.days[date]?.skippedSlots?.length ? 'partial' as const : 'missing' as const,
       calories: sumNutrients(entries.map(entry => entry.nutrients)).calories,
       hasPhoto: entries.some(entry => entry.source === 'photo_estimate' && !photoUsesOnlyLabels(entry.photoEstimate)), target: latestNutritionTarget(journal, date) };

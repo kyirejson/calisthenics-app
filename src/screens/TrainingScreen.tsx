@@ -13,7 +13,6 @@ export function TrainingScreen(props: TrainingProps) {
     rirTarget,
     onBack,
     profile,
-    openChat,
     setSelectedSet,
     timerDuration,
     receipt,
@@ -24,6 +23,7 @@ export function TrainingScreen(props: TrainingProps) {
     index,
     elapsed,
     timerKind,
+    holdTiming,
     remaining,
     paused,
     saving,
@@ -77,16 +77,17 @@ export function TrainingScreen(props: TrainingProps) {
           activeSet={activeSet}
           elapsed={elapsed}
           saving={saving}
+          voiceBlocked={saving || !!error || session.showGuide || session.showWarmup || session.showCooldown || session.showPrehab || session.showPicker}
           error={error}
           warmupDone={warmupDone}
           rirTarget={rirTarget}
           timerKind={timerKind}
+          holdTiming={holdTiming}
           remaining={remaining}
           timerDuration={timerDuration}
           paused={paused}
           receipt={receipt}
           onBack={confirmExit}
-          onChat={openChat}
           onFinish={requestFinish}
           onGuide={() => setShowGuide(true)}
           onWarmup={() => setShowWarmup(true)}

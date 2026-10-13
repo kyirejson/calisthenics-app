@@ -9,6 +9,8 @@ import { useReducedMotion, useRouteReveal } from './useProgressMotion';
 import { equipmentLoadLabel } from '../domain/training/equipment/equipmentTraining';
 import { appPalette } from '../theme';
 import type { PrescribedExercise, TargetUnit } from '../domain/training/trainingPrescription';
+import { useTrainingVoice } from '../features/training/useTrainingVoice';
+import { TrainingVoiceSettings } from '../features/training/TrainingVoiceSettings';
 
 export type CockpitSet = { reps: string; load?: string; rir?: string; completed: boolean; completedAt?: string };
 const c = { ...appPalette, ink: appPalette.text, line: appPalette.border };
@@ -18,8 +20,10 @@ const clock = (seconds: number) => `${String(Math.floor(seconds / 60)).padStart(
 type Props = {
   items: PrescribedExercise[]; index: number; sets: Record<string, CockpitSet[]>; activeSet: number;
   elapsed: number; saving: boolean; error: string; warmupDone: boolean; rirTarget?: number;
+  voiceBlocked: boolean;
   timerKind: 'rest' | 'transition' | 'hold' | null; remaining: number; timerDuration: number; paused: boolean; receipt: RestReceipt | null;
-  onBack: () => void; onChat: () => void; onFinish: () => void; onGuide: () => void; onWarmup: () => void;
+  holdTiming: { run: number; finished: boolean };
+  onBack: () => void; onFinish: () => void; onGuide: () => void; onWarmup: () => void;
   onExercise: (index: number) => void; onSet: (index: number) => void; onEdit: (index: number, field: 'reps' | 'load' | 'rir', value: string) => void;
   onToggleSet: (index: number) => void; onAddSet: () => void; onRemoveSet: (index: number) => void;
   onPause: () => void; onExtend: () => void; onEndTimer: () => void; onStartTimer: () => void; onStartRest: () => void;
@@ -29,6 +33,7 @@ type Props = {
 export function TrainingCockpit(p: Props) {
   const [showExercises, setShowExercises] = useState(false);
   const [showRecords, setShowRecords] = useState(false);
+  const [showSettings, setShowSettings] = useState(false), [editingCount, setEditingCount] = useState(false);
   const current = p.items[p.index], rows = p.sets[current.id] || [], active = rows[p.activeSet];
   const equipment = !!current.loadBasis, unit = unitNames[current.targetUnit];
   const all = Object.values(p.sets).flat(), done = all.filter(set => set.completed).length;
@@ -37,6 +42,11 @@ export function TrainingCockpit(p: Props) {
   const target = current.repRange ? current.repRange.join('–') : String(current.targetValue);
   const rest = !!p.timerKind;
   const allCurrentDone = rows.every(set => set.completed);
+  const voice = useTrainingVoice({ identity: `${current.id}:${p.activeSet}`, unit: current.targetUnit,
+    goal: Number(active?.reps) > 0 ? Number(active?.reps) : current.targetValue,
+    complete: allCurrentDone || !!active?.completed,
+    blocked: p.voiceBlocked || showExercises || showRecords || showSettings || editingCount,
+    timerKind: p.timerKind, timerDuration: p.timerDuration, remaining: p.remaining, paused: p.paused, holdTiming: p.holdTiming });
   const reduced = useReducedMotion();
   const actionReveal = useRouteReveal(current.id, reduced);
   const breath = useRef(new Animated.Value(0)).current;
@@ -61,10 +71,11 @@ export function TrainingCockpit(p: Props) {
 
   return <KeyboardAvoidingView style={s.root} behavior={Platform.OS === 'ios' ? 'padding' : Platform.OS === 'android' ? 'height' : undefined}>
     <View style={s.header}>
-      <Pressable disabled={p.saving} accessibilityRole="button" accessibilityLabel="保存并退出训练" onPress={p.onBack} style={s.icon}><AppGlyph name="back" color={c.ink} /></Pressable>
+      <Pressable disabled={p.saving} accessibilityRole="button" accessibilityLabel="保存并退出训练" onPress={() => { voice.reset(); p.onBack(); }} style={s.icon}><AppGlyph name="back" color={c.ink} /></Pressable>
       <Text testID="training-screen-title" style={s.title}>训练中</Text>
-      <Pressable accessibilityRole="button" accessibilityLabel="打开 DeepSeek 聊天" onPress={p.onChat} style={s.icon}><AppGlyph name="chat" color={c.ink} size={22} /></Pressable>
-      <Pressable disabled={p.saving} accessibilityRole="button" accessibilityLabel="结束训练" onPress={p.onFinish} style={s.icon}><Text style={s.end}>结束</Text></Pressable>
+      <Pressable disabled={p.saving} accessibilityRole="switch" accessibilityLabel={voice.enabled ? '关闭语音报数' : '开启语音报数'} accessibilityState={{ checked: voice.enabled }} aria-checked={voice.enabled} onPress={() => { const wasEnabled = voice.enabled; voice.toggle(); if (!wasEnabled && current.targetUnit === 'seconds' && !p.timerKind && !allCurrentDone) p.onStartTimer(); }} style={s.voiceIcon}><AppGlyph name={voice.enabled ? 'speaker' : 'speakerOff'} color={voice.enabled ? c.lime : c.muted} size={21} /></Pressable>
+      <Pressable disabled={p.saving} accessibilityRole="button" accessibilityLabel="打开训练设置" onPress={() => setShowSettings(true)} style={s.voiceIcon}><AppGlyph name="settings" color={c.muted} size={20} /></Pressable>
+      <Pressable disabled={p.saving} accessibilityRole="button" accessibilityLabel="结束训练" onPress={() => { voice.reset(); p.onFinish(); }} style={s.icon}><Text style={s.end}>结束</Text></Pressable>
     </View>
     <View style={s.progressRow}><Text testID="training-set-progress" style={s.progressText}>{done} / {all.length} 组</Text>
       <View style={s.segments}>{Array.from({ length: Math.min(12, all.length) }, (_, index) => <View key={index} style={[s.segment, (index + 1) / Math.min(12, all.length) <= done / Math.max(1, all.length) && s.segmentDone]} />)}</View>
@@ -102,7 +113,7 @@ export function TrainingCockpit(p: Props) {
         {!allCurrentDone && active ? <>
           <Text style={s.actualLabel}>实际{current.targetUnit === 'reps' ? '次数' : current.targetUnit === 'seconds' ? '保持时长' : current.targetUnit === 'meters' ? '距离' : '步数'}</Text>
           <View style={s.counter}><Pressable accessibilityRole="button" accessibilityLabel="减少实际数量" disabled={p.saving} onPress={() => changeValue(-1)} style={s.stepper}><Text style={s.stepperText}>−</Text></Pressable>
-            <View style={s.counterValue}><TextInput testID="training-actual-input" accessibilityLabel={`第${p.activeSet + 1}组${unit}`} editable={!p.saving} value={active.reps} placeholder="—" placeholderTextColor={c.muted} onChangeText={value => p.onEdit(p.activeSet, 'reps', value)} keyboardType={current.targetUnit === 'meters' ? 'decimal-pad' : 'number-pad'} selectTextOnFocus style={s.largeInput} /><Text style={s.unit}>{unit}</Text></View>
+            <View style={s.counterValue}><TextInput testID="training-actual-input" accessibilityLabel={`第${p.activeSet + 1}组${unit}`} editable={!p.saving} value={active.reps} placeholder="—" placeholderTextColor={c.muted} onFocus={() => setEditingCount(true)} onBlur={() => setEditingCount(false)} onChangeText={value => p.onEdit(p.activeSet, 'reps', value)} keyboardType={current.targetUnit === 'meters' ? 'decimal-pad' : 'number-pad'} selectTextOnFocus style={s.largeInput} /><Text style={s.unit}>{unit}</Text></View>
             <Pressable accessibilityRole="button" accessibilityLabel="增加实际数量" disabled={p.saving} onPress={() => changeValue(1)} style={s.stepper}><Text style={s.stepperText}>＋</Text></Pressable>
           </View><Text style={s.target}>本组目标 {target} {unit}{current.perSide ? ' / 侧' : ''}</Text>
           {equipment ? <View style={s.equipmentFields}>{current.loadBasis !== 'bodyweight' ? <View style={s.field}><Text style={s.muted}>重量 / kg</Text><TextInput accessibilityLabel={`第${p.activeSet + 1}组重量kg`} editable={!p.saving} value={active.load || ''} placeholder="待填" placeholderTextColor={c.muted} onChangeText={value => p.onEdit(p.activeSet, 'load', value)} keyboardType="decimal-pad" style={s.smallInput} /></View> : null}<View style={s.field}><Text style={s.muted}>余力 / 选填</Text><TextInput accessibilityLabel={`第${p.activeSet + 1}组实际余力`} editable={!p.saving} value={active.rir || ''} placeholder="—" placeholderTextColor={c.muted} onChangeText={value => p.onEdit(p.activeSet, 'rir', value)} keyboardType="number-pad" style={s.smallInput} /></View></View> : null}
@@ -116,9 +127,11 @@ export function TrainingCockpit(p: Props) {
     </ScrollView>
     <View style={s.footer}>
       {p.error ? <Text accessibilityRole="alert" style={s.error}>{p.error}</Text> : null}
+      {voice.error ? <Text accessibilityRole="alert" style={s.error}>{voice.error}</Text> : null}
       {rest ? <View style={s.restControls}><Pressable accessibilityRole="button" disabled={p.saving} onPress={p.onPause} style={s.restButton}><Text style={s.controlText}>{p.paused ? '继续' : '暂停'}</Text></Pressable>{p.timerKind !== 'hold' ? <Pressable accessibilityRole="button" disabled={p.saving} onPress={p.onExtend} style={s.restButton}><Text style={s.controlText}>+30 秒</Text></Pressable> : null}</View> : <View style={s.footerMeta}><Pressable accessibilityRole="button" accessibilityLabel="手动开始组间休息" disabled={p.saving} onPress={p.onStartRest} style={s.metaButton}><Text style={s.muted}>休息 {clock(current.restSeconds)} ↗</Text></Pressable><Pressable accessibilityRole="button" disabled={p.saving} accessibilityLabel="切换到下一个动作" onPress={() => next ? p.onExercise(p.items.indexOf(next)) : setShowExercises(true)} style={s.metaButton}><Text numberOfLines={1} style={s.muted}>接下来 {next?.name || '结束训练'} →</Text></Pressable></View>}
       <Pressable testID="training-primary" accessibilityRole="button" accessibilityLabel={primaryLabel} accessibilityState={{ disabled: p.saving }} disabled={p.saving} onPress={primary} style={[s.primary, p.saving && s.disabled]}><Text style={s.primaryText}>{p.saving ? '保存中…' : primaryLabel}</Text></Pressable>
     </View>
+    <TrainingVoiceSettings visible={showSettings} interval={voice.interval} onChange={voice.changeInterval} onClose={() => setShowSettings(false)} />
     <Modal transparent visible={showExercises || showRecords} animationType="fade" onRequestClose={() => { setShowExercises(false); setShowRecords(false); }}>
       <KeyboardAvoidingView style={s.shade} behavior={Platform.OS === 'ios' ? 'padding' : undefined}><View style={s.sheet}>
         <View style={s.sheetHead}><Text style={s.sheetTitle}>{showRecords ? `${current.name} · 组记录` : '切换动作'}</Text><Pressable accessibilityRole="button" accessibilityLabel="关闭训练记录面板" onPress={() => { setShowExercises(false); setShowRecords(false); }} style={s.icon}><Text style={s.controlText}>×</Text></Pressable></View>
@@ -131,6 +144,7 @@ export function TrainingCockpit(p: Props) {
 }
 
 const s = StyleSheet.create({
+  voiceIcon: { width: 44, height: 48, alignItems: 'center', justifyContent: 'center' },
   root: { flex: 1 }, header: { width: '100%', maxWidth: 440, alignSelf: 'center', flexDirection: 'row', alignItems: 'center', paddingHorizontal: 10, height: 60 }, icon: { minWidth: 48, minHeight: 48, alignItems: 'center', justifyContent: 'center' }, title: { flex: 1, color: c.ink, fontSize: 18, fontWeight: '800', textAlign: 'center' }, end: { color: c.ink, fontSize: 14, fontWeight: '700' },
   progressRow: { width: '100%', maxWidth: 440, paddingHorizontal: 20, alignSelf: 'center', flexDirection: 'row', alignItems: 'center', gap: 12, paddingBottom: 4 }, progressText: { color: c.ink, fontSize: 13, fontWeight: '700' }, elapsed: { color: c.muted, fontSize: 13, fontVariant: ['tabular-nums'] }, segments: { flex: 1, flexDirection: 'row', gap: 3 }, segment: { flex: 1, height: 5, borderRadius: 3, backgroundColor: c.line }, segmentDone: { backgroundColor: c.lime },
   content: { width: '100%', maxWidth: 440, alignSelf: 'center', paddingHorizontal: 20, paddingBottom: 16 }, warmup: { minHeight: 40, justifyContent: 'center', alignSelf: 'flex-start' }, muted: { color: c.muted, fontSize: 12, lineHeight: 19 }, lime: { color: c.lime, fontSize: 15, fontWeight: '700' },

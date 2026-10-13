@@ -1,0 +1,70 @@
+const test = require('node:test'), assert = require('node:assert/strict'), fs = require('node:fs'), path = require('node:path');
+require('./lib/register-typescript.cjs')();
+const read = file => fs.readFileSync(path.join(__dirname, '..', file), 'utf8');
+const native = file => read(`modules/uncover-music/android/src/main/java/uncover/music/${file}.kt`);
+test('background mode reuses model tools without keyword routes or added privileged model APIs', async () => {
+  const { musicTools, musicSystemInstruction } = await import('../src/music/modelTools.mjs');
+  assert.match(musicSystemInstruction, /executionMode=background/);
+  assert.match(musicSystemInstruction, /不擅自关闭后台模式/);
+  assert.equal(musicTools.some(tool => /shell|display|permission/.test(tool.function.name)), false);
+  assert.doesNotMatch(read('src/music/agentRuntime.ts'), /shizuku|backgroundConsent|permission\(/);
+});
+test('background observation and actions cannot fall back to the main display', () => {
+  const service = native('MusicAccessibilityService');
+  const branch = service.slice(service.indexOf('if (MusicBackground.enabled(this))'), service.indexOf('val node = foregroundRoot()'));
+  assert.match(branch, /windowsOnAllDisplays.get\(displayId\)/);
+  assert.match(branch, /window.displayId/);
+  assert.match(branch, /return node/);
+  assert.doesNotMatch(branch, /foregroundRoot\(\)|rootInActiveWindow\s*\?:|performGlobalAction\(/);
+  assert.match(service, /snapshot.displayId != displayId/);
+  assert.match(service, /if \(displayId > 0\) return MusicBackground.tap/);
+  assert.match(native('UncoverMusicModule'), /!MusicBackground.enabled\(context\).*isMusicForeground/);
+});
+test('privileged helper only has fixed music, input and cleanup operations, not arbitrary code execution', () => {
+  const protocol = native('IMusicDisplay');
+  assert.doesNotMatch(protocol, /\bIntent\b|shell\(|execute\(|displayId\s*[,)]/);
+  assert.match(protocol, /data.enforceInterface\(DESCRIPTOR\)/);
+  assert.match(protocol, /data.dataAvail\(\) == 0/);
+  const helper = native('MusicDisplayService');
+  assert.match(helper, /Binder.getCallingUid\(\) != ownerUid/);
+  assert.match(helper, /MusicController.prepareOpen\(shell, provider, command\)/);
+  assert.match(helper, /MusicDisplayPolicy.requireDisplay/);
+  assert.match(helper, /"setDisplayId"/);
+  assert.match(helper, /"setDisplayImePolicy".*2\)/);
+  assert.match(helper, /reader.setOnImageAvailableListener/);
+  assert.doesNotMatch(helper, /ALWAYS_UNLOCKED|Runtime.getRuntime|ProcessBuilder|SYSTEM_ALERT_WINDOW/);
+  assert.match(helper, /oldDisplay\?\.release\(\)/);
+  assert.match(native('MusicBackground'), /isKeyguardLocked/);
+});
+test('Shizuku stays opt-in, user-authorized, revocable and separated from default provider settings', () => {
+  const ui = read('src/music/MusicSettings.tsx'), transport = read('src/music/transport.ts');
+  assert.match(ui, /confirmAction\('启用不切换页面的后台点歌/);
+  assert.match(ui, /后台不可用时不切换主屏/);
+  assert.match(ui, /musicTransport.backgroundConsent\(false\)/);
+  assert.match(transport, /backgroundConsent: fail/);
+  assert.match(native('MusicBackground'), /Shizuku.requestPermission/);
+  assert.match(native('MusicBackground'), /background_consent_required/);
+  assert.match(native('UncoverMusicModule'), /MusicBackground.close\(\)/);
+  const manifest = read('modules/uncover-music/android/src/main/AndroidManifest.xml');
+  assert.match(manifest, /android:permission="android.permission.INTERACT_ACROSS_USERS_FULL"/);
+  assert.doesNotMatch(manifest, /SYSTEM_ALERT_WINDOW|WRITE_SECURE_SETTINGS|QUERY_ALL_PACKAGES/);
+});
+test('shell launch never passes a normal app Context/thread or ignores the ActivityTaskManager result', () => {
+  const service = native('MusicDisplayService'), launcher = native('MusicActivityLauncher'), policy = native('MusicLaunchPolicy');
+  assert.doesNotMatch(service, /shell\.startActivity\(/);
+  assert.match(service, /MusicActivityLauncher.start\(provider, intent, id, ownerUid\)/);
+  assert.match(launcher, /"activity_task"/); assert.match(launcher, /"startActivityAsUser"/);
+  assert.match(launcher, /setLaunchDisplayId\(displayId\)/);
+  assert.match(policy, /mutableListOf<Any\?>\(null, "com.android.shell", null\)/);
+  assert.match(policy, /ownerUid \/ 100_000/);
+  assert.match(launcher, /MusicLaunchPolicy.accepted\(result\)/);
+  assert.doesNotMatch(launcher, /startActivityAsCaller|ignoreTargetSecurity|setLaunchDisplayId\(0\)|startActivity\(/);
+});
+test('background failures preserve the raw stage and caller diagnostics instead of asking for unrelated permissions', () => {
+  const service = native('MusicDisplayService'), client = native('MusicBackground'), module = native('UncoverMusicModule');
+  assert.match(service, /"activity_launch_failed"/); assert.match(service, /"virtual_display_failed"/);
+  for (const field of ['stage', 'processUid', 'ownerUid', 'callingPackage', 'platformMessage', 'exception']) assert.ok(service.includes(`.put("${field}"`));
+  assert.match(client, /lastFailure = result/); assert.match(client, /虚拟屏幕释放只是后续结果/);
+  assert.match(module, /\.put\("diagnostics", \(error as\? MusicFailure\)\?\.details/);
+  assert.match(client, /\.version\(2\)/, 'Shizuku must replace a cached v1 helper after APK update');
+});

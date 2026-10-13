@@ -7,11 +7,6 @@ export const styles = StyleSheet.create({
   actionTitle: { color: colors.ink, fontSize: 22, fontWeight: '800' },
   close: { width: 48, height: 48, justifyContent: 'center', alignItems: 'center' },
   note: { color: colors.inkMuted, fontSize: 12, lineHeight: 19, marginTop: 3 },
-  eyebrow: { color: colors.lime, fontSize: 12, fontWeight: '700', marginBottom: 4 },
-  linkText: { color: colors.green, fontSize: 12, fontWeight: '700' },
-  secondaryText: { color: colors.ink, fontSize: 14, fontWeight: '800' },
-  helper: { color: colors.inkMuted, fontSize: 12, lineHeight: 19, marginVertical: 12 },
-  cooldownLink: { minHeight: 48, justifyContent: 'center', alignItems: 'center' },
   shade: {
     flex: 1,
     alignItems: 'center',
@@ -34,15 +29,4 @@ export const styles = StyleSheet.create({
   modalClose: { color: colors.inkMuted, fontSize: 28 },
   guideContent: { paddingHorizontal: 16, paddingBottom: 20 },
   modalFoot: { padding: 16 },
-  qualitySheet: { padding: 16 },
-  qualityOption: {
-    backgroundColor: colors.card,
-    borderWidth: 1,
-    borderColor: colors.line,
-    borderRadius: 14,
-    padding: 14,
-    marginTop: 9,
-  },
-  qualityPain: { backgroundColor: '#302322' },
-  criteria: { padding: 12, borderWidth: 1, borderColor: colors.line, borderRadius: 12 },
 });

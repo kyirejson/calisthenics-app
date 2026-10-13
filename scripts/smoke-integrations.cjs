@@ -52,7 +52,7 @@ const { chromium } = require(process.env.PLAYWRIGHT_PATH || 'playwright');
       await page.getByText('你好，司令。', { exact: true }).nth(1).waitFor();
       assert.deepEqual(chatRequests[0].messages.filter(m=>m.role!=='system'), [{ role: 'user', content: '叫我司令' }]);
       assert.deepEqual(chatRequests[1].messages.filter(m=>m.role!=='system'), [{ role: 'user', content: '叫我司令' }, { role: 'assistant', content: '你好，司令。' }, { role: 'user', content: '我叫什么？' }]);
-      assert.ok(chatRequests.every(r => r.tools.length===9));
+      assert.ok(chatRequests.every(r => r.tools.some(tool => tool.function.name === 'read_music_settings') && r.tools.some(tool => tool.function.name === 'update_memory')));
       await page.getByRole('button', { name: '关闭 DeepSeek 聊天', exact: true }).click();
       await page.getByRole('tab', { name: '切换到今日', exact: true }).click();
       const floating = page.getByRole('button', { name: '打开 DeepSeek 聊天', exact: true });

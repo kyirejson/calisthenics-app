@@ -12,7 +12,6 @@ async function finish(page, actual) {
     const label = await primary.innerText();
     if (label === '保存训练') {
       await primary.click();
-      await page.getByRole('button', { name: '按动作稳定保存训练', exact: true }).click();
       const summary = page.getByTestId(/^training-day-summary-/);
       await summary.waitFor();
       assert.equal(await page.getByTestId(/^training-day-chart-/).count(), 0, 'Saving does not force history open');
@@ -68,7 +67,6 @@ async function finish(page, actual) {
     await page.getByRole('button', { name: '结束休息', exact: true }).click();
     await page.getByRole('button', { name: '结束训练', exact: true }).click();
     await page.getByRole('button', { name: '记录已完成组', exact: true }).click();
-    await page.getByRole('button', { name: '按动作稳定保存训练', exact: true }).click();
     await page.getByTestId(/^training-day-summary-/).waitFor();
     await page.getByRole('button', { name: /^展开.*训练历史$/ }).click();
     assert.match(await page.getByTestId('performance-tooltip').innerText(), new RegExp(`\\b${total + 5} 次`));

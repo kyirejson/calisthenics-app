@@ -1,0 +1,8 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+  <application>
+    <!-- ADB-only diagnostic entry. This receiver is never part of a release build. -->
+    <receiver android:name="uncover.music.MusicQaReceiver" android:exported="true" android:permission="android.permission.DUMP">
+      <intent-filter><action android:name="uncover.music.QA" /></intent-filter>
+    </receiver>
+  </application>
+</manifest>

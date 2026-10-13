@@ -1,0 +1,10 @@
+<accessibility-service xmlns:android="http://schemas.android.com/apk/res/android"
+  android:accessibilityEventTypes="typeAllMask"
+  android:packageNames="com.netease.cloudmusic,com.tencent.qqmusic"
+  android:accessibilityFeedbackType="feedbackGeneric"
+  android:accessibilityFlags="flagReportViewIds|flagRetrieveInteractiveWindows"
+  android:canRetrieveWindowContent="true"
+  android:canPerformGestures="true"
+  android:isAccessibilityTool="false"
+  android:notificationTimeout="100"
+  android:description="@string/uncover_music_service_description" />

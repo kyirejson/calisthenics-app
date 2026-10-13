@@ -18,6 +18,7 @@ import { referencedPhotoIds } from '../nutrition/photoMetadata';
 import { localWeightDate } from '../domain/weight/weightTrend';
 import { storageKeys as keys, type DomainContext } from './contracts';
 import { createWriteQueue } from './writeQueue';
+import { applyMealOperations, type MealWriteResult } from '../nutrition/mealOperations';
 export function createNutritionDomain(
   context: DomainContext,
   drainInputs: () => Promise<unknown>,
@@ -60,6 +61,16 @@ export function createNutritionDomain(
       saveNutritionPreferences: (preferences: NutritionPreferences) =>
         update((current) => withNutritionPreferences(current, preferences)),
       saveIntakeEntry: (input: IntakeInput) => update((current) => withIntakeEntry(current, input)),
+      applyMealOperations: async (input: unknown, requestId: string, signal?: AbortSignal) => {
+        let result: MealWriteResult | undefined;
+        await update(current => {
+          if (signal?.aborted) throw Error('请求已取消。');
+          const applied = applyMealOperations(current, input, requestId);
+          result = applied.result;
+          return applied.journal;
+        });
+        return result!;
+      },
       deleteIntakeEntry: (id: string) => update((current) => withoutIntakeEntry(current, id)),
       saveCustomFood: (food: Food) => update((current) => withCustomFood(current, food)),
       deleteCustomFood: (id: string) => update((current) => withoutCustomFood(current, id)),

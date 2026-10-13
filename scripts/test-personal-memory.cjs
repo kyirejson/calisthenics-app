@@ -27,9 +27,9 @@ test('missing memory initializes once without overwriting empty or existing file
  value='';assert.equal(await readOrInitializeMemory('档案'),'');assert.equal(writes,1);
 });
 test('tool loop supplies actual results and errors to model before final answer',async()=>{
- const {personalChat}=await import('../src/integrations/personalTools.mjs');let round=0;
+ const {personalChat,personalTools}=await import('../src/integrations/personalTools.mjs');let round=0;
  const output=await personalChat({memory:'称呼：司令',date:'2026-10-06',messages:[{role:'user',content:'看看今天'}],execute:async(name)=>{if(name==='bad')throw Error('失败');return {ok:true,entries:[]};},client:{generate:async(messages,options)=>{
-  assert.equal(options.tools.length,9);
+  assert.equal(options.tools.length,personalTools.length);
   if(round++===0)return {role:'assistant',content:null,tool_calls:[{id:'a',type:'function',function:{name:'read_today_meals',arguments:'{}'}},{id:'b',type:'function',function:{name:'bad',arguments:'{}'}}]};
   assert.equal(JSON.parse(messages.at(-2).content).ok,true);assert.equal(JSON.parse(messages.at(-1).content).ok,false);return {content:'没有饮食记录。'};
  }}});assert.equal(output,'没有饮食记录。');

@@ -17,14 +17,18 @@ import {
 import { normalizeBodyMetrics } from '../nutrition/profileBody';
 import { captureTrainingTopic } from '../domain/training/trainingTopicProfiles';
 import { exercises } from '../domain/training/catalog';
+import { normalizeCountInterval } from '../domain/training/voiceCounter';
+import { normalizeMusicPreferences } from '../music/preferences';
 
-export const defaultSettings: Settings = { vibration: true, restSeconds: 120 };
+export const defaultSettings: Settings = { vibration: true, restSeconds: 120, voiceCountInterval: 5, music: normalizeMusicPreferences(undefined) };
 const exerciseIds = new Set(exercises.map((exercise) => exercise.id));
 
 export function normalizeSettings(raw: Partial<Settings> & Record<string, unknown>): Settings {
   const restSeconds = Number(raw.restSeconds);
   return {
     vibration: raw.vibration !== false,
+    voiceCountInterval: normalizeCountInterval(raw.voiceCountInterval),
+    music: normalizeMusicPreferences(raw.music),
     restSeconds: Number.isFinite(restSeconds)
       ? Math.max(15, Math.min(300, Math.round(restSeconds)))
       : defaultSettings.restSeconds,

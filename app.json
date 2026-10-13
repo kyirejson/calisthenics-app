@@ -2,7 +2,7 @@
   "expo": {
     "name": "Uncover",
     "slug": "uncover",
-    "version": "1.7.10",
+    "version": "1.7.11",
     "orientation": "portrait",
     "icon": "./assets/app-icon.png",
     "userInterfaceStyle": "light",
@@ -14,16 +14,17 @@
       }
     },
     "plugins": [
-      "expo-secure-store"
+      "expo-secure-store",
+      "./modules/uncover-music/plugin.cjs"
     ],
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.zizhong.jinjie",
-      "buildNumber": "19"
+      "buildNumber": "20"
     },
     "android": {
       "package": "com.zizhong.jinjie",
-      "versionCode": 19,
+      "versionCode": 20,
       "blockedPermissions": [
         "android.permission.CAMERA"
       ],

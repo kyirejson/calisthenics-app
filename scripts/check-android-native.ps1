@@ -5,7 +5,7 @@ param(
   [string]$NodeExecutable,
   [string]$ProjectRoot,
   [string]$BuildToolsRoot = 'D:/UncoverBuildTools',
-  [ValidateSet('Native', 'DebugApk', 'ModuleTests', 'VerifiedApk')][string]$Target = 'Native'
+  [ValidateSet('Native', 'DebugApk', 'ModuleTests', 'VerifiedApk', 'StandaloneQaApk')][string]$Target = 'Native'
 )
 
 $ErrorActionPreference = 'Stop'
@@ -55,21 +55,43 @@ try {
   Write-Host $buildJavaVersion.Trim()
   Push-Location (Join-Path $buildRepoPath 'android')
   try {
-    $buildGradleTask = if ($Target -eq 'VerifiedApk') { @(':uncover-running:testDebugUnitTest', ':app:assembleDebug') } elseif ($Target -eq 'DebugApk') { ':app:assembleDebug' } elseif ($Target -eq 'ModuleTests') { ':uncover-running:testDebugUnitTest' } else { ':app:compileDebugKotlin' }
+    $buildModuleTests = @(':uncover-running:testDebugUnitTest', ':uncover-music:testDebugUnitTest')
+    if ($Target -eq 'StandaloneQaApk') {
+      $buildQaGradle = Get-Content -LiteralPath (Join-Path $buildRepoPath 'android/app/build.gradle') -Raw
+      # A local test package must never overwrite the production app or use its signing key.
+      if ($buildQaGradle -notmatch 'release\s*\{\s*applicationIdSuffix\s+["'']\.musicqa["'']' -or
+          $buildQaGradle -notmatch '(?s)release\s*\{[^}]*signingConfig\s+signingConfigs\.debug') {
+        throw 'StandaloneQaApk requires an isolated snapshot with release applicationIdSuffix ".musicqa" and the local debug signer.'
+      }
+      if (!$buildQaGradle.Contains('// Uncover: track model/tool ES modules in native JS bundle inputs.')) {
+        throw 'Run Expo prebuild with the music config plugin first: .mjs/.cjs changes must invalidate the embedded JS bundle.'
+      }
+    }
+    $buildGradleTask = if ($Target -eq 'StandaloneQaApk') { $buildModuleTests + ':app:assembleRelease' } elseif ($Target -eq 'VerifiedApk') { $buildModuleTests + ':app:assembleDebug' } elseif ($Target -eq 'DebugApk') { ':app:assembleDebug' } elseif ($Target -eq 'ModuleTests') { $buildModuleTests } else { ':app:compileDebugKotlin' }
     # UTF-8 fixes Kotlin/Node path decoding, but C++ still needs an ASCII build snapshot.
-    if ($Target -in @('DebugApk', 'ModuleTests', 'VerifiedApk') -and $buildRepoPath -match '[^\x00-\x7F]') {
+    if ($Target -in @('DebugApk', 'ModuleTests', 'VerifiedApk', 'StandaloneQaApk') -and $buildRepoPath -match '[^\x00-\x7F]') {
       throw 'Windows C++ builds and JVM test workers require an ASCII-path snapshot. Pass -ProjectRoot with that snapshot; do not move the original repository.'
     }
     $buildGradleArgs = @('-Dfile.encoding=UTF-8')
     if ($buildRepoPath -match '[^\x00-\x7F]') { $buildGradleArgs += '-Pandroid.overridePathCheck=true' }
     & ./gradlew.bat @buildGradleArgs $buildGradleTask --no-daemon --console=plain
     if ($LASTEXITCODE -ne 0) { throw "Android build failed with exit code $LASTEXITCODE. See Gradle output above." }
-    if ($Target -in @('DebugApk', 'VerifiedApk')) {
-      $buildApkPath = Join-Path $buildRepoPath 'android/app/build/outputs/apk/debug/app-debug.apk'
+    if ($Target -in @('DebugApk', 'VerifiedApk', 'StandaloneQaApk')) {
+      $buildApkRelative = if ($Target -eq 'StandaloneQaApk') { 'android/app/build/outputs/apk/release/app-release.apk' } else { 'android/app/build/outputs/apk/debug/app-debug.apk' }
+      $buildApkPath = Join-Path $buildRepoPath $buildApkRelative
       if (!(Test-Path -LiteralPath $buildApkPath -PathType Leaf)) { throw 'Gradle finished without the expected debug APK.' }
       $buildBundlePath = Join-Path $buildRepoPath 'android/app/src/main/assets/index.android.bundle'
       $buildJsMode = if (Test-Path -LiteralPath $buildBundlePath) { 'embedded JS' } else { 'requires Metro' }
-      Write-Host "Debug APK: $buildApkPath ($buildJsMode; local debug signer, not a production release)"
+      if ($Target -eq 'StandaloneQaApk') {
+        $buildAapt = Get-ChildItem -LiteralPath (Join-Path $env:ANDROID_HOME 'build-tools') -Filter 'aapt2.exe' -Recurse |
+          Sort-Object FullName -Descending | Select-Object -First 1 -ExpandProperty FullName
+        if (!$buildAapt) { throw 'aapt2 is required to verify the isolated package.' }
+        $buildBadging = & $buildAapt dump badging $buildApkPath | Out-String
+        if ($LASTEXITCODE -ne 0 -or $buildBadging -notmatch "package: name='com\.zizhong\.jinjie\.musicqa'") { throw 'Unexpected QA APK application ID.' }
+        Write-Host "Standalone QA APK: $buildApkPath (bundled JS; local debug signer; independent .musicqa package; not a production release)"
+      } else {
+        Write-Host "Debug APK: $buildApkPath ($buildJsMode; local debug signer, not a production release)"
+      }
     }
   } finally { Pop-Location }
 } finally {

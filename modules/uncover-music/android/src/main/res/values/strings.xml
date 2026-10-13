@@ -1,0 +1,5 @@
+<resources>
+  <string name="uncover_music_service_name">Uncover 音乐界面控制</string>
+  <string name="uncover_music_playback_name">Uncover 音乐播放状态</string>
+  <string name="uncover_music_service_description">仅在你要求播放音乐时，读取和操作网易云音乐、QQ音乐的界面。必要的界面文字会发送给你配置的大模型，用于搜索、选择歌单及播放。默认关闭，不读取密码，不自动登录、购买或更改系统权限；可随时关闭。</string>
+</resources>
