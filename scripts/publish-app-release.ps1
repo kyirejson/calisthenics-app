@@ -1,4 +1,8 @@
-param([Parameter(Mandatory=$true)][string]$BuildId, [switch]$VerifyOnly)
+param(
+  [Parameter(Mandatory=$true, ParameterSetName='Cloud')][string]$BuildId,
+  [Parameter(Mandatory=$true, ParameterSetName='Local')][string]$LocalApk,
+  [switch]$VerifyOnly
+)
 $ErrorActionPreference = 'Stop'
 $publishRoot = Split-Path -Parent $PSScriptRoot
 $releaseConfig = ([IO.File]::ReadAllText((Join-Path $publishRoot 'app.json')) | ConvertFrom-Json).expo
@@ -48,6 +52,7 @@ function Read-ReleaseBuild {
     return $queryOutput | ConvertFrom-Json
   } finally { $queryProcess.Dispose() }
 }
+if (!$LocalApk) {
 for ($attempt=0; $attempt -lt 40; $attempt++) {
   $build = Read-ReleaseBuild
   if (!$build) {
@@ -66,8 +71,16 @@ $artifactUri = [uri]$build.artifacts.applicationArchiveUrl
 if ($artifactUri.Scheme -ne 'https' -or $artifactUri.Host -ne 'expo.dev') { throw 'Unexpected artifact URL' }
 $apk = Join-Path 'D:/UncoverBuildTools/temp' $releaseAssetName
 Get-ReleaseApk $artifactUri.AbsoluteUri $apk -Resume
+} else {
+  $apk = [IO.Path]::GetFullPath($LocalApk)
+  $expectedLocalApk = [IO.Path]::GetFullPath((Join-Path 'D:/UncoverBuildTools/temp' $releaseAssetName))
+  if ($apk -ne $expectedLocalApk -or !(Test-Path -LiteralPath $apk -PathType Leaf)) { throw 'Unexpected local production APK path' }
+  $localProof = [IO.File]::ReadAllText($apk + '.verification.json') | ConvertFrom-Json
+  if (!$localProof.localBuild -or $localProof.appVersion -ne $releaseVersion -or [string]$localProof.versionCode -ne $releaseCode -or $localProof.bytes -ne (Get-Item -LiteralPath $apk).Length) { throw 'Local production build proof mismatch' }
+}
 $apkInfo = (& $publishNode (Join-Path $publishRoot 'scripts/inspect-apk-certificate.cjs') $apk | Out-String) | ConvertFrom-Json
 if ($LASTEXITCODE -ne 0) { throw 'Certificate extraction failed' }
+if ($LocalApk -and ($localProof.sha256 -ne $apkInfo.sha256 -or $localProof.signer -ne $apkInfo.certificates[0].sha256)) { throw 'Local APK integrity proof mismatch' }
 $previous = Invoke-RestMethod -Uri 'https://api.github.com/repos/kyirejson/calisthenics-app/releases/latest'
 $previousApk = $previous.assets | Where-Object { $_.name -like '*.apk' } | Select-Object -First 1
 if (!$previousApk) { throw 'No previous release APK for signature comparison' }
@@ -116,7 +129,10 @@ $api = 'https://api.github.com/repos/kyirejson/calisthenics-app/releases'
 $body = [IO.File]::ReadAllText((Join-Path $publishRoot 'RELEASE-NOTES.md')) + "`n`nAPK SHA-256: " + $apkInfo.sha256 + "`nSigner verified against " + $previous.tag_name + "."
 $releaseCommit = (git -C $publishRoot rev-parse HEAD).Trim()
 if ($LASTEXITCODE -ne 0 -or $releaseCommit -notmatch '^[a-f0-9]{40}$') { throw 'Unable to resolve release source commit' }
-if ($build.gitCommitHash -ne $releaseCommit) { throw 'Build source differs from the release source commit; publication stopped' }
+if ($LocalApk) {
+  if ($localProof.sourceCommit -ne $releaseCommit) { throw 'Local build source differs from release source; publication stopped' }
+  $body += "`nLocally built production APK using the existing EAS signing key; cloud free-build quota was exhausted."
+} elseif ($build.gitCommitHash -ne $releaseCommit) { throw 'Build source differs from the release source commit; publication stopped' }
 $remoteCommit = (git -C $publishRoot ls-remote origin refs/heads/main).Split()[0]
 if ($LASTEXITCODE -ne 0 -or $remoteCommit -ne $releaseCommit) { throw 'Release source must be synchronized to main before publication' }
 $data = @{tag_name=$releaseTag;target_commitish=$releaseCommit;name=('Uncover ' + $releaseTag);body=$body;draft=$true;prerelease=$false} | ConvertTo-Json
