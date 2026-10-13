@@ -11,9 +11,11 @@ const checkpoint = 'D:/UncoverBuildTools/temp/running-native-qa/upgrade-checkpoi
   adb('shell', 'am', 'force-stop', 'com.zizhong.jinjie');
   adb('shell', 'am', 'start', '-n', 'com.zizhong.jinjie/.MainActivity');
   await waitFor(/切换到今日/);
-  // The upgrade crosses the migration from the running-history modal to My.
+  // Support both sides of the history migration, including future My-to-My upgrades.
+  await tap('切换到今日'); await tap('切换到跑步');
+  const legacyHistory = dump().includes('content-desc="查看跑步记录"');
   let migratedIds = [];
-  if (stage === 'before') { await tap('切换到今日'); await tap('切换到跑步'); await tap('查看跑步记录'); }
+  if (legacyHistory) await tap('查看跑步记录');
   else {
     await tap('切换到我的');
     for (let attempt = 0; attempt < 12; attempt++) {
@@ -30,11 +32,11 @@ const checkpoint = 'D:/UncoverBuildTools/temp/running-native-qa/upgrade-checkpoi
     }
   }
   await waitFor(/2.50/);
-  const ids = stage === 'before' ? [...dump().matchAll(/content-desc="(?:展开|收起)跑步记录([^"]+)"/g)].map(match => match[1]).sort() : [...new Set(migratedIds)].sort();
+  const ids = legacyHistory ? [...dump().matchAll(/content-desc="(?:展开|收起)跑步记录([^"]+)"/g)].map(match => match[1]).sort() : [...new Set(migratedIds)].sort();
   assert.ok(ids.length > 0, 'Known signed-APK training fixtures must exist before testing an upgrade');
   if (stage === 'before') fs.writeFileSync(checkpoint, JSON.stringify({ ids }));
   else assert.deepEqual(ids, JSON.parse(fs.readFileSync(checkpoint, 'utf8')).ids, 'Updating must preserve all existing run record IDs');
-  screenshot('upgrade-' + stage + '-history'); await tap(stage === 'before' ? '关闭跑步记录' : '关闭全部训练历史');
+  screenshot('upgrade-' + stage + '-history'); await tap(legacyHistory ? '关闭跑步记录' : '关闭全部训练历史');
   await tap('切换到我的');
   const expected = stage === 'before' ? process.env.UPGRADE_FROM_VERSION || '1.7.8' : require('../app.json').expo.version;
   await waitFor(new RegExp(expected.replace(/\./g, '\\.')));
