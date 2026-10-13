@@ -46,7 +46,7 @@ const normalize = value => value?.replace(/:/g, '').toLowerCase();
     stage = 'restrict temporary key access';
     const sid = command('whoami.exe', ['/user', '/fo', 'csv', '/nh']).match(/S-1-\d+(?:-\d+)+/)?.[0];
     assert.ok(sid);
-    command('icacls.exe', [keyDirectory, '/inheritance:r', '/grant:r', sid + ':(OI)(CI)F']);
+    command('icacls.exe', [keyDirectory, '/inheritance:r', '/grant:r', '*' + sid + ':(OI)(CI)F']);
     fs.writeFileSync(keyFile, Buffer.from(key.keystore, 'base64'), { flag: 'wx', mode: 0o600 });
     stage = 'sign local production APK';
     const java = path.join(buildRoot, 'java17/jdk-17.0.20.1+1/bin/java.exe');
