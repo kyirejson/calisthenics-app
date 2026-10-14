@@ -26,7 +26,7 @@ export function VoiceSettings() {
     <View style={s.row}><View style={{ flex: 1 }}><Text style={s.title}>BLACK · 语音唤醒</Text><Text style={s.small}>{state?.phase === 'starting' ? '正在准备本地语音' : state?.running ? '监听中' : state?.enabled ? '监听已开启，服务未运行' : '尚未开启'}</Text></View><Switch accessibilityLabel="BLACK 语音唤醒" value={state?.enabled ?? false} disabled={busy || Platform.OS !== 'android'} onValueChange={consent} trackColor={{ false: c.border, true: c.lime }} /></View>
     <Text style={s.small}>喊「BLACK」→「我在」→ 直接对话。语音和文字使用同一个 Agent，支持原有音乐、饮食和训练工具。</Text>
     <Pressable accessibilityRole="button" accessibilityLabel="设置 BLACK 为默认语音助手" disabled={busy || Platform.OS !== 'android'} style={s.button} onPress={() => { void voiceTransport.assistant().catch(e => setError(e.message)); }}><Text style={s.link}>{state?.assistant ? '已选为默认助手' : '设置为默认语音助手'} ›</Text></Pressable>
-    <Text style={s.small}>默认助手用于系统恢复监听；是否能在停止后恢复取决于系统。关闭麦克风、主动停止监听、首次解锁前不能唤醒。不会自动修改系统设置。</Text>
+    <Text style={s.small}>在系统的数字助手设置中选择 Uncover，会替换原默认助手。该入口用于系统恢复监听，停止后是否恢复取决于系统。关闭麦克风、主动停止监听、首次解锁前不能唤醒；不会自动修改系统设置。</Text>
     {error || state?.error ? <Text accessibilityRole="alert" style={s.warning}>{error || state?.message}</Text> : null}
   </View>;
 }

@@ -63,6 +63,10 @@ Kokoro weights or Python runtime are shipped.
 - Actual APK inspection verified headless/native classes, fused music tools,
   all four voice ABIs, model and acknowledgement hashes, and bundled licenses.
   This is artifact verification, not physical microphone/ColorOS acceptance.
+- The first signed candidate's emulator check found that requesting the assistant
+  role produces no picker: AOSP marks that role `requestable=false`. The entry was
+  corrected to public voice/default-app Settings, where the user selects Uncover.
+  No silent role grants or qualification bypass are used in the application.
 
 References:
 

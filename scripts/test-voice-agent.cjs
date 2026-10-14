@@ -49,6 +49,8 @@ test('wake uses local BLACK phonemes and packaged acknowledgement; microphone re
   const manifest = read('modules/uncover-voice/android/src/main/AndroidManifest.xml'), module = read('modules/uncover-voice/android/src/main/java/uncover/voice/UncoverVoiceModule.kt');
   assert.match(manifest, /FOREGROUND_SERVICE_MICROPHONE/); assert.match(manifest, /BIND_VOICE_INTERACTION/); assert.doesNotMatch(manifest, /RECEIVE_BOOT_COMPLETED|QUERY_ALL_PACKAGES/);
   assert.match(module, /RECORD_AUDIO/); assert.match(module, /appContext.currentActivity == null/);
+  assert.match(module, /ACTION_VOICE_INPUT_SETTINGS/); assert.match(module, /ACTION_MANAGE_DEFAULT_APPS_SETTINGS/);
+  assert.doesNotMatch(module, /createRequestRoleIntent/);
   assert.match(read('modules/uncover-voice/android/src/main/assets/black-voice/keywords.txt'), /^B L AE1 K @BLACK/m);
   assert.match(read('modules/uncover-voice/android/src/main/java/uncover/voice/VoiceSpeaker.kt'), /black-voice\/iam.wav/);
   const engine = read('modules/uncover-voice/android/src/main/java/uncover/voice/VoiceAudioEngine.kt');

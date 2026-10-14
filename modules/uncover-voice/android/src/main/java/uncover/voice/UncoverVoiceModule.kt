@@ -1,7 +1,7 @@
 package uncover.voice
 
 import android.Manifest
-import android.app.role.RoleManager
+import android.content.ActivityNotFoundException
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
@@ -30,10 +30,13 @@ class UncoverVoiceModule : Module() {
     }.runOnQueue(Queues.MAIN)
     AsyncFunction("assistant") {
       if (Build.VERSION.SDK_INT < 29) error("BLACK 默认语音助手需要 Android 10 或以上。")
-      val roles = context.getSystemService(RoleManager::class.java)
-      val intent = if (roles.isRoleAvailable(RoleManager.ROLE_ASSISTANT) && !roles.isRoleHeld(RoleManager.ROLE_ASSISTANT)) roles.createRequestRoleIntent(RoleManager.ROLE_ASSISTANT)
-        else Intent(Settings.ACTION_VOICE_INPUT_SETTINGS)
-      (appContext.currentActivity ?: error("请从 App 中设置默认语音助手。")).startActivity(intent)
+      val activity = appContext.currentActivity ?: error("请从 App 中设置默认语音助手。")
+      // AOSP marks ASSISTANT requestable=false. The user must choose it in system Settings.
+      try { activity.startActivity(Intent(Settings.ACTION_VOICE_INPUT_SETTINGS)) }
+      catch (_: ActivityNotFoundException) {
+        try { activity.startActivity(Intent(Settings.ACTION_MANAGE_DEFAULT_APPS_SETTINGS)) }
+        catch (_: ActivityNotFoundException) { error("请在系统设置的默认应用中，手动将数字助手选择为 Uncover。") }
+      }
     }.runOnQueue(Queues.MAIN)
     AsyncFunction("active") { id: String -> BlackVoiceService.instance?.active(id) == true }
     AsyncFunction("reply") { id: String, text: String -> BlackVoiceService.instance?.reply(id, text) }.runOnQueue(Queues.MAIN)
