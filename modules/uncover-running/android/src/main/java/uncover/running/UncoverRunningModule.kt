@@ -45,6 +45,7 @@ class UncoverRunningModule : Module() {
     AsyncFunction("snapshot") { after: Int -> RunStore.snapshot(context, after) }
     AsyncFunction("configure") { raw: String -> RunPreferences.write(context, raw) }.runOnQueue(Queues.MAIN)
     AsyncFunction("setVoice") { enabled: Boolean -> RunStore.setVoice(context, enabled); RunningService.instance?.refreshVoice(); Unit }.runOnQueue(Queues.MAIN)
+    AsyncFunction("setVoiceStyle") { style: String -> RunStore.setVoiceStyle(context, style); RunningService.instance?.refreshVoice(); Unit }.runOnQueue(Queues.MAIN)
     AsyncFunction("keepScreenOn") { enabled: Boolean ->
       appContext.currentActivity?.window?.let { window ->
         if (enabled) window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)

@@ -30,9 +30,9 @@ async function reveal(text) {
   await tap('继续跑步'); await waitFor(/暂停跑步/);
   screenshot('production-voice-toggle');
   await tap('结束并保存跑步'); await waitFor(/保存室内跑/); await tap('保存室内跑');
-  await waitFor(/跑步已保存/); await tap('关闭跑步总结');
+  await waitFor(/本次未测得里程，未保存记录/);
   if (!initiallyMuted) { await tap('开启跑步语音播报'); await waitFor(/关闭跑步语音播报/); }
   await tap('切换到数据'); await reveal('跑步数据');
   assert.match(dump(), /本周|本月/); screenshot('production-running-statistics');
-  console.log('PASS production native voice control while idle/running/paused, pause/resume, time-only indoor save, running statistics; previous voice preference restored. No claim of audible TTS quality.');
+  console.log('PASS production native voice control while idle/running/paused, pause/resume, distance-free ending without history, running statistics; previous voice preference restored. No claim of audible TTS quality.');
 })().catch(error => { console.error(error.message); try { screenshot('production-voice-failed'); } catch {} process.exitCode = 1; });

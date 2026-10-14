@@ -30,6 +30,9 @@ yarn-error.*
 /modules/uncover-music/android/build/
 /modules/uncover-music/android/.gradle/
 /modules/uncover-music/android/.cxx/
+/modules/uncover-voice/android/build/
+/modules/uncover-voice/android/.gradle/
+/.voice-resource-cache/
 /output/
 /public/chat-pdf/
 /assets/equipment-images/

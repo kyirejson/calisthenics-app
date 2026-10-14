@@ -19,6 +19,8 @@ internal object RunPreferences {
   fun clean(source: JSONObject): JSONObject {
     for (key in listOf("autoPause", "voice", "stepTracking")) require(source.opt(key) is Boolean) { "跑步设置无效。" }
     val clean = JSONObject().put("autoPause", source.getBoolean("autoPause")).put("voice", source.getBoolean("voice")).put("stepTracking", source.getBoolean("stepTracking"))
+    val style = if (!source.has("voiceStyle")) "female" else source.getString("voiceStyle")
+    clean.put("voiceStyle", RunVoiceClips.cleanStyle(style))
     if (source.has("stepLengthM") && !source.isNull("stepLengthM")) {
       val length = source.getDouble("stepLengthM")
       require(length.isFinite() && length in .3..2.0) { "校准步长应为 0.3–2 米/步。" }

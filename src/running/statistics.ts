@@ -1,5 +1,6 @@
 import type { TrainingSession } from '../types';
 import { historySessionDate, localDayKey, validHistorySessions } from '../domain/training/trainingHistory';
+import { hasRecordedRunDistance } from './model';
 
 export type RunPeriod = 'week' | 'month';
 export type DailyMileage = { key: string; day: number; km: number; runs: number; future: boolean };
@@ -10,12 +11,11 @@ export function runningStatistics(sessions: readonly TrainingSession[], now = ne
   const today = localDayKey(now);
   const weekStart = new Date(now.getFullYear(), now.getMonth(), now.getDate() - (now.getDay() + 6) % 7, 12);
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1, 12);
-  const runs = validHistorySessions(sessions, now).filter(session => session.kind === 'running' && !session.inProgress);
+  const runs = validHistorySessions(sessions, now).filter(session => session.kind === 'running' && !session.inProgress && hasRecordedRunDistance(session.distanceKm));
   const daily = new Map<string, { km: number; runs: number }>();
-  let weekKm = 0, monthKm = 0, lifetimeKm = 0, unknownRuns = 0, estimatedRuns = 0, partialRuns = 0;
+  let weekKm = 0, monthKm = 0, lifetimeKm = 0, estimatedRuns = 0, partialRuns = 0;
   for (const run of runs) {
     const date = localDayKey(historySessionDate(run)!);
-    if (!Number.isFinite(run.distanceKm) || run.distanceKm! < 0 || run.distanceKm! > 1000) { unknownRuns++; continue; }
     const km = run.distanceKm!;
     const previous = daily.get(date) || { km: 0, runs: 0 };
     daily.set(date, { km: previous.km + km, runs: previous.runs + 1 });
@@ -38,6 +38,6 @@ export function runningStatistics(sessions: readonly TrainingSession[], now = ne
   while (goals.at(-1)! <= lifetimeKm) goals.push(goals.at(-1)! * 2);
   const nextIndex = goals.findIndex(goal => goal > lifetimeKm), nextGoal = goals[nextIndex];
   const milestoneGoals = goals.slice(Math.max(0, nextIndex - 2), Math.max(4, nextIndex + 2));
-  return { weekKm, monthKm, lifetimeKm, unknownRuns, estimatedRuns, partialRuns, count: runs.length, days,
+  return { weekKm, monthKm, lifetimeKm, estimatedRuns, partialRuns, count: runs.length, days,
     milestone: { nextGoal, remaining: Math.max(0, nextGoal - lifetimeKm), progress: Math.min(100, lifetimeKm / nextGoal * 100), goals: milestoneGoals } };
 }

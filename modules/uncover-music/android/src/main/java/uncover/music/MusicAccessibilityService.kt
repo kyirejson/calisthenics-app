@@ -6,23 +6,59 @@ import android.graphics.Path
 import android.graphics.Rect
 import android.os.Build
 import android.os.Bundle
+import android.os.SystemClock
 import android.view.accessibility.AccessibilityEvent
 import android.view.accessibility.AccessibilityNodeInfo
 import android.view.accessibility.AccessibilityWindowInfo
 import org.json.JSONArray
 import org.json.JSONObject
 import java.util.UUID
+import kotlinx.coroutines.delay
 
 class MusicAccessibilityService : AccessibilityService() {
   companion object { @Volatile var instance: MusicAccessibilityService? = null; private set }
   private data class Anchor(val path: List<Int>, val fingerprint: String)
   private data class Snapshot(val provider: String, val displayId: Int, val anchors: Map<String, Anchor>)
   private val snapshots = linkedMapOf<String, Snapshot>()
+  private data class Change(val revision: Long, val at: Long)
+  private val changes = mutableMapOf<String, Change>()
   override fun onServiceConnected() { instance = this }
-  override fun onAccessibilityEvent(event: AccessibilityEvent?) { /* Screen data is read only on a user's model tool request. */ }
+  override fun onAccessibilityEvent(event: AccessibilityEvent?) {
+    // Retain primitive timing only, not event objects, text or arbitrary app data.
+    if (!MusicLedger.consent(this, "screen")) return
+    val name = event?.packageName?.toString() ?: return
+    if (name !in MusicPolicy.packages.values) return
+    if (event.eventType !in setOf(AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED, AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED,
+        AccessibilityEvent.TYPE_WINDOWS_CHANGED, AccessibilityEvent.TYPE_VIEW_SCROLLED, AccessibilityEvent.TYPE_VIEW_TEXT_CHANGED)) return
+    val old = changes[name]
+    changes[name] = Change((old?.revision ?: 0L) + 1, SystemClock.elapsedRealtime())
+  }
+  internal fun revision(provider: String) = changes[MusicPolicy.packageFor(provider)]?.revision ?: 0L
+  internal suspend fun awaitScreen(provider: String, offset: Int, before: Long? = null, cancelled: () -> Boolean = { false }): JSONObject {
+    require(offset >= 0)
+    val started = SystemClock.elapsedRealtime()
+    var changed = false
+    while (true) {
+      if (cancelled()) throw MusicFailure("cancelled", "音乐请求已取消。")
+      val now = SystemClock.elapsedRealtime()
+      val change = changes[MusicPolicy.packageFor(provider)]
+      changed = before != null && (change?.revision ?: 0L) > before
+      val expired = now - started >= MusicObservationPolicy.DEADLINE_MS
+      val ready = MusicObservationPolicy.ready(now, started, change?.at ?: 0L, changed, before != null)
+      try {
+        root(provider) // Fail missing consent immediately; only transient window readiness is retried.
+        if (ready || expired) return screen(provider, offset).put("observation", JSONObject()
+          .put("changed", changed).put("timedOut", expired).put("waitMs", now - started)
+          .put("reason", if (expired) "deadline" else if (changed) "event_settled" else if (before == null) "already_ready" else "no_event_fallback"))
+      } catch (error: MusicFailure) {
+        if (expired || error.code !in setOf("screen_unavailable", "needs_open_app", "background_screen_unavailable")) throw error
+      }
+      delay(40)
+    }
+  }
   override fun onInterrupt() { snapshots.clear(); MusicExecutionService.cancelActive(); MusicBackground.close() }
   override fun onDestroy() { snapshots.clear(); MusicExecutionService.cancelActive(); MusicBackground.close(); if (instance === this) instance = null; super.onDestroy() }
-  internal fun forgetScreens() { snapshots.clear() }
+  internal fun forgetScreens() { snapshots.clear(); changes.clear() }
   private fun foregroundRoot(): AccessibilityNodeInfo? {
     val visibleWindows = windows
     val active = rootInActiveWindow

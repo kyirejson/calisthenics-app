@@ -8,9 +8,11 @@ import expo.modules.kotlin.functions.Queues
 import expo.modules.kotlin.modules.Module
 import expo.modules.kotlin.modules.ModuleDefinition
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.delay
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
+import android.os.SystemClock
 import rikka.shizuku.Shizuku
 
 class UncoverMusicModule : Module() {
@@ -22,10 +24,10 @@ class UncoverMusicModule : Module() {
       .put("diagnostics", (error as? MusicFailure)?.details ?: JSONObject.NULL)
   }
   private suspend fun safeRequest(block: suspend () -> JSONObject): JSONObject = try { block() } catch (error: Exception) { safe { throw error } }
-  internal fun finishRequest(requestId: String, executionId: String) {
+  internal fun finishRequest(requestId: String, executionId: String, restoreUi: Boolean = true) {
     val service = MusicAccessibilityService.instance
     try {
-      if (!MusicBackground.enabled(context) && MusicLedger.owns(context, requestId) && service?.isMusicForeground() == true) {
+      if (restoreUi && !MusicBackground.enabled(context) && MusicLedger.owns(context, requestId) && service?.isMusicForeground() == true) {
         context.packageManager.getLaunchIntentForPackage(context.packageName)?.let { service.startActivity(it.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP)) }
       }
     } finally { MusicExecutionService.finish(executionId) }
@@ -86,18 +88,41 @@ class UncoverMusicModule : Module() {
     AsyncFunction("capabilities") { provider: String -> MusicController.capabilities(context, provider).toString() }
     AsyncFunction("playback") { provider: String -> safe { MusicController.playback(context, provider) }.toString() }
     AsyncFunction("screen") Coroutine { provider: String, offset: Int ->
-      delay(450) // Allow real navigation/keyboard events to settle; never invent UI nodes.
-      withContext(Dispatchers.Main) { safe {
-        require(offset >= 0)
-        (MusicAccessibilityService.instance ?: throw MusicFailure("accessibility_required", "请在音乐设置中开启无障碍控制；系统授权需你手动完成。")).screen(provider, offset)
+      withContext(Dispatchers.Main) { safeRequest {
+        (MusicAccessibilityService.instance ?: throw MusicFailure("accessibility_required", "请在音乐设置中开启无障碍控制；系统授权需你手动完成。")).awaitScreen(provider, offset)
       }.toString() }
     }
     AsyncFunction("execute") Coroutine { requestId: String, raw: String, executionId: String -> withContext(Dispatchers.Main) { executeRequest(requestId, raw, executionId).toString() } }
+    AsyncFunction("executeAndObserve") Coroutine { requestId: String, raw: String, executionId: String -> withContext(Dispatchers.Main) { safeRequest {
+      val started = SystemClock.elapsedRealtime()
+      val provider = JSONObject(raw).getString("provider")
+      MusicPolicy.packageFor(provider)
+      val revision = MusicAccessibilityService.instance?.revision(provider)
+      val playback = MusicPlaybackObservation(context, provider)
+      try {
+        // Ledger stores only the canonical physical command. Observation is always fresh,
+        // including after replay or partial failure, and cannot trigger another action.
+        val action = executeRequest(requestId, raw, executionId)
+        val observeAfterAction = action.optBoolean("ok") && !action.optBoolean("replayed")
+        val cancelled = { MusicLedger.isCancelled(executionId) }
+        coroutineScope {
+          val screenResult = async { safeRequest {
+            if (cancelled()) throw MusicFailure("cancelled", "音乐请求已取消。")
+            (MusicAccessibilityService.instance ?: throw MusicFailure("accessibility_required", "音乐无障碍控制尚未连接。")).awaitScreen(provider, 0, if (observeAfterAction) revision ?: 0L else null, cancelled)
+          } }
+          val playbackResult = async { safeRequest { playback.awaitResult(observeAfterAction, cancelled) } }
+          JSONObject().put("ok", action.optBoolean("ok")).put("action", action)
+            .put("screen", screenResult.await()).put("playback", playbackResult.await())
+            .put("elapsedMs", SystemClock.elapsedRealtime() - started)
+        }
+      } finally { playback.close() }
+    }.toString() } }
     AsyncFunction("receipts") { requestId: String -> MusicLedger.receipts(context, requestId).toString() }
     AsyncFunction("cancel") { executionId: String -> MusicLedger.cancel(executionId); MusicBackground.close() }.runOnQueue(Queues.MAIN)
     AsyncFunction("returnToApp") { requestId: String, executionId: String ->
       finishRequest(requestId, executionId)
     }.runOnQueue(Queues.MAIN)
+    AsyncFunction("finishWithoutUi") { requestId: String, executionId: String -> finishRequest(requestId, executionId, false) }.runOnQueue(Queues.MAIN)
     AsyncFunction("consent") { value: Boolean ->
       MusicLedger.setConsent(context, "screen", value)
       if (!value) { MusicExecutionService.cancelActive(); MusicBackground.close(); MusicAccessibilityService.instance?.forgetScreens(); MusicAccessibilityService.instance?.disableSelf() }

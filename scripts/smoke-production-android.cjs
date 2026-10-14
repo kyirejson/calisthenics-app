@@ -34,8 +34,11 @@ async function scrollFor(pattern) {
   // Reruns may encounter an interrupted synthetic run from a previous UI attempt.
   if (dump().includes('结束并保存跑步')) {
     await tap('结束并保存跑步');
-    if (dump().includes('保存室内跑')) await tap('保存室内跑'); else await tap('结束并保存');
-    await waitFor(/跑步已保存/); await tap('关闭跑步总结');
+    if (dump().includes('保存室内跑')) await tap('保存室内跑');
+    else if (dump().includes('content-desc="结束并保存"')) await tap('结束并保存');
+    else await tap('结束跑步');
+    await waitFor(/跑步已保存|本次未测得里程，未保存记录/);
+    if (dump().includes('content-desc="关闭跑步总结"')) await tap('关闭跑步总结');
   }
   await tap('打开跑步设置'); await waitFor(/当前设备无可用计步传感器/); await tap('关闭跑步设置');
   await tap('选择室内跑'); await tap('开始跑步'); await dismissPermissionRequests(); await waitFor(/正在跑步/);

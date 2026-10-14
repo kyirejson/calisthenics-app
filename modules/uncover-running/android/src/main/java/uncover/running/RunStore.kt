@@ -65,17 +65,23 @@ internal object RunStore {
   @Synchronized fun spokenKm(): Int = journal?.optInt("spokenKm") ?: 0
   @Synchronized fun markSpoken(km: Int) { journal?.put("spokenKm", km) }
   @Synchronized fun setVoice(context: Context, enabled: Boolean) {
+    updateVoice(context, "voice", enabled)
+  }
+  @Synchronized fun setVoiceStyle(context: Context, style: String) {
+    updateVoice(context, "voiceStyle", RunVoiceClips.cleanStyle(style))
+  }
+  private fun updateVoice(context: Context, key: String, value: Any) {
     load(context)
     check(!storageCorrupt) { "本机跑步草稿无法读取，未覆盖原文件。" }
     val previousPreferences = RunPreferences.read(context)
     val previousOptions = journal?.optJSONObject("options")
     val previousSpoken = spokenKm()
-    val nextPreferences = JSONObject(previousPreferences.toString()).put("voice", enabled)
+    val nextPreferences = JSONObject(previousPreferences.toString()).put(key, value)
     RunPreferences.store(context, nextPreferences)
     journal?.let { data ->
-      val nextOptions = JSONObject((previousOptions ?: previousPreferences).toString()).put("voice", enabled)
+      val nextOptions = JSONObject((previousOptions ?: previousPreferences).toString()).put(key, value)
       data.put("options", nextOptions)
-      if (enabled && !(previousOptions ?: previousPreferences).optBoolean("voice")) {
+      if (key == "voice" && value == true && !(previousOptions ?: previousPreferences).optBoolean("voice")) {
         val distance = if (mode() == "indoor") stepDistance() else metrics.metres
         markSpoken(maxOf(previousSpoken, ((distance ?: 0.0) / 1000).toInt()))
       }

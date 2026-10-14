@@ -1,0 +1,20 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+  <uses-permission android:name="android.permission.RECORD_AUDIO" />
+  <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+  <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />
+  <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+  <uses-permission android:name="android.permission.WAKE_LOCK" />
+  <application>
+    <service android:name="uncover.voice.BlackVoiceService" android:exported="false" android:foregroundServiceType="microphone" android:stopWithTask="false" />
+    <service android:name="uncover.voice.VoiceAgentTaskService" android:exported="false" />
+    <service android:name="uncover.voice.BlackAssistantService" android:exported="true" android:permission="android.permission.BIND_VOICE_INTERACTION">
+      <intent-filter><action android:name="android.service.voice.VoiceInteractionService" /></intent-filter>
+      <meta-data android:name="android.voice_interaction" android:resource="@xml/black_voice_interaction" />
+    </service>
+    <service android:name="uncover.voice.BlackSessionService" android:exported="true" android:permission="android.permission.BIND_VOICE_INTERACTION" />
+    <service android:name="uncover.voice.BlackRecognitionService" android:exported="true" android:permission="android.permission.BIND_VOICE_INTERACTION">
+      <intent-filter><action android:name="android.speech.RecognitionService" /></intent-filter>
+      <meta-data android:name="android.speech" android:resource="@xml/black_recognition" />
+    </service>
+  </application>
+</manifest>

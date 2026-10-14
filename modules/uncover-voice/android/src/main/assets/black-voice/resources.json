@@ -1,0 +1,72 @@
+{
+  "version": 1,
+  "artifacts": [
+    {
+      "name": "sherpa-onnx-1.13.8.aar",
+      "sha256": "633c24321e06b1fe79feafa03ea16cbc0f8a286641e2da3559bac91bdb13bd96",
+      "url": "https://github.com/k2-fsa/sherpa-onnx/releases/download/v1.13.8/sherpa-onnx-1.13.8.aar",
+      "destination": "libs/sherpa-onnx-1.13.8.aar"
+    },
+    {
+      "name": "kws-zh-en.tar.bz2",
+      "sha256": "68447f4fbc67e70eee3a93961f36e81e98f47aef73ce7e7ca00885c6cd3616a6",
+      "url": "https://github.com/k2-fsa/sherpa-onnx/releases/download/kws-models/sherpa-onnx-kws-zipformer-zh-en-3M-2025-12-20.tar.bz2",
+      "directory": "sherpa-onnx-kws-zipformer-zh-en-3M-2025-12-20",
+      "files": {
+        "encoder-epoch-13-avg-2-chunk-8-left-64.int8.onnx": "kws/encoder.onnx",
+        "decoder-epoch-13-avg-2-chunk-8-left-64.onnx": "kws/decoder.onnx",
+        "joiner-epoch-13-avg-2-chunk-8-left-64.int8.onnx": "kws/joiner.onnx",
+        "tokens.txt": "kws/tokens.txt"
+      }
+    },
+    {
+      "name": "asr.tar.bz2",
+      "sha256": "b3b309f7ce4a737195fcc6963ea19b0653a7d3401580af5ae0d3e284cbb71f0b",
+      "url": "https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/sherpa-onnx-streaming-zipformer-small-ctc-zh-int8-2025-04-01.tar.bz2",
+      "directory": "sherpa-onnx-streaming-zipformer-small-ctc-zh-int8-2025-04-01",
+      "files": {
+        "model.int8.onnx": "asr/model.int8.onnx",
+        "tokens.txt": "asr/tokens.txt"
+      }
+    }
+  ],
+  "files": [
+    {
+      "path": "libs/sherpa-onnx-1.13.8.aar",
+      "sha256": "633c24321e06b1fe79feafa03ea16cbc0f8a286641e2da3559bac91bdb13bd96",
+      "bytes": 50129134
+    },
+    {
+      "path": "src/main/assets/black-voice/kws/encoder.onnx",
+      "sha256": "2ca84d6bfe73e1ea3c9c49f600f7cad1c9ddd423c53c906b8bfe802444dd78d5",
+      "bytes": 4600657
+    },
+    {
+      "path": "src/main/assets/black-voice/kws/decoder.onnx",
+      "sha256": "63a22dd60f40fff082ac3e09afa507f6787da36df76ded2fbe145fa233e22c21",
+      "bytes": 759829
+    },
+    {
+      "path": "src/main/assets/black-voice/kws/joiner.onnx",
+      "sha256": "190d4067b4cc20b72a42a1916e69d92052000fb7051a427ebb1bc72a69207dc1",
+      "bytes": 86629
+    },
+    {
+      "path": "src/main/assets/black-voice/kws/tokens.txt",
+      "sha256": "2d3f32311f9b692b964da3c90e830258d3e78e013cb0c992dbfb15cd5a1a71b0",
+      "bytes": 1928
+    },
+    {
+      "path": "src/main/assets/black-voice/asr/model.int8.onnx",
+      "sha256": "68c9c943840f7d9cf3e8a4970ba50f404feb5277f611fa82b7e72267786fa84a",
+      "bytes": 26342340
+    },
+    {
+      "path": "src/main/assets/black-voice/asr/tokens.txt",
+      "sha256": "6fed8c6c248516f38e7faa19404b57413e8ce259f1cbc1fa4aebc86eac32fdfd",
+      "bytes": 13366
+    }
+  ],
+  "license": "Apache-2.0",
+  "name": "BLACK"
+}

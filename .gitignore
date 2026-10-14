@@ -47,6 +47,12 @@ yarn-error.*
 /modules/uncover-music/android/build/
 /modules/uncover-music/android/.gradle/
 /modules/uncover-music/android/.cxx/
+/modules/uncover-voice/android/build/
+/modules/uncover-voice/android/.gradle/
+/modules/uncover-voice/android/libs/
+/modules/uncover-voice/android/src/main/assets/black-voice/kws/
+/modules/uncover-voice/android/src/main/assets/black-voice/asr/
+/.voice-resource-cache/
 /output/
 /public/chat-pdf/
 

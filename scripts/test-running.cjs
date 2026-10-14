@@ -102,7 +102,7 @@ test('Android protects location startup and supports a permission-free workout s
   assert.match(cache, /setRequestProperty\("User-Agent", "Uncover\//); assert.match(cache, /If-None-Match/); assert.match(cache, /expiresAt/);
   assert.match(map, /SupervisorJob\(\) \+ Dispatchers.IO/, 'Map requests cannot block GPS snapshots'); assert.match(map, /canvas.drawBitmap/); assert.ok(!cache.includes('no-cache'));
 });
-test('unlocated runs save time without zero-distance fiction and partial routes have no average pace', () => {
+test('legacy unmeasured receipts retain time without zero-distance fiction and partial routes have no average pace', () => {
   const blank = { ...model.emptyRun(), id: 'timer', phase: 'finished', startedAt: 1000000, completedAt: 1060000, elapsedMs: 60000 };
   const saved = model.toRunSession(blank);
   assert.equal(saved.distanceKm, undefined); assert.equal(saved.distanceSource, 'unmeasured'); assert.equal(saved.durationSeconds, 60); assert.deepEqual(saved.route, []);
@@ -115,7 +115,7 @@ test('source handovers break routes instead of adding a position jump', () => {
   assert.ok(Math.abs(model.analyseRun(samples).distanceM - 20) < .1); assert.equal(model.analyseRun(samples).segments.length, 2);
   assert.equal(model.usablePoint(point(0, 0, { provider: 'fused', ageMs: 15001 })), false);
 });
-test('browser no-fix start, permission loss, pause, resume and time-only save all remain usable', async () => {
+test('browser no-fix start, permission loss, pause, resume and finishing without invented mileage remain usable', async () => {
   const h = browserHarness(), r = h.recorder;
   await r.start('without-fix'); h.deny(); h.advance(10000); await r.pause(); h.advance(20000); await r.resume(); h.advance(10000); await r.finish();
   const snapshot = await r.snapshot(0);

@@ -38,7 +38,7 @@ export function RunningMileageCard({ sessions, now }: { sessions: readonly Train
       <View style={s.goals}>{stats.milestone.goals.map(goal => <Text key={goal} style={[s.goal, stats.lifetimeKm >= goal && s.earned, stats.milestone.nextGoal === goal && s.next]}>{stats.lifetimeKm >= goal ? '✓ ' : ''}{goal}</Text>)}</View>
       <Text style={s.caption}>再跑 <Text style={s.earned}>{mileageLabel(stats.milestone.remaining)}</Text> 公里，点亮 {stats.milestone.nextGoal} 公里。</Text>
     </View>
-    {stats.unknownRuns || stats.estimatedRuns || stats.partialRuns ? <Text testID="running-statistics-note" style={s.note}>{[stats.unknownRuns ? `${stats.unknownRuns} 次仅计时未计里程` : '', stats.estimatedRuns ? `含 ${stats.estimatedRuns} 次估算或手填距离` : '', stats.partialRuns ? `${stats.partialRuns} 次仅有部分路段` : ''].filter(Boolean).join(' · ')}</Text> : null}
+    {stats.estimatedRuns || stats.partialRuns ? <Text testID="running-statistics-note" style={s.note}>{[stats.estimatedRuns ? `含 ${stats.estimatedRuns} 次估算或手填距离` : '', stats.partialRuns ? `${stats.partialRuns} 次仅有部分路段` : ''].filter(Boolean).join(' · ')}</Text> : null}
   </View>;
 }
 function ViewGrid({ y, label }: { y: number; label: string }) { return <G><Line x1={28} x2={346} y1={y} y2={y} stroke="#303B3F" strokeWidth={1} /><SvgText x={20} y={y + 4} textAnchor="end" fill={c.faint} fontSize={10}>{label}</SvgText></G>; }

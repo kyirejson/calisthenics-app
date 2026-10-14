@@ -177,7 +177,8 @@ test('static data does not depend on domain algorithms and pure domains do not d
 
 test('React only binds the stable repository; every subscriber explicitly selects fields', () => {
   const binding = read('src/store/AppStore.tsx');
-  assert.match(binding, /createAppRepository/);
+  assert.match(binding, /const repository = appRepository/);
+  assert.match(read('src/store/runtime.ts'), /export const appRepository = createAppRepository/);
   assert.match(binding, /useSyncExternalStore/);
   assert.doesNotMatch(
     binding,

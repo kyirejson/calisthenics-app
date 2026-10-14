@@ -12,7 +12,7 @@ async function prepare(browser, width = 390, height = 844, denied = false, pendi
   const context = await browser.newContext({ viewport: { width, height }, reducedMotion: 'reduce', timezoneId: 'Asia/Shanghai' });
   await context.addInitScript(({ profile, denied, pendingGps }) => {
     if (!localStorage.getItem('running-map-qa')) { localStorage.setItem('running-map-qa', '1'); localStorage.setItem('user_profile', JSON.stringify(profile)); localStorage.setItem('sessions', '[]'); localStorage.setItem('profile-invitation-seen', '1'); }
-    let offset = 0, metres = 0, next = 0; const watches = new Map(), originalNow = performance.now.bind(performance), OriginalDate = Date;
+    let offset = Number(sessionStorage.getItem('running-qa-clock')) || 0, metres = 0, next = 0; const watches = new Map(), originalNow = performance.now.bind(performance), OriginalDate = Date;
     const anchor = OriginalDate.now(), start = originalNow();
     class Clock extends OriginalDate { constructor(...args) { super(...(args.length ? args : [anchor + originalNow() - start + offset])); } static now() { return anchor + originalNow() - start + offset; } }
     window.Date = Clock; Object.defineProperty(performance, 'now', { value: () => originalNow() + offset });
@@ -20,7 +20,7 @@ async function prepare(browser, width = 390, height = 844, denied = false, pendi
     Object.defineProperty(navigator, 'geolocation', { configurable: true, value: {
       watchPosition: (success, failure) => { const id = ++next; watches.set(id, { success, failure }); setTimeout(() => denied ? failure({ code: 1 }) : pendingGps ? undefined : success(position(5)), 10); return id; }, clearWatch: id => watches.delete(id),
     } });
-    window.qaGps = { advance: seconds => { offset += seconds * 1000; }, emit: (distance, seconds, accuracy = 5) => { metres = distance; offset += seconds * 1000; watches.forEach(watch => watch.success(position(accuracy))); }, deny: () => watches.forEach(watch => watch.failure({ code: 1 })), count: () => watches.size };
+    window.qaGps = { advance: seconds => { offset += seconds * 1000; sessionStorage.setItem('running-qa-clock', offset); }, emit: (distance, seconds, accuracy = 5) => { metres = distance; offset += seconds * 1000; sessionStorage.setItem('running-qa-clock', offset); watches.forEach(watch => watch.success(position(accuracy))); }, deny: () => watches.forEach(watch => watch.failure({ code: 1 })), count: () => watches.size };
   }, { profile, denied, pendingGps });
   const page = await context.newPage(), errors = []; page.setDefaultTimeout(20000); page.on('pageerror', error => errors.push(error.message));
   // Repeated automated pan/zoom must not make production OSM requests. Real map
@@ -33,7 +33,13 @@ async function prepare(browser, width = 390, height = 844, denied = false, pendi
 }
 async function locate(page) { await page.getByRole('button', { name: '检查跑步定位', exact: true }).click(); await page.getByText(/定位就绪/).waitFor(); }
 async function start(page) { await locate(page); await page.getByRole('button', { name: '开始跑步', exact: true }).click(); await page.getByText('正在跑步', { exact: true }).waitFor(); }
-async function finish(page) { await page.getByRole('button', { name: '结束并保存跑步', exact: true }).click(); await page.getByRole('button', { name: '结束并保存', exact: true }).click(); await page.getByRole('button', { name: '关闭跑步总结', exact: true }).click(); await page.getByRole('button', { name: '开始跑步', exact: true }).waitFor(); }
+async function finish(page) {
+  await page.getByRole('button', { name: '结束并保存跑步', exact: true }).click();
+  const save = page.getByRole('button', { name: '结束并保存', exact: true });
+  if (await save.count()) { await save.click(); await page.getByRole('button', { name: '关闭跑步总结', exact: true }).click(); }
+  else { await page.getByRole('button', { name: '结束跑步', exact: true }).click(); await page.getByTestId('run-completion-notice').waitFor(); }
+  await page.getByRole('button', { name: '开始跑步', exact: true }).waitFor();
+}
 async function emit(page, distance, seconds = 3, accuracy = 5) { await page.evaluate(([d, s, a]) => window.qaGps.emit(d, s, a), [distance, seconds, accuracy]); }
 (async () => {
   const browser = await chromium.launch({ headless: true, executablePath: process.env.CHROME_PATH || 'C:/Program Files/Google/Chrome/Application/chrome.exe' });
@@ -99,10 +105,15 @@ async function emit(page, distance, seconds = 3, accuracy = 5) { await page.eval
       const day = page.getByTestId('history-day-' + date); await day.getByRole('button', { name: '展开' + date + '训练历史', exact: true }).click();
       await page.getByTestId('history-run-' + saved.id).waitFor(); assert.ok(!(await day.innerText()).includes('0 组')); console.log('PASS real mileage/pace, pause exclusion, page changes, offline GPS, save failure/retry and My history');
       await page.getByRole('tab', { name: '切换到今日', exact: true }).click(); await page.getByRole('tab', { name: '切换到跑步', exact: true }).click(); await waitRunPane(page);
-      await start(page); await emit(page, 0, 3); await emit(page, 20, 4); await page.waitForTimeout(1100);
+      await emit(page, 0, 3); await start(page); await emit(page, 0, 3); await emit(page, 20, 4); await page.waitForTimeout(1100);
       await page.reload({ waitUntil: 'domcontentloaded', timeout: 60000 }); await page.getByText('跑步已暂停', { exact: true }).waitFor();
-      assert.ok(await page.getByText(/上次记录已恢复/).count()); await page.getByRole('button', { name: '继续跑步', exact: true }).click(); await page.getByText('正在跑步', { exact: true }).waitFor();
-      await emit(page, 1000, 3); await emit(page, 1010, 3); await finish(page); await page.waitForFunction(() => JSON.parse(localStorage.getItem('sessions')).length === 2);
+      assert.ok(await page.getByText(/上次记录已恢复/).count());
+      await emit(page, 1000, 3); // Movement during interruption is map-only, not running distance.
+      await page.getByRole('button', { name: '继续跑步', exact: true }).click(); await page.getByText('正在跑步', { exact: true }).waitFor();
+      await emit(page, 1010, 3); await emit(page, 1020, 3);
+      try { await page.waitForFunction(() => Number(document.querySelector('[data-testid="run-distance"]').textContent) >= .01); }
+      catch (failure) { console.error('QA resume checkpoint:', await page.evaluate(() => localStorage.getItem('uncover.running.web-journal.v2'))); throw failure; }
+      await finish(page); await page.waitForFunction(() => JSON.parse(localStorage.getItem('sessions')).length === 2);
       assert.notEqual((await records(page))[0].id, (await records(page))[1].id); assert.deepEqual(errors, []); console.log('PASS reload restores paused checkpoint, resume does not bridge gaps, repeated runs retain independent records');
     } finally { await context.close(); }
     for (const [w, h] of [[320, 600], [390, 844]]) {
@@ -129,8 +140,8 @@ async function emit(page, distance, seconds = 3, accuracy = 5) { await page.eval
       await denied.page.getByRole('button', { name: '开始跑步', exact: true }).click(); await denied.page.getByText('正在跑步', { exact: true }).waitFor();
       await denied.page.waitForFunction(() => { const value = document.querySelector('[data-testid="run-duration"]')?.textContent; return value && value !== '00:00'; }, undefined, { timeout: 5000 });
       assert.equal(await denied.page.getByTestId('run-distance').innerText(), '—');
-      await finish(denied.page); const timeOnly = (await records(denied.page))[0]; assert.equal(timeOnly.distanceKm, undefined); assert.equal(timeOnly.distanceSource, 'unmeasured'); assert.ok(timeOnly.durationSeconds > 0);
-      assert.deepEqual(denied.errors, []); console.log('PASS denied GPS allows start, timing and time-only save without invented mileage');
+      await finish(denied.page); assert.deepEqual(await records(denied.page), []);
+      assert.deepEqual(denied.errors, []); console.log('PASS denied GPS allows timing and ending without creating zero-distance history');
     } finally { await denied.context.close(); }
     const indoor = await prepare(browser, 320, 600, true);
     try {

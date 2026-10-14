@@ -1,7 +1,9 @@
 param(
   [Parameter(Mandatory=$true, ParameterSetName='Cloud')][string]$BuildId,
   [Parameter(Mandatory=$true, ParameterSetName='Local')][string]$LocalApk,
-  [switch]$VerifyOnly
+  [switch]$VerifyOnly,
+  [switch]$Candidate,
+  [ValidateRange(1,99)][int]$CandidateNumber = 1
 )
 $ErrorActionPreference = 'Stop'
 $publishRoot = Split-Path -Parent $PSScriptRoot
@@ -9,7 +11,8 @@ $releaseConfig = ([IO.File]::ReadAllText((Join-Path $publishRoot 'app.json')) | 
 $releaseVersion = $releaseConfig.version
 $releaseCode = [string]$releaseConfig.android.versionCode
 $releaseTag = 'v' + $releaseVersion
-$releaseAssetName = 'uncover-' + $releaseTag + '.apk'
+if ($Candidate) { $releaseTag += '-rc' + $CandidateNumber }
+$releaseAssetName = 'uncover-v' + $releaseVersion + '.apk'
 $publishNode = 'D:/openclaw/node.exe'
 $publishCli = 'D:/UncoverBuildTools/npm-cache/_npx/cdcf29a1293ceb8d/node_modules/eas-cli/bin/run'
 function Get-ReleaseApk([string]$DownloadUri, [string]$Destination, [switch]$Resume) {
@@ -116,6 +119,10 @@ if (($apkPermissions -join "`n") -match "android.permission.CAMERA'") { throw 'R
 if (($apkPermissions -join "`n") -match "android.permission.ACCESS_MOCK_LOCATION'") { throw 'Emulator QA permission must not enter the production APK' }
 & $publishNode (Join-Path $publishRoot 'scripts/inspect-apk-running-diagnostics.cjs') $apk
 if ($LASTEXITCODE -ne 0) { throw 'GPS repair missing from release artifact; publication stopped' }
+if ($releaseConfig.plugins -contains './modules/uncover-voice/plugin.cjs') {
+  & $publishNode (Join-Path $publishRoot 'scripts/inspect-apk-voice.cjs') $apk
+  if ($LASTEXITCODE -ne 0) { throw 'Voice/music candidate missing features; publication stopped' }
+}
 if ($VerifyOnly) {
   Write-Output ('VERIFIED_APK ' + $apk)
   Write-Output ('SHA256 ' + $apkInfo.sha256)
@@ -135,13 +142,14 @@ if ($LocalApk) {
 } elseif ($build.gitCommitHash -ne $releaseCommit) { throw 'Build source differs from the release source commit; publication stopped' }
 $remoteCommit = (git -C $publishRoot ls-remote origin refs/heads/main).Split()[0]
 if ($LASTEXITCODE -ne 0 -or $remoteCommit -ne $releaseCommit) { throw 'Release source must be synchronized to main before publication' }
-$data = @{tag_name=$releaseTag;target_commitish=$releaseCommit;name=('Uncover ' + $releaseTag);body=$body;draft=$true;prerelease=$false} | ConvertTo-Json
+$data = @{tag_name=$releaseTag;target_commitish=$releaseCommit;name=('Uncover ' + $releaseTag);body=$body;draft=$true;prerelease=[bool]$Candidate} | ConvertTo-Json
 $release = Invoke-RestMethod -Method Post -Uri $api -Headers $headers -ContentType 'application/json; charset=utf-8' -Body ([Text.Encoding]::UTF8.GetBytes($data))
 $upload = $release.upload_url.Split('{')[0] + '?name=' + $releaseAssetName
 $asset = Invoke-RestMethod -Method Post -Uri $upload -Headers $headers -ContentType 'application/vnd.android.package-archive' -InFile $apk
 if ($asset.size -ne (Get-Item -LiteralPath $apk).Length) { throw 'Uploaded asset size mismatch; release left as draft' }
 if ($asset.digest -and $asset.digest -ne ('sha256:' + $apkInfo.sha256)) { throw 'Uploaded digest mismatch; release left as draft' }
-$published = Invoke-RestMethod -Method Patch -Uri ($api + '/' + $release.id) -Headers $headers -ContentType 'application/json' -Body '{"draft":false,"make_latest":"true"}'
+$publishPatch = @{ draft = $false; make_latest = $(if ($Candidate) { 'false' } else { 'true' }) } | ConvertTo-Json
+$published = Invoke-RestMethod -Method Patch -Uri ($api + '/' + $release.id) -Headers $headers -ContentType 'application/json' -Body $publishPatch
 Write-Output ('PUBLISHED ' + $published.html_url)
 Write-Output ('APK ' + ($published.assets | Where-Object { $_.id -eq $asset.id } | Select-Object -First 1).browser_download_url)
 Write-Output ('SHA256 ' + $apkInfo.sha256)

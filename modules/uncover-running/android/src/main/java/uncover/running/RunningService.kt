@@ -96,7 +96,8 @@ class RunningService : Service() {
   private fun setupVoice() {
     if (!RunStore.options(this).optBoolean("voice") || RunStore.phase() == "finished") { voice?.stop(); voice = null; return }
     if (voice == null) try { voice = RunVoice(this).also { it.start() } }
-      catch (_: Exception) { RunStore.speechIssue = "语音引擎启动失败，跑步记录不受影响。" }
+      catch (_: Exception) { RunStore.speechIssue = "语音启动失败，跑步记录不受影响。" }
+    voice?.selectStyle(RunStore.options(this).optString("voiceStyle", "female"))
   }
   internal fun refreshVoice() { if (::handler.isInitialized) handler.post { setupVoice() } }
   private fun motionFix(location: Location, provider: String) {

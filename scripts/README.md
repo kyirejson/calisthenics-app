@@ -12,6 +12,8 @@
 | 打包预处理 | `prepare-public-resources.cjs`、`prepare-chat-pdf.cjs`、`prepare-original-resources.cjs`、`verify-release-resources.cjs` | 安装后资源映射/PDF worker；开源开发缺少原书时补空桩，正式 production 构建缺少原文或原图则阻止发布 |
 | 浏览器验收 | `smoke-*.cjs` | 按功能运行的隔离会话，需启动 Web 预览及 Playwright |
 | 发布/原生验证 | `publish-app-release.ps1`、`check-android-native.ps1`、`build-android-ui-dump.ps1` | 仅在需要构建/发布/设备检查时调用 |
+| 本地语音构建 | `prepare-voice-resources.cjs`、`build-agent-ack.py`、`build-running-voices.py` | 下载哈希固定的原生库/模型，或在隔离工具环境重生成带来源的离线提示音；构建工具不进入 App |
+| 语音验证 | `test-voice-agent.cjs`、`check-voice-models.py`、`build-wake-fixtures.ps1`、`inspect-apk-voice.cjs` | 对话所有权/取消回归、合成语音识别、最终 APK 资源与原生类检查；不冒充真机唤醒验收 |
 | 历史研究 | `audit*`、图片研究 `.py`/`.json` | 手工研究/一次性素材工具，不属于发版门禁 |
 
 本轮已删除四个对应已退场相机/条码功能的 smoke。`test-nutrition-photo-history` 只保护历史营养照片、份量快照与照片存储兼容，不提供新拍照功能。

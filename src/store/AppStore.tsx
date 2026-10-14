@@ -1,35 +1,19 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import React, {
   createContext,
   useCallback,
   useContext,
   useEffect,
   useRef,
-  useState,
   useSyncExternalStore,
 } from 'react';
-import { clearRetiredAssistantStorage } from './retiredAssistantStorage';
-import { resetConnection } from '../integrations/connectionRuntime.mjs';
-import { createAppRepository, type AppRepository } from './repository';
+import type { AppRepository } from './repository';
+import { appRepository } from './runtime';
 import { shallowEqual } from './observable';
 import type { StoreValue } from './contracts';
 
 const Store = createContext<AppRepository | null>(null);
 export function AppStoreProvider({ children }: { children: React.ReactNode }) {
-  const [repository] = useState(() =>
-    createAppRepository(AsyncStorage, {
-      clearRetired: clearRetiredAssistantStorage,
-      clearRunning: async () => (await import('../running/transport')).runningTransport.clear(),
-      clearMusic: async () => (await import('../music/transport')).musicTransport.clear(),
-      resetConnection: async () => {
-        await (await import('../integrations/credentials')).loadConnection();
-        await resetConnection();
-      },
-      clearMemory: async () => (await import('../memory/storage')).clearMemory(),
-      deletePhotos: async (ids) =>
-        (await import('../nutrition/photoStorage')).deleteStoredPhotos(ids),
-    }),
-  );
+  const repository = appRepository;
   useEffect(() => {
     void repository.load();
   }, [repository]);

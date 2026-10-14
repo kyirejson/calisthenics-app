@@ -1,0 +1,23 @@
+BLACK local wake-word recognition uses sherpa-onnx v1.13.8 (k2-fsa / Xiaomi).
+Engine source: https://github.com/k2-fsa/sherpa-onnx/tree/v1.13.8
+
+The native SDK also includes Microsoft ONNX Runtime (MIT License).
+Its license is included in ONNX-RUNTIME-LICENSE.txt.
+Upstream license: https://github.com/microsoft/onnxruntime/blob/v1.28.2/LICENSE
+
+Keyword spotting model: pkufool, icefall-kws-zipformer-zh-en-3M-2025-12-20.
+Author license: https://www.modelscope.cn/models/pkufool/icefall-kws-zipformer-zh-en-3M-2025-12-20
+Apache License 2.0; upstream ONNX export/INT8 quantization, no local retraining.
+
+Streaming Chinese ASR: csukuangfj, icefall-streaming-zipformer-small-ctc-zh-2025-04-01.
+Author license: https://huggingface.co/csukuangfj/icefall-streaming-zipformer-small-ctc-zh-2025-04-01
+Apache License 2.0; upstream ONNX INT8 model, no local retraining.
+
+Local acknowledgement is synthetic audio generated with Kokoro-82M-v1.1-zh
+(hexgrad, Apache-2.0), voice zf_001. It is not a Doubao/XiaoAi recording or clone.
+Its model revision and audio SHA-256 are recorded in iam-provenance.json.
+
+The bundled native AAR and model archives are fixed by SHA-256 in resources.json
+and scripts/prepare-voice-resources.cjs. No audio recordings, passwords or accounts
+are sent to these local models. After wake-up, transcribed text uses the existing
+configured Agent API. Native microphone monitoring is explicitly user-controlled.

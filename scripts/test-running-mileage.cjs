@@ -21,7 +21,7 @@ test('week/month boundaries, missing mileage and provenance never fabricate zero
   const december = { ...run('dec', 1, 2), startedAt: dec.toISOString(), completedAt: dec.toISOString() };
   const s = runningStatistics([december], jan); assert.equal(s.weekKm, 2); assert.equal(s.monthKm, 0);
   const stats = runningStatistics([run('none', 12, undefined), run('bad', 12, -1), run('infinite', 13, Infinity), run('step', 12, 2, { distanceSource: 'steps' }), run('manual', 13, 3, { distanceSource: 'manual', runDistancePartial: true })], now);
-  assert.equal(stats.weekKm, 5); assert.equal(stats.unknownRuns, 3); assert.equal(stats.estimatedRuns, 2); assert.equal(stats.partialRuns, 1);
+  assert.equal(stats.weekKm, 5); assert.equal(stats.count, 2); assert.equal(stats.estimatedRuns, 2); assert.equal(stats.partialRuns, 1);
   assert.equal(runningStatistics([], now).lifetimeKm, 0);
 });
 test('deletion recomputes totals and milestone credit with no stored achievement cache', () => {

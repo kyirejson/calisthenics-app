@@ -1,12 +1,13 @@
 {
   "name": "uncover-app",
-  "version": "1.7.12",
+  "version": "1.7.13",
   "main": "index.ts",
   "dependencies": {
     "@expo/metro-runtime": "~57.0.16",
     "@react-native-async-storage/async-storage": "^2.2.0",
     "expo": "~57.0.26",
     "expo-application": "~57.0.3",
+    "expo-asset": "~57.0.18",
     "expo-constants": "~57.0.20",
     "expo-document-picker": "~57.0.3",
     "expo-file-system": "~57.0.7",
@@ -33,6 +34,7 @@
   "scripts": {
     "postinstall": "node scripts/prepare-public-resources.cjs && node scripts/verify-release-resources.cjs",
     "prepare:public": "node scripts/prepare-public-resources.cjs",
+    "prepare:voice": "node scripts/prepare-voice-resources.cjs",
     "start": "expo start",
     "dev:phone": "expo start --host lan --port 8082",
     "dev:tunnel": "expo start --tunnel --port 8082",

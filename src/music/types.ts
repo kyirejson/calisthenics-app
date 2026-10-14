@@ -17,9 +17,11 @@ export type MusicTransport = {
   screen(provider: MusicProvider, offset: number): Promise<MusicResult>;
   playback(provider: MusicProvider): Promise<MusicResult>;
   execute(requestId: string, command: MusicCommand, executionId?: string): Promise<MusicResult>;
+  executeAndObserve(requestId: string, command: MusicCommand, executionId?: string): Promise<MusicResult>;
   receipts(requestId: string): Promise<Array<Record<string, unknown>>>;
   cancel(requestId: string): Promise<void>;
   returnToApp(requestId: string, executionId?: string): Promise<void>;
+  finishWithoutUi(requestId: string, executionId?: string): Promise<void>;
   onCancelled(executionId: string, callback: () => void): () => void;
   consent(value: boolean): Promise<void>;
   backgroundConsent(value: boolean): Promise<void>;

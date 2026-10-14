@@ -2,16 +2,11 @@ import { useChatAttachments } from './useChatAttachments';
 import { isClearContextCommand } from './commands';
 import { useEffect, useRef, useState } from 'react';
 import { Keyboard, ScrollView } from 'react-native';
-import { currentConnection, loadConnection } from '../../integrations/credentials';
+import { loadConnection } from '../../integrations/credentials';
 import { subscribeConnection } from '../../integrations/connectionRuntime.mjs';
-import { createDeepseekClient } from '../../integrations/deepseekClient.mjs';
 
 import { useAppRepository } from '../../store/AppStore';
-import { readOrInitializeMemory } from '../../memory/operations';
-import { profileMarkdown } from '../../memory/profileMemory';
-import { personalChat } from '../../integrations/personalTools.mjs';
-import { executePersonalTool } from '../../integrations/personalData';
-import { localWeightDate } from '../../domain/weight/weightTrend';
+import { runAgentTurn } from '../../integrations/runAgentTurn';
 
 import { attachmentMessage } from '../../integrations/chatAttachments.mjs';
 import { releaseChatFile } from '../../integrations/chatFiles';
@@ -38,6 +33,7 @@ function toolLabel(name: string, args: Record<string, unknown>): string {
         read_today_meals: '读取今日饮食',
         write_meal_records: '处理饮食记录',
         read_music_settings: '读取音乐预设', write_music_settings: '保存音乐预设',
+        open_music_and_observe: '打开并核实音乐界面', music_ui_action_and_observe: '操作并核实音乐界面', control_music_and_observe: '控制并核实音乐播放',
         open_music: '打开音乐软件', read_music_screen: '查看音乐界面',
         music_ui_action: '操作音乐界面', control_music: '控制音乐播放', read_music_playback: '核实播放状态',
       } as Record<string, string>
@@ -142,31 +138,11 @@ export function useChatSession({ visible, onClose }: { visible: boolean; onClose
     setStreamContent('');
     setActiveTools([]);
     const capturedTools: string[] = [];
-    let unsubscribeMusic = () => {};
     try {
-      await loadConnection();
-      if (controller.signal.aborted) throw Error('请求已取消，请重试。');
       const messages = [...turns, user];
-      const { musicTransport } = await import('../../music/transport');
-      unsubscribeMusic = musicTransport.onCancelled(executionId, () => controller.abort());
-      const musicReceipts = await musicTransport.receipts(requestId).catch(e => [{ ok: false, error: e instanceof Error ? e.message : '音乐操作回执读取失败。' }]);
-      const answer = await personalChat({
-        client: createDeepseekClient({ config: currentConnection() }),
+      const answer = await runAgentTurn({
+        repository, requestId, executionId, controller,
         messages: messages.map(attachmentMessage),
-        memory: await readOrInitializeMemory(
-          repository.getSnapshot().profile
-            ? profileMarkdown(repository.getSnapshot().profile!)
-            : null,
-        ),
-        date: localWeightDate(new Date()),
-        time: new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' }),
-        mealReceipts: repository.getSnapshot().nutritionJournal.mealOperationReceipts?.filter(row => row.requestId === requestId)
-          .map(row => ({ operationKey: row.id.slice(requestId.length + 1), entryIds: row.entryIds })) ?? [],
-        signal: controller.signal,
-        musicReceipts,
-        execute: (name: string, input: unknown, signal?: AbortSignal) =>
-          executePersonalTool(name, input, repository.getSnapshot(), signal,
-            { requestId, executionId, apply: repository.getSnapshot().applyMealOperations, updateSettings: repository.getSnapshot().updateSettings }),
         onToolCall: (call: { name: string; args: Record<string, unknown> }) => {
           const label = toolLabel(call.name, call.args);
           if (!capturedTools.includes(label)) capturedTools.push(label);
@@ -193,12 +169,6 @@ export function useChatSession({ visible, onClose }: { visible: boolean; onClose
     } catch (e) {
       if (alive.current) setError(e instanceof Error ? e.message : '请求失败，请重试。');
     } finally {
-      try {
-        const { musicTransport } = await import('../../music/transport');
-        if (controller.signal.aborted) await musicTransport.cancel(executionId);
-        await musicTransport.returnToApp(requestId, executionId);
-      } catch { /* Missing/revoked music access must not strand the chat's busy state. */ }
-      unsubscribeMusic();
       locked.current = false;
       request.current = null;
       if (alive.current) {

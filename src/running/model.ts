@@ -1,15 +1,16 @@
 import type { TrainingSession } from '../types';
+import { cleanRunVoiceStyle, type RunVoiceStyle } from './voiceClips';
 
 export type RunPhase = 'idle' | 'running' | 'paused' | 'finished';
 export type RunMode = 'outdoor' | 'indoor';
 export type RunPoint = { latitude: number; longitude: number; accuracy: number; timestamp: number; elapsedMs: number; segment: number; ageMs?: number; monotonicNanos?: number; provider?: string; cached?: boolean };
 export type LocationDiagnostics = { permission: boolean; providerAvailable: boolean; enabled: boolean; listening: boolean; waitMs: number; satellites: number | null; usedSatellites: number | null; satelliteAgeMs: number | null; rejection: string; requestError: string; gpsListening?: boolean; systemEnabled?: boolean; auxiliaryProviders?: string[]; providerErrors?: Record<string, string>; networkAvailable?: boolean; networkEnabled?: boolean };
-export type RunOptions = { autoPause: boolean; voice: boolean; stepTracking: boolean; stepLengthM?: number };
-export const defaultRunOptions = (): RunOptions => ({ autoPause: false, voice: true, stepTracking: false });
+export type RunOptions = { autoPause: boolean; voice: boolean; voiceStyle?: RunVoiceStyle; stepTracking: boolean; stepLengthM?: number };
+export const defaultRunOptions = (): RunOptions => ({ autoPause: false, voice: true, voiceStyle: 'female', stepTracking: false });
 export function cleanRunOptions(value: RunOptions): RunOptions {
   if (!value || ['autoPause', 'voice', 'stepTracking'].some(key => typeof value[key as keyof RunOptions] !== 'boolean')) throw Error('跑步设置无效。');
   if (value.stepLengthM !== undefined && (!Number.isFinite(value.stepLengthM) || value.stepLengthM < .3 || value.stepLengthM > 2)) throw Error('校准步长应为 0.3–2 米/步。');
-  return { autoPause: value.autoPause, voice: value.voice, stepTracking: value.stepTracking, ...(value.stepLengthM === undefined ? {} : { stepLengthM: value.stepLengthM }) };
+  return { autoPause: value.autoPause, voice: value.voice, voiceStyle: cleanRunVoiceStyle(value.voiceStyle), stepTracking: value.stepTracking, ...(value.stepLengthM === undefined ? {} : { stepLengthM: value.stepLengthM }) };
 }
 export type RunSnapshot = { phase: RunPhase; mode?: RunMode; manualDistanceKm?: number; id?: string; startedAt?: number; completedAt?: number; elapsedMs: number; error: string; locationError?: string; preview: RunPoint | null; mapPosition?: RunPoint | null; samples: RunPoint[]; sampleCount: number; interrupted?: boolean; location?: LocationDiagnostics; options?: RunOptions; autoPaused?: boolean; stepAvailable?: boolean; stepCount?: number; stepDistanceM?: number; stepCurrentPace?: number; stepPartial?: boolean; featureIssue?: string };
 export const emptyRun = (): RunSnapshot => ({ phase: 'idle', elapsedMs: 0, error: '', preview: null, samples: [], sampleCount: 0 });
@@ -74,6 +75,10 @@ export function runRecordMeasurement(session: TrainingSession) {
   const km = Number.isFinite(session.distanceKm) && session.distanceKm! >= 0 ? session.distanceKm! : undefined;
   return { km, label: km === undefined ? '仅记录用时 · 距离未测得' : session.distanceSource === 'manual' ? '手动填写距离' : session.distanceSource === 'steps' ? '计步 × 校准步长 · 估算距离' + (session.runDistancePartial ? ' · 部分未记录' : '') : session.runDistancePartial ? '仅含已定位路段' : '定位记录距离',
     pace: km && !session.runDistancePartial ? session.durationSeconds / km : null };
+}
+/** A timer can start without GPS; only a positive measured/entered distance creates history. */
+export function hasRecordedRunDistance(km: number | null | undefined) {
+  return Number.isFinite(km) && km! > 0 && km! <= 1000;
 }
 export function runClock(ms: number) {
   const seconds = Math.max(0, Math.floor(ms / 1000)), hours = Math.floor(seconds / 3600);

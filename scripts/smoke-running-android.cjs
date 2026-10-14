@@ -140,8 +140,8 @@ function seed() {
   adb('shell', 'input', 'keyevent', '224'); adb('shell', 'wm', 'dismiss-keyguard');
   await tap('暂停跑步'); const onlyPaused = journal(); await sleep(2200); assert.equal(journal().elapsedMs, onlyPaused.elapsedMs);
   await tap('继续跑步'); await waitFor(/正在跑步/); await sleep(1000);
-  await tap('结束并保存跑步'); await tap('结束并保存'); await waitFor(/跑步已保存/); await tap('关闭跑步总结'); await waitFor(/开始跑步/);
-  console.log('PASS native permission-free start, no-fix timing under lock, pause/resume and time-only save');
+  await tap('结束并保存跑步'); await tap('结束跑步'); await waitFor(/本次未测得里程，未保存记录/); await waitFor(/开始跑步/);
+  console.log('PASS native permission-free start, no-fix timing under lock, pause/resume and ending without empty history');
   await tap('选择室内跑'); await tap('开始跑步'); await waitFor(/正在跑步/); await sleep(1500);
   assert.equal(journal().mode, 'indoor'); assert.equal(journal().samples.length, 0);
   await tap('结束并保存跑步'); await waitFor(/保存室内跑/);

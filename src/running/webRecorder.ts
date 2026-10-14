@@ -4,6 +4,7 @@ import { MotionGate } from './motionGate';
 import { webRunVoice, stopWebRunVoice } from './webVoice';
 import { browserLocationError, browserPositionValid } from './browserLocation';
 import { kilometreAnnouncement } from './kilometreAnnouncement';
+import { cleanRunVoiceStyle, type RunVoiceStyle } from './voiceClips';
 
 // Browser-only adapter. Refresh restores a pause; it never counts a closed page.
 const KEY = 'uncover.running.web-journal.v2';
@@ -39,7 +40,7 @@ async function load() {
   }
   loaded = true;
 }
-function speak(text: string) { return state.options?.voice ? webRunVoice(text, issue => { state.featureIssue = issue; }) : false; }
+function speak(text: string) { return state.options?.voice ? webRunVoice(text, issue => { state.featureIssue = issue; }, state.options.voiceStyle ?? 'female') : false; }
 function automaticMotion(point: RunPoint, speed: number | null | undefined) {
   if (!state.options?.autoPause || state.mode === 'indoor' || state.phase !== 'running' && !state.autoPaused) return;
   const change = motion.update(point.timestamp, speed, point.accuracy, !!state.autoPaused);
@@ -97,6 +98,22 @@ async function preview() {
     receive(position, false);
   }, failure => { preciseError = browserLocationError(failure, '连续定位请求'); report(); }, { enableHighAccuracy: true, maximumAge: 0, timeout: 15000 });
 }
+async function updateVoice(patch: { voice?: boolean; voiceStyle?: RunVoiceStyle }) {
+  await load();
+  if (storageCorrupt) throw Error(state.error);
+  const previousOptions = options, previousState = state, previousSpoken = spokenKm;
+  const next = cleanRunOptions({ ...options, ...patch });
+  await AsyncStorage.setItem(OPTIONS, JSON.stringify(next));
+  options = next;
+  if (state.phase !== 'idle') {
+    const wasEnabled = state.options?.voice;
+    state = { ...state, options: cleanRunOptions({ ...(state.options ?? previousOptions), ...patch }) };
+    if (patch.voice === true && !wasEnabled) spokenKm = Math.max(spokenKm, Math.floor(analyseRun(state.samples).distanceM / 1000));
+    try { await persist(); } catch (failure) { options = previousOptions; state = previousState; spokenKm = previousSpoken; await AsyncStorage.setItem(OPTIONS, JSON.stringify(previousOptions)); throw failure; }
+  }
+  if (patch.voice === false || patch.voiceStyle !== undefined) stopWebRunVoice();
+  state.featureIssue = '';
+}
 export const browserRunning = {
   snapshot: async (after: number): Promise<RunSnapshot> => {
     await load();
@@ -114,21 +131,10 @@ export const browserRunning = {
     await AsyncStorage.setItem(OPTIONS, JSON.stringify(next)); options = next;
   },
   setVoice: async (enabled: boolean) => {
-    await load();
-    if (storageCorrupt) throw Error(state.error);
     if (typeof enabled !== 'boolean') throw Error('语音开关无效。');
-    const previousOptions = options, previousState = state, previousSpoken = spokenKm;
-    const next = { ...options, voice: enabled };
-    await AsyncStorage.setItem(OPTIONS, JSON.stringify(next));
-    options = next;
-    if (state.phase !== 'idle') {
-      const wasEnabled = state.options?.voice;
-      state = { ...state, options: { ...(state.options ?? previousOptions), voice: enabled } };
-      if (enabled && !wasEnabled) spokenKm = Math.max(spokenKm, Math.floor(analyseRun(state.samples).distanceM / 1000));
-      try { await persist(); } catch (failure) { options = previousOptions; state = previousState; spokenKm = previousSpoken; await AsyncStorage.setItem(OPTIONS, JSON.stringify(previousOptions)); throw failure; }
-    }
-    if (!enabled) { stopWebRunVoice(); state.featureIssue = ''; }
+    await updateVoice({ voice: enabled });
   },
+  setVoiceStyle: async (style: RunVoiceStyle) => { await updateVoice({ voiceStyle: cleanRunVoiceStyle(style) }); },
   preview, stopPreview: async () => { if (state.phase !== 'running' && !state.autoPaused) stopPreview(); },
   start: async (id: string, mode: RunMode = 'outdoor') => {
     await load();

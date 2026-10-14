@@ -1,0 +1,1188 @@
+{
+  "version": 1,
+  "sampleRate": 24000,
+  "channels": 1,
+  "sampleWidth": 2,
+  "model": "hexgrad/Kokoro-82M-v1.1-zh",
+  "revision": "01e7505bd6a7a2ac4975463114c3a7650a9f7218",
+  "modelSha256": "b1d8410fa44dfb5c15471fd6c4225ea6b4e9ac7fa03c98e8bea47a9928476e2b",
+  "license": "Apache-2.0",
+  "voices": {
+    "female": {
+      "speaker": "zf_001",
+      "speakerSha256": "9bdc9a87e13e9bb1ea3e7803259c2ecbfebaeeb2ff80b5d0c76df1a464c1c962",
+      "sha256": "093e43b1fb0709cce1845c9d1dea9508dc33ac4553c1550b0b0c780d784cbe2e",
+      "frames": 1972044,
+      "clips": {
+        "start": {
+          "start": 0,
+          "length": 26164,
+          "text": "开始跑步。"
+        },
+        "resume": {
+          "start": 26164,
+          "length": 24951,
+          "text": "继续跑步。"
+        },
+        "pause": {
+          "start": 51115,
+          "length": 29324,
+          "text": "跑步已暂停。"
+        },
+        "auto_pause": {
+          "start": 80439,
+          "length": 70795,
+          "text": "已自动暂停，重新跑动后继续。"
+        },
+        "auto_resume": {
+          "start": 151234,
+          "length": 38245,
+          "text": "已自动继续跑步。"
+        },
+        "distance": {
+          "start": 189479,
+          "length": 21717,
+          "text": "您已跑了"
+        },
+        "estimated": {
+          "start": 211196,
+          "length": 42010,
+          "text": "计步估算，您已跑了"
+        },
+        "partial": {
+          "start": 253206,
+          "length": 34243,
+          "text": "已记录定位路段"
+        },
+        "km_time": {
+          "start": 287449,
+          "length": 24788,
+          "text": "公里，用时"
+        },
+        "minutes": {
+          "start": 312237,
+          "length": 13582,
+          "text": "分钟"
+        },
+        "minute": {
+          "start": 325819,
+          "length": 10851,
+          "text": "分"
+        },
+        "seconds": {
+          "start": 336670,
+          "length": 11496,
+          "text": "秒"
+        },
+        "hundred": {
+          "start": 348166,
+          "length": 10285,
+          "text": "百"
+        },
+        "thousand": {
+          "start": 358451,
+          "length": 11583,
+          "text": "千"
+        },
+        "ten_thousand": {
+          "start": 370034,
+          "length": 10776,
+          "text": "万"
+        },
+        "hundred_million": {
+          "start": 380810,
+          "length": 9455,
+          "text": "亿"
+        },
+        "n0": {
+          "start": 390265,
+          "length": 10173,
+          "text": "零"
+        },
+        "n1": {
+          "start": 400438,
+          "length": 10104,
+          "text": "一"
+        },
+        "n2": {
+          "start": 410542,
+          "length": 10757,
+          "text": "二"
+        },
+        "n3": {
+          "start": 421299,
+          "length": 10685,
+          "text": "三"
+        },
+        "n4": {
+          "start": 431984,
+          "length": 10865,
+          "text": "四"
+        },
+        "n5": {
+          "start": 442849,
+          "length": 9606,
+          "text": "五"
+        },
+        "n6": {
+          "start": 452455,
+          "length": 11171,
+          "text": "六"
+        },
+        "n7": {
+          "start": 463626,
+          "length": 11278,
+          "text": "七"
+        },
+        "n8": {
+          "start": 474904,
+          "length": 9335,
+          "text": "八"
+        },
+        "n9": {
+          "start": 484239,
+          "length": 11302,
+          "text": "九"
+        },
+        "n10": {
+          "start": 495541,
+          "length": 7820,
+          "text": "十"
+        },
+        "n11": {
+          "start": 503361,
+          "length": 13433,
+          "text": "十一"
+        },
+        "n12": {
+          "start": 516794,
+          "length": 13070,
+          "text": "十二"
+        },
+        "n13": {
+          "start": 529864,
+          "length": 13535,
+          "text": "十三"
+        },
+        "n14": {
+          "start": 543399,
+          "length": 13825,
+          "text": "十四"
+        },
+        "n15": {
+          "start": 557224,
+          "length": 12821,
+          "text": "十五"
+        },
+        "n16": {
+          "start": 570045,
+          "length": 13766,
+          "text": "十六"
+        },
+        "n17": {
+          "start": 583811,
+          "length": 13302,
+          "text": "十七"
+        },
+        "n18": {
+          "start": 597113,
+          "length": 13085,
+          "text": "十八"
+        },
+        "n19": {
+          "start": 610198,
+          "length": 14471,
+          "text": "十九"
+        },
+        "n20": {
+          "start": 624669,
+          "length": 13827,
+          "text": "二十"
+        },
+        "n21": {
+          "start": 638496,
+          "length": 17012,
+          "text": "二十一"
+        },
+        "n22": {
+          "start": 655508,
+          "length": 15302,
+          "text": "二十二"
+        },
+        "n23": {
+          "start": 670810,
+          "length": 16478,
+          "text": "二十三"
+        },
+        "n24": {
+          "start": 687288,
+          "length": 17501,
+          "text": "二十四"
+        },
+        "n25": {
+          "start": 704789,
+          "length": 16924,
+          "text": "二十五"
+        },
+        "n26": {
+          "start": 721713,
+          "length": 16513,
+          "text": "二十六"
+        },
+        "n27": {
+          "start": 738226,
+          "length": 17696,
+          "text": "二十七"
+        },
+        "n28": {
+          "start": 755922,
+          "length": 15596,
+          "text": "二十八"
+        },
+        "n29": {
+          "start": 771518,
+          "length": 17918,
+          "text": "二十九"
+        },
+        "n30": {
+          "start": 789436,
+          "length": 14271,
+          "text": "三十"
+        },
+        "n31": {
+          "start": 803707,
+          "length": 18202,
+          "text": "三十一"
+        },
+        "n32": {
+          "start": 821909,
+          "length": 17255,
+          "text": "三十二"
+        },
+        "n33": {
+          "start": 839164,
+          "length": 18241,
+          "text": "三十三"
+        },
+        "n34": {
+          "start": 857405,
+          "length": 19121,
+          "text": "三十四"
+        },
+        "n35": {
+          "start": 876526,
+          "length": 18377,
+          "text": "三十五"
+        },
+        "n36": {
+          "start": 894903,
+          "length": 18673,
+          "text": "三十六"
+        },
+        "n37": {
+          "start": 913576,
+          "length": 19628,
+          "text": "三十七"
+        },
+        "n38": {
+          "start": 933204,
+          "length": 17282,
+          "text": "三十八"
+        },
+        "n39": {
+          "start": 950486,
+          "length": 20147,
+          "text": "三十九"
+        },
+        "n40": {
+          "start": 970633,
+          "length": 14254,
+          "text": "四十"
+        },
+        "n41": {
+          "start": 984887,
+          "length": 17954,
+          "text": "四十一"
+        },
+        "n42": {
+          "start": 1002841,
+          "length": 16421,
+          "text": "四十二"
+        },
+        "n43": {
+          "start": 1019262,
+          "length": 17542,
+          "text": "四十三"
+        },
+        "n44": {
+          "start": 1036804,
+          "length": 18222,
+          "text": "四十四"
+        },
+        "n45": {
+          "start": 1055026,
+          "length": 17829,
+          "text": "四十五"
+        },
+        "n46": {
+          "start": 1072855,
+          "length": 17540,
+          "text": "四十六"
+        },
+        "n47": {
+          "start": 1090395,
+          "length": 18002,
+          "text": "四十七"
+        },
+        "n48": {
+          "start": 1108397,
+          "length": 16739,
+          "text": "四十八"
+        },
+        "n49": {
+          "start": 1125136,
+          "length": 19506,
+          "text": "四十九"
+        },
+        "n50": {
+          "start": 1144642,
+          "length": 16107,
+          "text": "五十"
+        },
+        "n51": {
+          "start": 1160749,
+          "length": 16142,
+          "text": "五十一"
+        },
+        "n52": {
+          "start": 1176891,
+          "length": 15066,
+          "text": "五十二"
+        },
+        "n53": {
+          "start": 1191957,
+          "length": 16285,
+          "text": "五十三"
+        },
+        "n54": {
+          "start": 1208242,
+          "length": 16464,
+          "text": "五十四"
+        },
+        "n55": {
+          "start": 1224706,
+          "length": 16152,
+          "text": "五十五"
+        },
+        "n56": {
+          "start": 1240858,
+          "length": 15744,
+          "text": "五十六"
+        },
+        "n57": {
+          "start": 1256602,
+          "length": 17248,
+          "text": "五十七"
+        },
+        "n58": {
+          "start": 1273850,
+          "length": 15439,
+          "text": "五十八"
+        },
+        "n59": {
+          "start": 1289289,
+          "length": 18272,
+          "text": "五十九"
+        },
+        "n60": {
+          "start": 1307561,
+          "length": 14152,
+          "text": "六十"
+        },
+        "n61": {
+          "start": 1321713,
+          "length": 17031,
+          "text": "六十一"
+        },
+        "n62": {
+          "start": 1338744,
+          "length": 15884,
+          "text": "六十二"
+        },
+        "n63": {
+          "start": 1354628,
+          "length": 16919,
+          "text": "六十三"
+        },
+        "n64": {
+          "start": 1371547,
+          "length": 17295,
+          "text": "六十四"
+        },
+        "n65": {
+          "start": 1388842,
+          "length": 16682,
+          "text": "六十五"
+        },
+        "n66": {
+          "start": 1405524,
+          "length": 16492,
+          "text": "六十六"
+        },
+        "n67": {
+          "start": 1422016,
+          "length": 17978,
+          "text": "六十七"
+        },
+        "n68": {
+          "start": 1439994,
+          "length": 15925,
+          "text": "六十八"
+        },
+        "n69": {
+          "start": 1455919,
+          "length": 19073,
+          "text": "六十九"
+        },
+        "n70": {
+          "start": 1474992,
+          "length": 13913,
+          "text": "七十"
+        },
+        "n71": {
+          "start": 1488905,
+          "length": 17042,
+          "text": "七十一"
+        },
+        "n72": {
+          "start": 1505947,
+          "length": 16960,
+          "text": "七十二"
+        },
+        "n73": {
+          "start": 1522907,
+          "length": 16846,
+          "text": "七十三"
+        },
+        "n74": {
+          "start": 1539753,
+          "length": 17141,
+          "text": "七十四"
+        },
+        "n75": {
+          "start": 1556894,
+          "length": 17629,
+          "text": "七十五"
+        },
+        "n76": {
+          "start": 1574523,
+          "length": 17147,
+          "text": "七十六"
+        },
+        "n77": {
+          "start": 1591670,
+          "length": 18255,
+          "text": "七十七"
+        },
+        "n78": {
+          "start": 1609925,
+          "length": 16140,
+          "text": "七十八"
+        },
+        "n79": {
+          "start": 1626065,
+          "length": 18538,
+          "text": "七十九"
+        },
+        "n80": {
+          "start": 1644603,
+          "length": 12872,
+          "text": "八十"
+        },
+        "n81": {
+          "start": 1657475,
+          "length": 16455,
+          "text": "八十一"
+        },
+        "n82": {
+          "start": 1673930,
+          "length": 15645,
+          "text": "八十二"
+        },
+        "n83": {
+          "start": 1689575,
+          "length": 16012,
+          "text": "八十三"
+        },
+        "n84": {
+          "start": 1705587,
+          "length": 16834,
+          "text": "八十四"
+        },
+        "n85": {
+          "start": 1722421,
+          "length": 16216,
+          "text": "八十五"
+        },
+        "n86": {
+          "start": 1738637,
+          "length": 16210,
+          "text": "八十六"
+        },
+        "n87": {
+          "start": 1754847,
+          "length": 17276,
+          "text": "八十七"
+        },
+        "n88": {
+          "start": 1772123,
+          "length": 15144,
+          "text": "八十八"
+        },
+        "n89": {
+          "start": 1787267,
+          "length": 17791,
+          "text": "八十九"
+        },
+        "n90": {
+          "start": 1805058,
+          "length": 13316,
+          "text": "九十"
+        },
+        "n91": {
+          "start": 1818374,
+          "length": 17377,
+          "text": "九十一"
+        },
+        "n92": {
+          "start": 1835751,
+          "length": 15569,
+          "text": "九十二"
+        },
+        "n93": {
+          "start": 1851320,
+          "length": 16995,
+          "text": "九十三"
+        },
+        "n94": {
+          "start": 1868315,
+          "length": 16874,
+          "text": "九十四"
+        },
+        "n95": {
+          "start": 1885189,
+          "length": 16844,
+          "text": "九十五"
+        },
+        "n96": {
+          "start": 1902033,
+          "length": 16850,
+          "text": "九十六"
+        },
+        "n97": {
+          "start": 1918883,
+          "length": 18199,
+          "text": "九十七"
+        },
+        "n98": {
+          "start": 1937082,
+          "length": 16098,
+          "text": "九十八"
+        },
+        "n99": {
+          "start": 1953180,
+          "length": 18864,
+          "text": "九十九"
+        }
+      }
+    },
+    "male": {
+      "speaker": "zm_010",
+      "speakerSha256": "d2eeba86192eee269f600ca6821038034abd017532a1fe68ff7b0e86c2983b2a",
+      "sha256": "27d01ef29edc1a99b7f1ee81e792137b458ac98ff22415b90af03795ff23ff8b",
+      "frames": 2065495,
+      "clips": {
+        "start": {
+          "start": 0,
+          "length": 26029,
+          "text": "开始跑步。"
+        },
+        "resume": {
+          "start": 26029,
+          "length": 25666,
+          "text": "继续跑步。"
+        },
+        "pause": {
+          "start": 51695,
+          "length": 29479,
+          "text": "跑步已暂停。"
+        },
+        "auto_pause": {
+          "start": 81174,
+          "length": 71564,
+          "text": "已自动暂停，重新跑动后继续。"
+        },
+        "auto_resume": {
+          "start": 152738,
+          "length": 39540,
+          "text": "已自动继续跑步。"
+        },
+        "distance": {
+          "start": 192278,
+          "length": 23541,
+          "text": "您已跑了"
+        },
+        "estimated": {
+          "start": 215819,
+          "length": 44355,
+          "text": "计步估算，您已跑了"
+        },
+        "partial": {
+          "start": 260174,
+          "length": 35829,
+          "text": "已记录定位路段"
+        },
+        "km_time": {
+          "start": 296003,
+          "length": 24741,
+          "text": "公里，用时"
+        },
+        "minutes": {
+          "start": 320744,
+          "length": 13087,
+          "text": "分钟"
+        },
+        "minute": {
+          "start": 333831,
+          "length": 10293,
+          "text": "分"
+        },
+        "seconds": {
+          "start": 344124,
+          "length": 11920,
+          "text": "秒"
+        },
+        "hundred": {
+          "start": 356044,
+          "length": 9466,
+          "text": "百"
+        },
+        "thousand": {
+          "start": 365510,
+          "length": 11516,
+          "text": "千"
+        },
+        "ten_thousand": {
+          "start": 377026,
+          "length": 11358,
+          "text": "万"
+        },
+        "hundred_million": {
+          "start": 388384,
+          "length": 10087,
+          "text": "亿"
+        },
+        "n0": {
+          "start": 398471,
+          "length": 11360,
+          "text": "零"
+        },
+        "n1": {
+          "start": 409831,
+          "length": 10126,
+          "text": "一"
+        },
+        "n2": {
+          "start": 419957,
+          "length": 11236,
+          "text": "二"
+        },
+        "n3": {
+          "start": 431193,
+          "length": 11202,
+          "text": "三"
+        },
+        "n4": {
+          "start": 442395,
+          "length": 10550,
+          "text": "四"
+        },
+        "n5": {
+          "start": 452945,
+          "length": 10405,
+          "text": "五"
+        },
+        "n6": {
+          "start": 463350,
+          "length": 10830,
+          "text": "六"
+        },
+        "n7": {
+          "start": 474180,
+          "length": 10810,
+          "text": "七"
+        },
+        "n8": {
+          "start": 484990,
+          "length": 11017,
+          "text": "八"
+        },
+        "n9": {
+          "start": 496007,
+          "length": 10638,
+          "text": "九"
+        },
+        "n10": {
+          "start": 506645,
+          "length": 6740,
+          "text": "十"
+        },
+        "n11": {
+          "start": 513385,
+          "length": 13034,
+          "text": "十一"
+        },
+        "n12": {
+          "start": 526419,
+          "length": 11461,
+          "text": "十二"
+        },
+        "n13": {
+          "start": 537880,
+          "length": 12585,
+          "text": "十三"
+        },
+        "n14": {
+          "start": 550465,
+          "length": 13071,
+          "text": "十四"
+        },
+        "n15": {
+          "start": 563536,
+          "length": 12687,
+          "text": "十五"
+        },
+        "n16": {
+          "start": 576223,
+          "length": 12377,
+          "text": "十六"
+        },
+        "n17": {
+          "start": 588600,
+          "length": 13054,
+          "text": "十七"
+        },
+        "n18": {
+          "start": 601654,
+          "length": 11786,
+          "text": "十八"
+        },
+        "n19": {
+          "start": 613440,
+          "length": 13525,
+          "text": "十九"
+        },
+        "n20": {
+          "start": 626965,
+          "length": 13831,
+          "text": "二十"
+        },
+        "n21": {
+          "start": 640796,
+          "length": 17139,
+          "text": "二十一"
+        },
+        "n22": {
+          "start": 657935,
+          "length": 16305,
+          "text": "二十二"
+        },
+        "n23": {
+          "start": 674240,
+          "length": 18587,
+          "text": "二十三"
+        },
+        "n24": {
+          "start": 692827,
+          "length": 19633,
+          "text": "二十四"
+        },
+        "n25": {
+          "start": 712460,
+          "length": 17640,
+          "text": "二十五"
+        },
+        "n26": {
+          "start": 730100,
+          "length": 17657,
+          "text": "二十六"
+        },
+        "n27": {
+          "start": 747757,
+          "length": 19042,
+          "text": "二十七"
+        },
+        "n28": {
+          "start": 766799,
+          "length": 17636,
+          "text": "二十八"
+        },
+        "n29": {
+          "start": 784435,
+          "length": 20181,
+          "text": "二十九"
+        },
+        "n30": {
+          "start": 804616,
+          "length": 13891,
+          "text": "三十"
+        },
+        "n31": {
+          "start": 818507,
+          "length": 18070,
+          "text": "三十一"
+        },
+        "n32": {
+          "start": 836577,
+          "length": 17235,
+          "text": "三十二"
+        },
+        "n33": {
+          "start": 853812,
+          "length": 20344,
+          "text": "三十三"
+        },
+        "n34": {
+          "start": 874156,
+          "length": 20148,
+          "text": "三十四"
+        },
+        "n35": {
+          "start": 894304,
+          "length": 19439,
+          "text": "三十五"
+        },
+        "n36": {
+          "start": 913743,
+          "length": 18545,
+          "text": "三十六"
+        },
+        "n37": {
+          "start": 932288,
+          "length": 21071,
+          "text": "三十七"
+        },
+        "n38": {
+          "start": 953359,
+          "length": 19303,
+          "text": "三十八"
+        },
+        "n39": {
+          "start": 972662,
+          "length": 20494,
+          "text": "三十九"
+        },
+        "n40": {
+          "start": 993156,
+          "length": 14681,
+          "text": "四十"
+        },
+        "n41": {
+          "start": 1007837,
+          "length": 19624,
+          "text": "四十一"
+        },
+        "n42": {
+          "start": 1027461,
+          "length": 17325,
+          "text": "四十二"
+        },
+        "n43": {
+          "start": 1044786,
+          "length": 19863,
+          "text": "四十三"
+        },
+        "n44": {
+          "start": 1064649,
+          "length": 20666,
+          "text": "四十四"
+        },
+        "n45": {
+          "start": 1085315,
+          "length": 19923,
+          "text": "四十五"
+        },
+        "n46": {
+          "start": 1105238,
+          "length": 19536,
+          "text": "四十六"
+        },
+        "n47": {
+          "start": 1124774,
+          "length": 20684,
+          "text": "四十七"
+        },
+        "n48": {
+          "start": 1145458,
+          "length": 19238,
+          "text": "四十八"
+        },
+        "n49": {
+          "start": 1164696,
+          "length": 20095,
+          "text": "四十九"
+        },
+        "n50": {
+          "start": 1184791,
+          "length": 13109,
+          "text": "五十"
+        },
+        "n51": {
+          "start": 1197900,
+          "length": 16387,
+          "text": "五十一"
+        },
+        "n52": {
+          "start": 1214287,
+          "length": 15337,
+          "text": "五十二"
+        },
+        "n53": {
+          "start": 1229624,
+          "length": 17602,
+          "text": "五十三"
+        },
+        "n54": {
+          "start": 1247226,
+          "length": 18867,
+          "text": "五十四"
+        },
+        "n55": {
+          "start": 1266093,
+          "length": 17128,
+          "text": "五十五"
+        },
+        "n56": {
+          "start": 1283221,
+          "length": 17514,
+          "text": "五十六"
+        },
+        "n57": {
+          "start": 1300735,
+          "length": 17878,
+          "text": "五十七"
+        },
+        "n58": {
+          "start": 1318613,
+          "length": 16234,
+          "text": "五十八"
+        },
+        "n59": {
+          "start": 1334847,
+          "length": 19298,
+          "text": "五十九"
+        },
+        "n60": {
+          "start": 1354145,
+          "length": 13754,
+          "text": "六十"
+        },
+        "n61": {
+          "start": 1367899,
+          "length": 17102,
+          "text": "六十一"
+        },
+        "n62": {
+          "start": 1385001,
+          "length": 16468,
+          "text": "六十二"
+        },
+        "n63": {
+          "start": 1401469,
+          "length": 19816,
+          "text": "六十三"
+        },
+        "n64": {
+          "start": 1421285,
+          "length": 19507,
+          "text": "六十四"
+        },
+        "n65": {
+          "start": 1440792,
+          "length": 17758,
+          "text": "六十五"
+        },
+        "n66": {
+          "start": 1458550,
+          "length": 17935,
+          "text": "六十六"
+        },
+        "n67": {
+          "start": 1476485,
+          "length": 19765,
+          "text": "六十七"
+        },
+        "n68": {
+          "start": 1496250,
+          "length": 18519,
+          "text": "六十八"
+        },
+        "n69": {
+          "start": 1514769,
+          "length": 20152,
+          "text": "六十九"
+        },
+        "n70": {
+          "start": 1534921,
+          "length": 13590,
+          "text": "七十"
+        },
+        "n71": {
+          "start": 1548511,
+          "length": 16514,
+          "text": "七十一"
+        },
+        "n72": {
+          "start": 1565025,
+          "length": 15856,
+          "text": "七十二"
+        },
+        "n73": {
+          "start": 1580881,
+          "length": 19072,
+          "text": "七十三"
+        },
+        "n74": {
+          "start": 1599953,
+          "length": 18545,
+          "text": "七十四"
+        },
+        "n75": {
+          "start": 1618498,
+          "length": 17670,
+          "text": "七十五"
+        },
+        "n76": {
+          "start": 1636168,
+          "length": 17861,
+          "text": "七十六"
+        },
+        "n77": {
+          "start": 1654029,
+          "length": 19291,
+          "text": "七十七"
+        },
+        "n78": {
+          "start": 1673320,
+          "length": 17823,
+          "text": "七十八"
+        },
+        "n79": {
+          "start": 1691143,
+          "length": 19344,
+          "text": "七十九"
+        },
+        "n80": {
+          "start": 1710487,
+          "length": 13454,
+          "text": "八十"
+        },
+        "n81": {
+          "start": 1723941,
+          "length": 17405,
+          "text": "八十一"
+        },
+        "n82": {
+          "start": 1741346,
+          "length": 15877,
+          "text": "八十二"
+        },
+        "n83": {
+          "start": 1757223,
+          "length": 18703,
+          "text": "八十三"
+        },
+        "n84": {
+          "start": 1775926,
+          "length": 19053,
+          "text": "八十四"
+        },
+        "n85": {
+          "start": 1794979,
+          "length": 17823,
+          "text": "八十五"
+        },
+        "n86": {
+          "start": 1812802,
+          "length": 17558,
+          "text": "八十六"
+        },
+        "n87": {
+          "start": 1830360,
+          "length": 18642,
+          "text": "八十七"
+        },
+        "n88": {
+          "start": 1849002,
+          "length": 17421,
+          "text": "八十八"
+        },
+        "n89": {
+          "start": 1866423,
+          "length": 19703,
+          "text": "八十九"
+        },
+        "n90": {
+          "start": 1886126,
+          "length": 13015,
+          "text": "九十"
+        },
+        "n91": {
+          "start": 1899141,
+          "length": 17352,
+          "text": "九十一"
+        },
+        "n92": {
+          "start": 1916493,
+          "length": 17365,
+          "text": "九十二"
+        },
+        "n93": {
+          "start": 1933858,
+          "length": 19061,
+          "text": "九十三"
+        },
+        "n94": {
+          "start": 1952919,
+          "length": 18468,
+          "text": "九十四"
+        },
+        "n95": {
+          "start": 1971387,
+          "length": 18801,
+          "text": "九十五"
+        },
+        "n96": {
+          "start": 1990188,
+          "length": 18037,
+          "text": "九十六"
+        },
+        "n97": {
+          "start": 2008225,
+          "length": 19690,
+          "text": "九十七"
+        },
+        "n98": {
+          "start": 2027915,
+          "length": 17660,
+          "text": "九十八"
+        },
+        "n99": {
+          "start": 2045575,
+          "length": 19920,
+          "text": "九十九"
+        }
+      }
+    }
+  }
+}

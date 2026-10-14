@@ -8,9 +8,10 @@ import { RunFocus, runGoals } from '../running/RunFocus';
 import { RunRecordDetail } from '../running/RunRecordDetail';
 import { RunOptionsPanel } from '../running/RunOptionsPanel';
 import { mapPosition } from '../running/locationStatus';
-import { paceLabel, runClock, usablePoint, runMeasurement, type RunMode } from '../running/model';
+import { hasRecordedRunDistance, paceLabel, runClock, usablePoint, runMeasurement, type RunMode } from '../running/model';
 import { appPalette as c } from '../theme';
 import { confirmAction } from '../utils/confirm';
+import { prepareWebRunVoice } from '../running/webVoice';
 
 export function RunScreen({ visible }: { visible: boolean }) {
   const run = useRunRecorder(), { sessions } = useAppStore(state => ({ sessions: state.sessions }));
@@ -18,18 +19,22 @@ export function RunScreen({ visible }: { visible: boolean }) {
   const [chosenMode, setChosenMode] = useState<RunMode>('outdoor'), [distanceOpen, setDistanceOpen] = useState(false), [manualDistance, setManualDistance] = useState(''), [distanceError, setDistanceError] = useState('');
   const [focus, setFocus] = useState(false), [goalOpen, setGoalOpen] = useState(false), [goalIndex, setGoalIndex] = useState(0), [countdown, setCountdown] = useState<number | null>(null), [receiptId, setReceiptId] = useState<string | null>(null);
   const lastActiveId = useRef<string | undefined>(undefined);
+  const automaticLocationRequested = useRef(false);
   const [optionsOpen, setOptionsOpen] = useState(false);
+  const [completionNotice, setCompletionNotice] = useState('');
   const { snapshot, analysis } = run;
   const receipt = sessions.find(session => session.id === receiptId);
   useEffect(() => {
     if (snapshot.phase !== 'idle') { lastActiveId.current = snapshot.id; return; }
-    if (lastActiveId.current && sessions.some(session => session.id === lastActiveId.current)) {
-      setReceiptId(lastActiveId.current); setFocus(false); lastActiveId.current = undefined;
+    if (lastActiveId.current) {
+      if (sessions.some(session => session.id === lastActiveId.current)) setReceiptId(lastActiveId.current);
+      else setCompletionNotice('本次未测得里程，未保存记录。');
+      setFocus(false); lastActiveId.current = undefined;
     }
   }, [snapshot.phase, snapshot.id, sessions]);
   useEffect(() => {
     if (countdown === null) return;
-    if (countdown === 0) { setCountdown(null); void run.start(chosenMode); return; }
+    if (countdown === 0) { setCountdown(null); setCompletionNotice(''); void run.start(chosenMode); return; }
     const timer = setTimeout(() => setCountdown(value => value === null ? null : value - 1), 1000);
     return () => clearTimeout(timer);
   }, [countdown, chosenMode]);
@@ -44,6 +49,14 @@ export function RunScreen({ visible }: { visible: boolean }) {
   const distanceText = measurement.distanceKm === undefined ? '—' : measurement.distanceKm.toFixed(2);
   const distanceFont = Math.floor(Math.max(26, Math.min(height < 600 ? 42 : 56, ((width - 48) * 1.3 / 3.3 - 8) / (distanceText.length * 0.6))));
   useEffect(() => { if (!visible) run.stopPreview(); return run.stopPreview; }, [visible, run.stopPreview]);
+  useEffect(() => {
+    if (!visible || indoor) { automaticLocationRequested.current = false; return; }
+    // One continuous subscription per outdoor-page visit. Denial/failure must
+    // not cause an automatic permission/request loop; Retry remains available.
+    if (!run.ready || run.busy || active || automaticLocationRequested.current) return;
+    automaticLocationRequested.current = true;
+    void run.locate();
+  }, [visible, indoor, run.ready, run.busy, active]);
   const retryLocation = () => {
     if (!run.location.settings || Platform.OS === 'web') { void run.locate(); return; }
     const open = Platform.OS === 'android' && snapshot.location?.enabled === false && snapshot.location.permission
@@ -55,11 +68,12 @@ export function RunScreen({ visible }: { visible: boolean }) {
       void (async () => { if (recording && !await run.pause()) return; setManualDistance(''); setDistanceError(''); setDistanceOpen(true); })();
       return;
     }
-    void confirmAction('结束并保存跑步？', '保存用时和已测得的路段；未定位的距离不会编造。暂停时间不计入跑步。', () => { void run.save(); }, { confirmLabel: '结束并保存' });
+    const recordable = hasRecordedRunDistance(measurement.distanceKm);
+    void confirmAction(recordable ? '结束并保存跑步？' : '结束跑步？', recordable ? '保存用时和已测得的路段；未定位的距离不会编造。暂停时间不计入跑步。' : '本次尚未测得里程，结束后不保存训练记录。可以返回继续跑步或重试定位。', () => { void run.save(); }, { confirmLabel: recordable ? '结束并保存' : '结束跑步' });
   };
   const saveIndoor = () => {
     const value = manualDistance.trim(), distance = value === '' ? undefined : Number(value);
-    if (value && (!/^\d+(?:\.\d+)?$/.test(value) || !Number.isFinite(distance) || distance! < 0 || distance! > 1000)) { setDistanceError('请输入 0–1000 公里，或留空只保存用时。'); return; }
+    if (value && (!/^\d+(?:\.\d+)?$/.test(value) || !Number.isFinite(distance) || distance! < 0 || distance! > 1000)) { setDistanceError('请输入 0–1000 公里；没有距离时留空结束，不保存记录。'); return; }
     setDistanceOpen(false); void run.save(distance);
   };
   return <View testID="running-screen" style={s.root} onLayout={event => { setHeight(event.nativeEvent.layout.height); setWidth(event.nativeEvent.layout.width); }}>
@@ -68,13 +82,13 @@ export function RunScreen({ visible }: { visible: boolean }) {
         <View style={s.modeSwitch}>{(['outdoor', 'indoor'] as const).map(mode => <Pressable key={mode} accessibilityRole="button" accessibilityLabel={mode === 'outdoor' ? '选择户外跑' : '选择室内跑'} disabled={active} accessibilityState={{ selected: (active ? snapshot.mode : chosenMode) === mode }} onPress={() => { setChosenMode(mode); run.stopPreview(); }} style={[s.modeChoice, (active ? snapshot.mode : chosenMode) === mode && s.modeSelected]}><Text style={[s.modeChoiceText, (active ? snapshot.mode : chosenMode) === mode && { color: c.onLime }]}>{mode === 'outdoor' ? '户外' : '室内'}</Text></Pressable>)}</View>
       </View>
       <View style={s.headActions}>
-        <Pressable accessibilityRole="switch" accessibilityLabel={snapshot.options?.voice !== false ? '关闭跑步语音播报' : '开启跑步语音播报'} accessibilityState={{ checked: snapshot.options?.voice !== false, disabled: run.busy || !run.ready }} disabled={run.busy || !run.ready} onPress={() => { void run.setVoice(snapshot.options?.voice === false); }} style={s.iconControl}><AppGlyph name={snapshot.options?.voice !== false ? 'speaker' : 'speakerOff'} size={23} color={snapshot.options?.voice !== false ? c.lime : c.muted} /></Pressable>
+        <Pressable accessibilityRole="switch" accessibilityLabel={snapshot.options?.voice !== false ? '关闭跑步语音播报' : '开启跑步语音播报'} accessibilityState={{ checked: snapshot.options?.voice !== false, disabled: run.busy || !run.ready }} disabled={run.busy || !run.ready} onPress={() => { if (snapshot.options?.voice === false) prepareWebRunVoice(snapshot.options?.voiceStyle ?? 'female'); void run.setVoice(snapshot.options?.voice === false); }} style={s.iconControl}><AppGlyph name={snapshot.options?.voice !== false ? 'speaker' : 'speakerOff'} size={23} color={snapshot.options?.voice !== false ? c.lime : c.muted} /></Pressable>
         <Pressable accessibilityRole="button" accessibilityLabel="打开跑步设置" onPress={() => setOptionsOpen(true)} style={s.iconControl}><AppGlyph name="settings" size={22} color={c.muted} /></Pressable>
         {active ? <Pressable accessibilityRole="button" accessibilityLabel="进入跑步全屏" onPress={() => setFocus(true)} style={s.iconControl}><AppGlyph name="expand" size={20} color={c.muted} /></Pressable> : null}
       </View>
     </View>
     <ScrollView testID="running-page-content" showsVerticalScrollIndicator={false} style={s.body} contentContainerStyle={s.bodyContent}>
-    <View style={[s.mapArea, height < 600 && { minHeight: 120 }]}>{indoor ? <View style={s.indoorArea}><AppGlyph name="run" size={50} color={c.lime} /><Text style={s.indoorTitle}>专注跑步，无需 GPS</Text><Text style={s.indoorHint}>跑步机 · 室内训练</Text><Text style={s.indoorHint}>{snapshot.options?.stepTracking ? `${snapshot.stepCount || 0} 步 · ${snapshot.options.stepLengthM ? '距离按校准步长估算' : '未校准步长，仅计步'}` : '先记录用时，结束后填写距离'}</Text></View> : visible && !focus ? <RunMap position={mapPosition(snapshot)} segments={analysis.segments} splits={analysis.splits} status={status} good={run.location.good} onLocate={() => { void run.locate(); }} interactive /> : null}</View>
+    <View style={[s.mapArea, height < 600 && { minHeight: 120 }]}>{indoor ? <View style={s.indoorArea}><AppGlyph name="run" size={50} color={c.lime} /><Text style={s.indoorTitle}>专注跑步，无需 GPS</Text><Text style={s.indoorHint}>跑步机 · 室内训练</Text><Text style={s.indoorHint}>{snapshot.options?.stepTracking ? `${snapshot.stepCount || 0} 步 · ${snapshot.options.stepLengthM ? '距离按校准步长估算' : '未校准步长，仅计步'}` : '先开始计时，结束时填写距离'}</Text></View> : visible && !focus ? <RunMap position={mapPosition(snapshot)} segments={analysis.segments} splits={analysis.splits} status={status} good={run.location.good} onLocate={() => { void run.locate(); }} interactive /> : null}</View>
     <View style={s.readout}>
       <View style={s.stats}>
         <View style={s.distance}><Text testID="run-distance" numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.65} style={[s.distanceValue, { fontSize: distanceFont, lineHeight: distanceFont + 9 }]}>{distanceText}</Text><Text style={s.distanceUnit}>公里</Text></View>
@@ -83,11 +97,12 @@ export function RunScreen({ visible }: { visible: boolean }) {
       </View>
       <View style={s.mode}><AppGlyph name="run" size={20} color={c.text} /><Pressable accessibilityRole="button" accessibilityLabel="设置跑步目标" disabled={active} onPress={() => setGoalOpen(true)}><Text style={s.modeLabel}>{runGoals[goalIndex].label + (active ? '' : ' ▾')}</Text></Pressable>{active ? <Text testID="run-current-pace" accessibilityLabel={(indoor ? '估算' : '') + '当前配速 ' + paceLabel(currentPace)} style={s.currentPace}>{paceLabel(currentPace)}<Text style={s.caption}> /km</Text></Text> : null}<Text style={[s.modeHint, recording && { color: c.lime }]}>{active ? recording ? '正在跑步' : snapshot.autoPaused ? '已自动暂停' : paused ? '跑步已暂停' : '等待保存' : indoor ? measurement.source === 'steps' ? '计步估算 · 可手动校正' : '距离可手动填写' : '可直接开始计时'}</Text></View>
       {snapshot.autoPaused ? <Text style={s.endHint}>已自动暂停 · 重新跑动后自动继续，也可手动继续</Text> : null}
+      {!active && completionNotice ? <Text testID="run-completion-notice" accessibilityLiveRegion="polite" style={s.endHint}>{completionNotice}</Text> : null}
       {run.error || snapshot.interrupted || (!indoor && run.location.detail) ? <View style={s.issue} accessibilityRole="alert"><Text style={s.issueText}>{run.error || (snapshot.interrupted ? '上次记录已恢复为暂停，不计入 App 中断期间的时间。' : run.location.detail)}</Text>{!indoor ? <Pressable accessibilityRole="button" accessibilityLabel={run.location.settings && Platform.OS !== 'web' ? '打开系统定位设置' : '重试跑步定位'} onPress={retryLocation} style={s.settings}><Text style={s.settingsText}>{run.location.settings && Platform.OS !== 'web' ? '定位设置' : '重试定位'}</Text></Pressable> : null}</View> : null}
     </View>
     </ScrollView>
     <View style={s.dock} testID="run-control-dock">
-      {!active ? <Pressable accessibilityRole="button" accessibilityLabel="开始跑步" disabled={run.busy || !run.ready} onPress={() => setCountdown(3)} style={({ pressed }) => [s.primary, s.start, pressed && s.pressed, (run.busy || !run.ready) && s.disabled]}>{run.busy ? <ActivityIndicator color={c.onLime} /> : <><Text style={s.play}>▶</Text><Text style={s.primaryText}>开始跑步</Text></>}</Pressable> : <View style={s.runControls}>
+      {!active ? <Pressable accessibilityRole="button" accessibilityLabel="开始跑步" disabled={run.busy || !run.ready} onPress={() => { if (snapshot.options?.voice !== false) prepareWebRunVoice(snapshot.options?.voiceStyle ?? 'female'); setCountdown(3); }} style={({ pressed }) => [s.primary, s.start, pressed && s.pressed, (run.busy || !run.ready) && s.disabled]}>{run.busy ? <ActivityIndicator color={c.onLime} /> : <><Text style={s.play}>▶</Text><Text style={s.primaryText}>开始跑步</Text></>}</Pressable> : <View style={s.runControls}>
         <Pressable accessibilityRole="button" accessibilityLabel={pendingSave ? '重试保存跑步' : paused ? '继续跑步' : '暂停跑步'} disabled={run.busy} onPress={() => { void (pendingSave ? run.save() : paused ? run.resume() : run.pause()); }} style={({ pressed }) => [s.primary, pressed && s.pressed, run.busy && s.disabled]}>{run.busy ? <ActivityIndicator color={c.onLime} /> : <><AppGlyph name={recording ? 'pause' : pendingSave ? 'check' : 'run'} color={c.onLime} size={22} /><Text style={s.primaryText}>{pendingSave ? '重试保存' : paused ? '继续' : '暂停'}</Text></>}</Pressable>
         {!pendingSave ? <Pressable accessibilityRole="button" accessibilityLabel="结束并保存跑步" disabled={run.busy} onPress={finish} style={({ pressed }) => [s.end, pressed && s.pressed, run.busy && s.disabled]}><AppGlyph name="stop" size={20} color={c.text} /><Text style={s.endText}>结束</Text></Pressable> : null}
       </View>}
@@ -98,7 +113,7 @@ export function RunScreen({ visible }: { visible: boolean }) {
     <Modal visible={goalOpen} transparent animationType="fade" onRequestClose={() => setGoalOpen(false)}><View style={s.formOverlay}><View style={s.distanceForm}><Text style={s.title}>本次跑步目标</Text>{runGoals.map((goal, index) => <Pressable key={goal.label} accessibilityRole="radio" accessibilityState={{ checked: goalIndex === index }} onPress={() => { setGoalIndex(index); setGoalOpen(false); }} style={s.goalChoice}><Text style={[s.historyText, goalIndex === index && { color: c.lime }]}>{goal.label}{goalIndex === index ? ' ✓' : ''}</Text></Pressable>)}<Text style={s.caption}>达成目标后可以继续跑，不会自动结束记录。</Text><Pressable accessibilityRole="button" accessibilityLabel="取消设置跑步目标" onPress={() => setGoalOpen(false)} style={s.close}><Text style={s.historyText}>取消</Text></Pressable></View></View></Modal>
     <Modal visible={countdown !== null} transparent onRequestClose={() => setCountdown(null)}><View style={s.countdown}><Text style={s.title}>准备开跑</Text><Text testID="run-countdown" style={s.countdownValue}>{countdown}</Text><Pressable accessibilityRole="button" accessibilityLabel="取消开始跑步" onPress={() => setCountdown(null)} style={s.close}><Text style={s.settingsText}>取消</Text></Pressable></View></Modal>
     <Modal visible={!!receipt} animationType="slide" onRequestClose={() => setReceiptId(null)}><View style={s.historyRoot}><View style={s.historyHeading}><Text style={s.title}>跑步已保存</Text><Pressable accessibilityRole="button" accessibilityLabel="关闭跑步总结" onPress={() => setReceiptId(null)} style={s.close}><Text style={s.closeText}>×</Text></Pressable></View><ScrollView contentContainerStyle={s.historyContent}>{receipt ? <RunRecordDetail session={receipt} /> : null}</ScrollView></View></Modal>
-    <Modal visible={distanceOpen} transparent animationType="fade" onRequestClose={() => setDistanceOpen(false)}><KeyboardAvoidingView style={s.formOverlay} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}><ScrollView contentContainerStyle={s.formContent} keyboardShouldPersistTaps="always" keyboardDismissMode="none"><View style={s.distanceForm}><Text style={s.title}>保存室内跑</Text><Text style={s.caption}>{measurement.source === 'steps' ? `计步估算 ${distanceText} 公里。填写跑步机距离可覆盖估算，留空保留估算。` : '计时已暂停。可填写跑步机显示的公里数，也可留空只保存用时。'}</Text><TextInput accessibilityLabel="室内跑距离（公里，可选）" placeholder="例如 3.50" placeholderTextColor={c.muted} keyboardType="decimal-pad" value={manualDistance} onChangeText={value => { setManualDistance(value); setDistanceError(''); }} style={s.distanceInput} />{distanceError ? <Text accessibilityRole="alert" style={[s.issueText, { flex: 0 }]}>{distanceError}</Text> : null}<Pressable accessibilityRole="button" accessibilityLabel="保存室内跑" onPress={saveIndoor} style={[s.primary, { flex: 0 }]}><Text style={s.primaryText}>保存记录</Text></Pressable><Pressable accessibilityRole="button" accessibilityLabel="返回跑步" onPress={() => setDistanceOpen(false)} style={s.close}><Text style={s.historyText}>返回跑步</Text></Pressable></View></ScrollView></KeyboardAvoidingView></Modal>
+    <Modal visible={distanceOpen} transparent animationType="fade" onRequestClose={() => setDistanceOpen(false)}><KeyboardAvoidingView style={s.formOverlay} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}><ScrollView contentContainerStyle={s.formContent} keyboardShouldPersistTaps="always" keyboardDismissMode="none"><View style={s.distanceForm}><Text style={s.title}>保存室内跑</Text><Text style={s.caption}>{measurement.source === 'steps' ? `计步估算 ${distanceText} 公里。填写跑步机距离可覆盖估算，留空保留估算。` : '计时已暂停。填写跑步机距离后保存，留空则直接结束，不保存记录。'}</Text><TextInput accessibilityLabel="室内跑距离（公里，可选）" placeholder="例如 3.50" placeholderTextColor={c.muted} keyboardType="decimal-pad" value={manualDistance} onChangeText={value => { setManualDistance(value); setDistanceError(''); }} style={s.distanceInput} />{distanceError ? <Text accessibilityRole="alert" style={[s.issueText, { flex: 0 }]}>{distanceError}</Text> : null}<Pressable accessibilityRole="button" accessibilityLabel="保存室内跑" onPress={saveIndoor} style={[s.primary, { flex: 0 }]}><Text style={s.primaryText}>{hasRecordedRunDistance(manualDistance.trim() ? Number(manualDistance) : measurement.distanceKm) ? '保存记录' : '结束本次跑步'}</Text></Pressable><Pressable accessibilityRole="button" accessibilityLabel="返回跑步" onPress={() => setDistanceOpen(false)} style={s.close}><Text style={s.historyText}>返回跑步</Text></Pressable></View></ScrollView></KeyboardAvoidingView></Modal>
 
   </View>;
 }
