@@ -14,8 +14,9 @@ class UncoverVoiceModule : Module() {
   companion object { @Volatile internal var instance: UncoverVoiceModule? = null; private set }
   private val context get() = appContext.reactContext ?: error("App 尚未就绪。")
   internal fun status() { runCatching { sendEvent("status", emptyMap<String, Any>()) } }
+  internal fun dialogue(data: Map<String, Any>) { runCatching { sendEvent("dialogue", data) } }
   override fun definition() = ModuleDefinition {
-    Name("UncoverVoice"); Events("status")
+    Name("UncoverVoice"); Events("status", "dialogue")
     OnCreate { instance = this@UncoverVoiceModule }
     OnDestroy { if (instance === this@UncoverVoiceModule) instance = null }
     AsyncFunction("state") { VoiceState.snapshot(context).toString() }
@@ -39,6 +40,8 @@ class UncoverVoiceModule : Module() {
       }
     }.runOnQueue(Queues.MAIN)
     AsyncFunction("active") { id: String -> BlackVoiceService.instance?.active(id) == true }
+    AsyncFunction("dialogue") { BlackVoiceService.instance?.dialogue() ?: "{\"kind\":\"status\",\"sequence\":0,\"phase\":\"stopped\"}" }
+    AsyncFunction("cancel") { id: String? -> BlackVoiceService.instance?.cancel(id) }.runOnQueue(Queues.MAIN)
     AsyncFunction("reply") { id: String, text: String -> BlackVoiceService.instance?.reply(id, text) }.runOnQueue(Queues.MAIN)
     AsyncFunction("clear") { VoiceState.setEnabled(context, false); BlackVoiceService.stop(context); VoiceState.clearError(context); status() }.runOnQueue(Queues.MAIN)
   }

@@ -3,7 +3,14 @@ apply plugin: 'expo-module-gradle-plugin'
 
 group = 'uncover.voice'
 version = '1.0.0'
-android { namespace 'uncover.voice'; defaultConfig { versionCode 1; versionName '1.0.0'; consumerProguardFiles 'consumer-rules.pro' } }
+android {
+  namespace 'uncover.voice'
+  defaultConfig {
+    versionCode 1; versionName '1.0.0'; consumerProguardFiles 'consumer-rules.pro'
+    externalNativeBuild { cmake { arguments '-DANDROID_STL=c++_shared' } }
+  }
+  externalNativeBuild { cmake { path 'native/CMakeLists.txt'; version '3.22.1' } }
+}
 dependencies {
   implementation 'com.facebook.react:react-android'
   compileOnly files('libs/sherpa-onnx-1.13.8.aar')

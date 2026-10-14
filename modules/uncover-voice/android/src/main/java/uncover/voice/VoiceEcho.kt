@@ -1,0 +1,20 @@
+package uncover.voice
+
+/** Stateful double-talk-safe Speex AEC plus residual echo suppression. Owned only by the mic worker. */
+internal class VoiceEcho(frameSize: Int) : AutoCloseable {
+  private var pointer = nativeCreate(frameSize)
+  init { check(pointer != 0L) { "本地回声消除器初始化失败。" } }
+  fun process(captured: ShortArray, rendered: ShortArray): FloatArray {
+    val output = ShortArray(captured.size)
+    nativeProcess(pointer, captured, rendered, output)
+    return FloatArray(output.size) { output[it] / 32768f }
+  }
+  fun resample(audio: ShortArray, rate: Int): ShortArray = if (rate == 16000) audio else
+    nativeResample(audio, rate) ?: error("语音音频重采样失败。")
+  override fun close() { if (pointer != 0L) { nativeRelease(pointer); pointer = 0 } }
+  private external fun nativeCreate(frameSize: Int): Long
+  private external fun nativeProcess(pointer: Long, captured: ShortArray, rendered: ShortArray, output: ShortArray)
+  private external fun nativeRelease(pointer: Long)
+  private external fun nativeResample(audio: ShortArray, rate: Int): ShortArray?
+  companion object { init { System.loadLibrary("black-echo") } }
+}

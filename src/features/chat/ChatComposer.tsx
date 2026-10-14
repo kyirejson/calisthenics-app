@@ -6,8 +6,8 @@ import { FileTile } from './ChatMessages';
 import { ChatInputChrome } from './ChatInputChrome';
 import { s, lime, muted } from './styles';
 
-export function ChatComposer({ draft, setDraft, busy, canSend, files, filesOpen, openFiles, remove, send, stop }: {
-  draft: string; setDraft: (text: string) => void; busy: boolean; canSend: boolean;
+export function ChatComposer({ draft, setDraft, busy, inputBusy, canSend, files, filesOpen, openFiles, remove, send, stop }: {
+  draft: string; setDraft: (text: string) => void; busy: boolean; inputBusy: boolean; canSend: boolean;
   files: DraftAttachment[]; filesOpen: boolean; openFiles: () => void;
   remove: (file: DraftAttachment) => void; send: () => void; stop: () => void;
 }) {
@@ -16,6 +16,7 @@ export function ChatComposer({ draft, setDraft, busy, canSend, files, filesOpen,
   const maximum = Math.max(64, Math.min(132, height * .25));
   const [inputHeight, setInputHeight] = useState(48);
   const [focused, setFocused] = useState(false);
+  const showStop = busy && (!canSend || inputBusy);
   const fitHeight = (value: number) => Math.max(48, Math.min(maximum, value));
   useEffect(() => { if (!draft) setInputHeight(48); }, [draft]);
   // Native reports content size; a textarea must be measured unconstrained to shrink as well as grow.
@@ -37,21 +38,21 @@ export function ChatComposer({ draft, setDraft, busy, canSend, files, filesOpen,
         {files.map(file => <View key={file.id} style={[s.pendingFile, { width: Math.min(300, width - 56) }]}><FileTile file={file} remove={() => remove(file)} /></View>)}
       </ScrollView> : null}
       <TextInput ref={input} accessibilityLabel="聊天输入" multiline value={draft} onChangeText={setDraft}
-        editable={!busy} placeholder="写下你的问题…" placeholderTextColor="#82908D"
+        editable={!inputBusy} placeholder="写下你的问题…" placeholderTextColor="#82908D"
         onFocus={() => setFocused(true)} onBlur={() => setFocused(false)}
         onContentSizeChange={event => { if (Platform.OS !== 'web') setInputHeight(fitHeight(event.nativeEvent.contentSize.height)); }}
         submitBehavior="newline" blurOnSubmit={false} textAlignVertical="top" underlineColorAndroid="transparent"
         style={[s.input, { height: fitHeight(inputHeight), maxHeight: maximum }]} />
       <View style={s.composerActions}>
-        <Pressable accessibilityRole="button" accessibilityLabel="添加聊天附件" disabled={busy} onPress={openFiles}
-          style={({ pressed }) => [s.fileButton, busy && s.disabled, pressed && s.pressed]}>
+        <Pressable accessibilityRole="button" accessibilityLabel="添加聊天附件" disabled={inputBusy} onPress={openFiles}
+          style={({ pressed }) => [s.fileButton, inputBusy && s.disabled, pressed && s.pressed]}>
           <AppGlyph name="paperclip" size={21} color={focused ? lime : muted} />
           <Text style={s.fileButtonText}>添加文件{files.length ? ` · ${files.length}` : ''}</Text>
         </Pressable>
-        <Pressable accessibilityRole="button" accessibilityLabel={busy ? '停止回复' : '发送聊天消息'}
-          disabled={!busy && !canSend} onPress={busy ? stop : send}
+        <Pressable accessibilityRole="button" accessibilityLabel={showStop ? '停止回复' : '发送聊天消息'}
+          disabled={!showStop && !canSend} onPress={showStop ? stop : send}
           style={({ pressed }) => [s.send, !busy && !canSend && s.sendDisabled, pressed && s.pressed]}>
-          <AppGlyph name={busy ? 'stop' : 'arrowUp'} color={busy || canSend ? '#0D1114' : '#91A580'} size={busy ? 18 : 23} />
+          <AppGlyph name={showStop ? 'stop' : 'arrowUp'} color={busy || canSend ? '#0D1114' : '#91A580'} size={showStop ? 18 : 23} />
         </Pressable>
       </View>
     </View>

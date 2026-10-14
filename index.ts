@@ -1,5 +1,5 @@
 import { registerRootComponent } from 'expo';
-import { AppRegistry, LogBox } from 'react-native';
+import { AppRegistry, LogBox, Platform } from 'react-native';
 import { voiceAgentTask } from './src/voice/agentTask';
 
 LogBox.ignoreLogs([
@@ -13,4 +13,4 @@ import App from './App';
 // It also ensures that whether you load the app in Expo Go or in a native build,
 // the environment is set up appropriately
 registerRootComponent(App);
-AppRegistry.registerHeadlessTask('UncoverVoiceAgent', () => voiceAgentTask);
+if (Platform.OS === 'android') AppRegistry.registerHeadlessTask('UncoverVoiceAgent', () => voiceAgentTask);

@@ -13,6 +13,15 @@ Streaming Chinese ASR: csukuangfj, icefall-streaming-zipformer-small-ctc-zh-2025
 Author license: https://huggingface.co/csukuangfj/icefall-streaming-zipformer-small-ctc-zh-2025-04-01
 Apache License 2.0; upstream ONNX INT8 model, no local retraining.
 
+Speech activity: Silero VAD, Silero Team, MIT (SILERO-LICENSE.txt).
+Model distribution is SHA-256 pinned in resources.json.
+Source and license: https://github.com/snakers4/silero-vad
+
+Local acoustic echo cancellation, residual suppression and resampling:
+SpeexDSP 1.2.1, Xiph.org contributors, BSD-3-Clause (SPEEX-DSP-LICENSE.txt).
+Source: https://downloads.xiph.org/releases/speex/speexdsp-1.2.1.tar.gz
+Only app-rendered audio is used as the playback reference; microphone audio stays in RAM.
+
 Local acknowledgement is synthetic audio generated with Kokoro-82M-v1.1-zh
 (hexgrad, Apache-2.0), voice zf_001. It is not a Doubao/XiaoAi recording or clone.
 Its model revision and audio SHA-256 are recorded in iam-provenance.json.

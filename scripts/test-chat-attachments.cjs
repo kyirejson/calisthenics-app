@@ -39,7 +39,8 @@ test('local PDF worker matches installed version and PDF text is actual selectab
 });
 test('UI upload path preserves attachments independently of personal data tools', () => {
   const ui = readFeature('chat');
-  assert.match(ui, /messages: messages\.map\(attachmentMessage\)/);
+  assert.match(ui, /messages: agentConversation.messages\(handle\)/);
+  assert.match(fs.readFileSync(path.join(__dirname, '../src/agent/conversation.ts'), 'utf8'), /attachmentMessage\(turn\)/);
   assert.match(ui, /setDraft\(''\);[\s\S]*?setFiles\(\[\]\)/);
   assert.doesNotMatch(ui, /专属体能与营养私教|Flash 1M|正在思考并检索数据/);
   assert.doesNotMatch(fs.readFileSync(path.join(__dirname, '../src/integrations/chatAttachments.mjs'), 'utf8'), /localStorage|update_memory|writeMemory/);
@@ -54,7 +55,8 @@ test('mobile chat redesign keeps real controls, bounded multiline input and no f
   assert.match(composer, /node\.style\.height = '0px'/);
   assert.match(composer, /Math\.min\(132, height \* \.25\)/);
   assert.match(composer, /keyboardShouldPersistTaps="handled"/);
-  assert.match(composer, /busy \? stop : send/);
+  assert.match(composer, /showStop \? stop : send/);
+  assert.match(composer, /editable=\{!inputBusy\}/);
   assert.doesNotMatch(composer, /onSubmitEditing|支持 PDF|DOCX|TXT|update_memory|personalChat/);
   const modal = read('src/integrations/DeepseekChat.tsx');
   assert.match(modal, /<ChatComposer/);

@@ -29,10 +29,10 @@ export function DeepseekChat(props: { visible: boolean; onClose: () => void }) {
     turns,
     draft,
     setDraft,
-    pendingTurn,
-    streamContent,
-    activeTools,
+    voice,
+    preview,
     busy,
+    inputBusy,
     error,
     contextNotice,
     settingsOpen,
@@ -43,7 +43,7 @@ export function DeepseekChat(props: { visible: boolean; onClose: () => void }) {
     setFilesOpen,
     picking,
     files,
-    request,
+    stop,
     scroll,
     following,
     pick,
@@ -118,9 +118,8 @@ export function DeepseekChat(props: { visible: boolean; onClose: () => void }) {
               model={{
                 turns,
                 setDraft,
-                pendingTurn,
-                streamContent,
-                activeTools,
+                voice,
+                preview,
                 busy,
                 scroll,
                 following,
@@ -133,9 +132,9 @@ export function DeepseekChat(props: { visible: boolean; onClose: () => void }) {
                 {error}
               </Text>
             ) : null}
-            <ChatComposer draft={draft} setDraft={setDraft} busy={busy} canSend={canSend}
+            <ChatComposer draft={draft} setDraft={setDraft} busy={busy} inputBusy={inputBusy} canSend={canSend}
               files={files} filesOpen={filesOpen} openFiles={openFiles} remove={remove}
-              send={() => void send()} stop={() => request.current?.abort()} />
+              send={() => void send()} stop={stop} />
             {filesOpen ? (
               <View style={s.sheetLayer}>
                 <Pressable

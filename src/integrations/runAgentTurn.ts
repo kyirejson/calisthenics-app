@@ -7,9 +7,12 @@ import { readOrInitializeMemory } from '../memory/operations';
 import { profileMarkdown } from '../memory/profileMemory';
 import { localWeightDate } from '../domain/weight/weightTrend';
 
-export async function runAgentTurn({ repository, messages, requestId, executionId, controller, onToolCall, onDelta, restoreUi = true }:
+export async function runAgentTurn({ repository, messages, requestId, executionId, controller, onToolCall, onToolResult, onDelta, onRoundStart, responseMode = 'text', restoreUi = true }:
   { repository: AppRepository; messages: Array<{ role: string; content: unknown }>; requestId: string; executionId: string; controller: AbortController;
-    onToolCall?: (call: { name: string; args: Record<string, unknown> }) => void; onDelta?: (delta: string, accumulated: string) => void; restoreUi?: boolean }) {
+    onToolCall?: (call: { name: string; args: Record<string, unknown> }) => void;
+    onToolResult?: (call: { name: string; args: Record<string, unknown>; result: unknown }) => void;
+    onDelta?: (delta: string, accumulated: string) => void; onRoundStart?: () => void;
+    responseMode?: 'text' | 'voice'; restoreUi?: boolean }) {
   let unsubscribeMusic = () => {};
   const { musicTransport } = await import('../music/transport');
   try {
@@ -28,7 +31,7 @@ export async function runAgentTurn({ repository, messages, requestId, executionI
       musicReceipts, signal: controller.signal,
       execute: (name: string, input: unknown, signal?: AbortSignal) => executePersonalTool(name, input, repository.getSnapshot(), signal,
         { requestId, executionId, apply: repository.getSnapshot().applyMealOperations, updateSettings: repository.getSnapshot().updateSettings }),
-      onToolCall, onDelta,
+      onToolCall, onToolResult, onDelta, onRoundStart, responseMode,
     });
   } finally {
     try {

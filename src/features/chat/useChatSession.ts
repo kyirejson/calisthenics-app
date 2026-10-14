@@ -1,213 +1,95 @@
 import { useChatAttachments } from './useChatAttachments';
 import { isClearContextCommand } from './commands';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { Keyboard, ScrollView } from 'react-native';
 import { loadConnection } from '../../integrations/credentials';
 import { subscribeConnection } from '../../integrations/connectionRuntime.mjs';
-
 import { useAppRepository } from '../../store/AppStore';
 import { runAgentTurn } from '../../integrations/runAgentTurn';
-
-import { attachmentMessage } from '../../integrations/chatAttachments.mjs';
 import { releaseChatFile } from '../../integrations/chatFiles';
 import type { ChatAttachment } from '../../integrations/chatFileTypes';
-export type Turn = {
-  role: 'user' | 'assistant';
-  content: string;
-  toolsUsed?: string[];
-  attachments?: ChatAttachment[];
-};
-
-function toolLabel(name: string, args: Record<string, unknown>): string {
-  if (name === 'search_knowledge')
-    return `检索知识库${typeof args.query === 'string' ? ` · ${args.query}` : ''}`;
-  if (name === 'read_knowledge_note')
-    return `阅读资料 · ${typeof args.path === 'string' ? args.path.split('/').pop()?.replace('.md', '') : '知识库'}`;
-  return (
-    (
-      {
-        read_memory: '读取个人记忆',
-        update_memory: '更新个人记忆',
-        read_today_training: '读取今日训练',
-        read_recent_weight: '读取近期体重',
-        read_today_meals: '读取今日饮食',
-        write_meal_records: '处理饮食记录',
-        read_music_settings: '读取音乐预设', write_music_settings: '保存音乐预设',
-        open_music_and_observe: '打开并核实音乐界面', music_ui_action_and_observe: '操作并核实音乐界面', control_music_and_observe: '控制并核实音乐播放',
-        open_music: '打开音乐软件', read_music_screen: '查看音乐界面',
-        music_ui_action: '操作音乐界面', control_music: '控制音乐播放', read_music_playback: '核实播放状态',
-      } as Record<string, string>
-    )[name] || name
-  );
-}
+import { agentConversation, clearAgentContext, stopAgentReply } from '../../agent/runtime';
+import type { AgentTurn, TurnHandle } from '../../agent/conversation';
+export type Turn = AgentTurn;
 
 export function useChatSession({ visible, onClose }: { visible: boolean; onClose: () => void }) {
   const repository = useAppRepository();
-  const [turns, setTurns] = useState<Turn[]>([]),
-    [draft, setDraft] = useState('');
-  const [pendingTurn, setPendingTurn] = useState<Turn | null>(null);
-  const [streamContent, setStreamContent] = useState('');
-  const [activeTools, setActiveTools] = useState<string[]>([]);
-  const [contextNotice, setContextNotice] = useState('');
-  const [busy, setBusy] = useState(false),
-    [error, setError] = useState(''),
-    [ready, setReady] = useState(false);
-  const [settingsOpen, setSettingsOpen] = useState(false),
-    [memoryOpen, setMemoryOpen] = useState(false);
+  const conversation = useSyncExternalStore(agentConversation.subscribe, agentConversation.getSnapshot, agentConversation.getSnapshot);
+  const [draft, setDraft] = useState(''), [contextNotice, setContextNotice] = useState('');
+  const [error, setError] = useState(''), [ready, setReady] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false), [memoryOpen, setMemoryOpen] = useState(false);
   const [filesOpen, setFilesOpen] = useState(false);
-  const alive = useRef(true),
-    locked = useRef(false),
-    request = useRef<AbortController | null>(null);
-  // Keep the same message identity on retries; a successfully sent new message gets a new identity.
+  const alive = useRef(true), locked = useRef(false), request = useRef<AbortController | null>(null);
+  // Retries reuse the operation identity, including successful tool receipts.
   const messageRequest = useRef<{ signature: string; id: string } | null>(null);
-  const scroll = useRef<ScrollView>(null),
-    following = useRef(true);
-  const { files, setFiles, filesRef, picking, pick, remove, retry } = useChatAttachments({
-    alive,
-    locked,
-    setError,
-  });
+  const scroll = useRef<ScrollView>(null), following = useRef(true);
+  const { files, setFiles, filesRef, picking, pick, remove, retry } = useChatAttachments({ alive, locked, setError });
   useEffect(() => {
     alive.current = true;
-    const unsubscribe = subscribeConnection(() => request.current?.abort());
-    void loadConnection()
-      .then(() => {
-        if (alive.current) setReady(true);
-      })
-      .catch((e) => {
-        if (alive.current) setError(e instanceof Error ? e.message : '无法读取连接配置。');
-      });
+    const unsubscribe = subscribeConnection(() => { request.current?.abort(); agentConversation.interrupt(); });
+    void Promise.all([loadConnection(), agentConversation.load()]).then(() => {
+      if (alive.current) setReady(true);
+    }).catch(e => { if (alive.current) setError(e instanceof Error ? e.message : '无法读取连接或对话配置。'); });
     return () => {
       alive.current = false;
-      request.current?.abort();
-      unsubscribe();
-      filesRef.current.forEach((file) => releaseChatFile(file.source));
+      // Unmount owns only this typed request. Hiding the panel does not stop headless voice.
+      if (request.current) { request.current.abort(); agentConversation.interrupt(messageRequest.current?.id); }
+      unsubscribe(); filesRef.current.forEach(file => releaseChatFile(file.source));
     };
   }, []);
-  const openFiles = () => {
-    Keyboard.dismiss();
-    setFilesOpen(true);
-  };
-  const canSend =
-    !picking &&
-    (isClearContextCommand(draft) || ready &&
-      files.every((file) => file.status === 'ready') &&
-      (!!draft.trim() || !!files.length));
+  const openFiles = () => { Keyboard.dismiss(); setFilesOpen(true); };
+  const canSend = !picking && !locked.current && (isClearContextCommand(draft) || ready &&
+    files.every(file => file.status === 'ready') && (!!draft.trim() || !!files.length));
   const send = async () => {
-    if (!canSend || locked.current) return;
+    if (!canSend) return;
     if (isClearContextCommand(draft)) {
-      // This is a local action, not a model turn: no API request, data tool or memory write.
-      setTurns([]);
-      setPendingTurn(null);
-      setStreamContent('');
-      setActiveTools([]);
-      setError('');
-      setDraft('');
-      messageRequest.current = null;
-      filesRef.current.forEach(remove);
-      setFilesOpen(false);
-      following.current = true;
-      scroll.current?.scrollTo({ y: 0, animated: false });
-      setContextNotice('对话上下文已清空，个人记忆和已保存记录保留。');
+      try {
+        await clearAgentContext(); setError(''); setDraft(''); messageRequest.current = null;
+        filesRef.current.forEach(remove); setFilesOpen(false); following.current = true;
+        scroll.current?.scrollTo({ y: 0, animated: false });
+        setContextNotice('对话上下文已清空，个人记忆和已保存记录保留。');
+      } catch (e) { setError(e instanceof Error ? e.message : '上下文未能清空，请重试。'); }
       return;
     }
     setContextNotice('');
-    const capturedFiles: ChatAttachment[] = files.map(({ id, name, size, kind, text }) => ({
-      id,
-      name,
-      size,
-      kind,
-      text,
-    }));
-    const user: Turn = {
-      role: 'user',
-      content: draft.trim(),
-      attachments: capturedFiles.length ? capturedFiles : undefined,
-    };
+    const capturedFiles: ChatAttachment[] = files.map(({ id, name, size, kind, text }) => ({ id, name, size, kind, text }));
+    const user = { content: draft.trim(), attachments: capturedFiles.length ? capturedFiles : undefined };
     const signature = JSON.stringify(user);
     if (messageRequest.current?.signature !== signature) messageRequest.current = { signature, id: `chat-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 12)}` };
-    const requestId = messageRequest.current!.id;
-    const executionId = `${requestId}-attempt-${Math.random().toString(36).slice(2)}`;
+    const requestId = messageRequest.current!.id, executionId = `${requestId}-attempt-${Math.random().toString(36).slice(2)}`;
     const controller = new AbortController();
-    locked.current = true;
-    request.current = controller;
-    following.current = true;
-    setBusy(true);
-    setError('');
-    setPendingTurn(user);
-    setStreamContent('');
-    setActiveTools([]);
-    const capturedTools: string[] = [];
+    locked.current = true; request.current = controller; following.current = true; setError('');
+    let handle: TurnHandle | null = null;
     try {
-      const messages = [...turns, user];
-      const answer = await runAgentTurn({
-        repository, requestId, executionId, controller,
-        messages: messages.map(attachmentMessage),
-        onToolCall: (call: { name: string; args: Record<string, unknown> }) => {
-          const label = toolLabel(call.name, call.args);
-          if (!capturedTools.includes(label)) capturedTools.push(label);
-          if (alive.current) setActiveTools([...capturedTools]);
-        },
-        onDelta: (_delta: string, accumulated: string) => {
-          if (alive.current) setStreamContent(accumulated);
-        },
+      // Typed follow-ups can stop a spoken answer without navigating to another screen.
+      await stopAgentReply();
+      handle = await agentConversation.begin({ requestId, source: 'text', user, controller });
+      if (!handle) return;
+      const activeHandle = handle;
+      const answer = await runAgentTurn({ repository, requestId, executionId, controller,
+        messages: agentConversation.messages(handle), responseMode: 'text',
+        onRoundStart: () => agentConversation.round(activeHandle),
+        onToolCall: call => agentConversation.tool(activeHandle, call),
+        onToolResult: call => agentConversation.receipt(activeHandle, call),
+        onDelta: (_delta, accumulated) => agentConversation.delta(activeHandle, accumulated),
       });
-      if (alive.current && !controller.signal.aborted) {
-        setTurns([
-          ...messages,
-          {
-            role: 'assistant',
-            content: answer,
-            toolsUsed: capturedTools.length ? capturedTools : undefined,
-          },
-        ]);
-        setDraft('');
-        messageRequest.current = null;
-        setFiles([]);
-        files.forEach((file) => releaseChatFile(file.source));
+      if (agentConversation.complete(handle, answer) && alive.current) {
+        setDraft(''); messageRequest.current = null; setFiles([]); files.forEach(file => releaseChatFile(file.source));
       }
     } catch (e) {
-      if (alive.current) setError(e instanceof Error ? e.message : '请求失败，请重试。');
-    } finally {
-      locked.current = false;
-      request.current = null;
-      if (alive.current) {
-        setBusy(false);
-        setPendingTurn(null);
-        setStreamContent('');
-        setActiveTools([]);
+      if (controller.signal.aborted) agentConversation.interrupt(requestId);
+      else {
+        const message = e instanceof Error ? e.message : '请求失败，请重试。';
+        if (handle) agentConversation.fail(handle, message);
+        if (alive.current) setError(message);
       }
+    } finally {
+      if (request.current === controller) { locked.current = false; request.current = null; }
     }
   };
-
-  return {
-    visible,
-    onClose,
-    turns,
-    draft,
-    setDraft,
-    pendingTurn,
-    streamContent,
-    activeTools,
-    busy,
-    error,
-    contextNotice,
-    settingsOpen,
-    setSettingsOpen,
-    memoryOpen,
-    setMemoryOpen,
-    filesOpen,
-    setFilesOpen,
-    picking,
-    files,
-    request,
-    scroll,
-    following,
-    pick,
-    remove,
-    retry,
-    openFiles,
-    canSend,
-    send,
-  };
+  const busy = conversation.generating || ['speaking', 'acknowledging'].includes(conversation.voice.phase);
+  return { visible, onClose, turns: conversation.turns, voice: conversation.voice, preview: conversation.preview,
+    draft, setDraft, busy, inputBusy: locked.current, error: error || conversation.error || conversation.voice.error || '', contextNotice,
+    settingsOpen, setSettingsOpen, memoryOpen, setMemoryOpen, filesOpen, setFilesOpen,
+    picking, files, scroll, following, pick, remove, retry, openFiles, canSend, send, stop: () => void stopAgentReply() };
 }

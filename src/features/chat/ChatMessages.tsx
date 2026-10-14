@@ -70,9 +70,8 @@ export function ChatMessages({
     ReturnType<typeof useChatSession>,
     | 'turns'
     | 'setDraft'
-    | 'pendingTurn'
-    | 'streamContent'
-    | 'activeTools'
+    | 'voice'
+    | 'preview'
     | 'busy'
     | 'scroll'
     | 'following'
@@ -84,9 +83,8 @@ export function ChatMessages({
   const {
     turns,
     setDraft,
-    pendingTurn,
-    streamContent,
-    activeTools,
+    voice,
+    preview,
     busy,
     scroll,
     following,
@@ -149,38 +147,35 @@ export function ChatMessages({
           </View>
         </View>
       ) : null}
-      {turns.map((turn, index) =>
+      {turns.map((turn) =>
         turn.role === 'user' ? (
-          renderUser(turn, String(index))
+          renderUser(turn, turn.id)
         ) : (
-          <View key={index} style={s.assistant}>
+          <View key={turn.id} style={s.assistant} testID={turn.status === 'generating' ? 'chat-streaming-answer' : undefined}>
             <View style={s.assistantHeader}>
               <ChatMark size={28} />
               <Text style={s.assistantName}>DeepSeek</Text>
+              {turn.status === 'interrupted' ? <Text style={s.busyText}>已打断</Text> :
+                voice.phase === 'speaking' && voice.requestId === turn.requestId ? <Text style={[s.busyText, { color: lime }]}>朗读中</Text> : null}
             </View>
             {turn.toolsUsed?.length ? (
               <Text style={s.toolText}>{turn.toolsUsed.join(' · ')}</Text>
             ) : null}
-            <MarkdownView content={turn.content} accentColor={lime} />
+            {turn.content ? turn.source === 'voice' && voice.phase === 'speaking' && voice.requestId === turn.requestId ?
+              <Text testID="chat-spoken-answer" selectable style={{ color: '#F1F4EC', fontSize: 16, lineHeight: 27 }}>
+                {turn.content.slice(0, voice.speechStart || 0)}
+                <Text style={{ color: lime }}>{turn.content.slice(voice.speechStart || 0, voice.speechEnd || 0)}</Text>
+                {turn.content.slice(voice.speechEnd || 0)}
+              </Text> : <MarkdownView content={turn.content} accentColor={lime} /> :
+              turn.status === 'generating' ? <View style={s.busyRow}><ActivityIndicator size="small" color={lime} /><Text style={s.busyText}>正在回复…</Text></View> : null}
           </View>
         ),
       )}
-      {pendingTurn ? renderUser(pendingTurn, 'pending') : null}
-      {busy && streamContent ? (
-        <View style={s.assistant}>
-          <View style={s.assistantHeader}>
-            <ChatMark size={28} />
-            <Text style={s.assistantName}>DeepSeek</Text>
-          </View>
-          {activeTools.length ? <Text style={s.toolText}>{activeTools.join(' · ')}</Text> : null}
-          <MarkdownView content={streamContent} accentColor={lime} />
-        </View>
-      ) : busy ? (
+      {preview ? <View testID="chat-voice-transcript" style={s.user}><Text selectable style={s.userText}>{preview.text}</Text><Text style={s.busyText}>正在听…</Text></View> : null}
+      {voice.phase === 'acknowledging' || voice.phase === 'listening' && !preview ? (
         <View style={s.busyRow}>
-          <ActivityIndicator size="small" color={lime} />
-          <Text accessibilityLiveRegion="polite" style={s.busyText}>
-            {activeTools.length ? `已调用：${activeTools.join(' · ')}，正在生成回复…` : '正在回复…'}
-          </Text>
+          <AppGlyph name="speaker" size={18} color={lime} />
+          <Text testID="chat-voice-status" accessibilityLiveRegion="polite" style={s.busyText}>{voice.phase === 'acknowledging' ? '我在' : '正在听你说话…'}</Text>
         </View>
       ) : null}
     </ScrollView>

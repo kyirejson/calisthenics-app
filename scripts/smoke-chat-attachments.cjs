@@ -3,6 +3,7 @@ const assert = require('node:assert/strict'), fs = require('node:fs/promises'), 
 const { chromium } = require(process.env.PLAYWRIGHT_PATH || 'playwright');
 const fixtures = require('./chat-file-fixtures.cjs');
 const output = process.env.CHAT_QA_OUTPUT || 'D:/UncoverBuildTools/temp/chat-ui-template';
+const baseUrl = process.env.CHAT_QA_URL || 'http://127.0.0.1:8081/';
 (async () => {
   const browser = await chromium.launch({ headless: true, channel: 'chrome' });
   await fs.mkdir(output, { recursive: true });
@@ -25,9 +26,9 @@ const output = process.env.CHAT_QA_OUTPUT || 'D:/UncoverBuildTools/temp/chat-ui-
           // Chat requests SSE; match the actual protocol rather than return non-stream JSON.
           return body.stream ? route.fulfill({ contentType: 'text/event-stream', body: `data: ${JSON.stringify({ choices: [{ delta: { content }, finish_reason: null }] })}\n\ndata: ${JSON.stringify({ choices: [{ delta: {}, finish_reason: 'stop' }] })}\n\ndata: [DONE]\n\n` }) : route.fulfill({ json: { choices: [{ finish_reason: 'stop', message: { content } }] } });
         }
-        return url.startsWith('http://127.0.0.1:8081/') || /^(data|blob):/.test(url) ? route.continue() : route.abort();
+        return url.startsWith(baseUrl) || /^(data|blob):/.test(url) ? route.continue() : route.abort();
       });
-      await page.goto('http://127.0.0.1:8081/', { waitUntil: 'domcontentloaded' });
+      await page.goto(baseUrl, { waitUntil: 'domcontentloaded' });
       await page.getByRole('button', { name: '打开 DeepSeek 聊天', exact: true }).click();
       await page.getByLabel('聊天输入').waitFor();
       await page.waitForFunction(() => document.querySelector('[aria-label="关闭 DeepSeek 聊天"]').getBoundingClientRect().top <= 10);
@@ -83,11 +84,12 @@ const output = process.env.CHAT_QA_OUTPUT || 'D:/UncoverBuildTools/temp/chat-ui-
       await page.getByRole('button', { name: '发送聊天消息', exact: true }).click();
       await page.getByRole('alert').waitFor();
       assert.equal(await page.getByLabel('聊天输入').inputValue(), '请查看这些资料');
-      assert.equal(await page.getByText('训练记录.md', { exact: true }).count(), 1);
+      assert.equal(await composer.getByText('训练记录.md', { exact: true }).count(), 1, 'Failed send preserves the retry attachment');
       await page.getByRole('button', { name: '发送聊天消息', exact: true }).click();
       await page.getByText('附件正文已进入这次消息。', { exact: true }).waitFor();
       assert.equal(await page.getByLabel('聊天输入').inputValue(), '');
       assert.equal(await page.getByTestId('chat-pending-files').count(), 0, 'Successful send clears the pending attachment tray');
+      assert.equal(await page.getByText('训练记录.md', { exact: true }).count(), 1, 'Retry keeps one persisted user message, not two');
       const userMessage = requests[1].messages.find(message => message.role === 'user');
       assert.match(userMessage.content, /深蹲完成 4 组/);
       assert.match(userMessage.content, /附件测试：豆腐 & 鸡蛋/);
@@ -100,6 +102,11 @@ const output = process.env.CHAT_QA_OUTPUT || 'D:/UncoverBuildTools/temp/chat-ui-
       await page.screenshot({ path: path.join(output, `conversation-${width}.png`) });
       assert.ok(await page.getByLabel('聊天输入').isVisible());
       assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth + 1), false);
+      await page.reload({ waitUntil: 'domcontentloaded' });
+      await page.getByRole('button', { name: '打开 DeepSeek 聊天', exact: true }).click();
+      await page.getByText('附件正文已进入这次消息。', { exact: true }).waitFor();
+      assert.equal(await page.getByText('训练记录.md', { exact: true }).count(), 1, 'Reload restores the common conversation once');
+      assert.equal(requests.length, 2, 'Restoring history never replays model or mutating tool requests');
       assert.deepEqual(errors, []);
       console.log(`PASS chat UI + actual MD/DOCX/PDF + scanned rejection + failure/retry at ${width}px`);
       await context.close();

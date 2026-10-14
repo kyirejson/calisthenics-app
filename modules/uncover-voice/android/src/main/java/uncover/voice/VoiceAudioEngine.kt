@@ -5,27 +5,34 @@ import android.media.AudioFormat
 import android.media.AudioRecord
 import android.media.AudioManager
 import android.media.AudioRecordingConfiguration
+import android.media.AudioTimestamp
 import android.media.MediaRecorder
 import android.media.audiofx.AcousticEchoCanceler
 import android.os.SystemClock
 import android.os.Handler
 import android.os.Looper
 import com.k2fsa.sherpa.onnx.*
+import java.util.ArrayDeque
+import java.util.concurrent.atomic.AtomicInteger
 import kotlin.concurrent.thread
 
-/** One native microphone owner; ambient PCM never leaves memory or the device. */
-internal class VoiceAudioEngine(private val context: Context, private val ready: () -> Unit, private val wake: () -> Unit,
-  private val utterance: (String) -> Unit, private val idle: () -> Unit, private val microphoneState: (Boolean) -> Unit, private val failure: (Throwable) -> Unit) {
+/** One microphone owner. Cleaned speech feeds KWS/ASR; microphone PCM never leaves RAM or the device. */
+internal class VoiceAudioEngine(private val context: Context, private val reference: VoiceRenderReference,
+  private val ready: () -> Unit, private val wake: () -> Unit, private val partial: (String) -> Unit,
+  private val utterance: (String) -> Unit, private val barge: () -> Unit, private val idle: () -> Unit,
+  private val microphoneState: (Boolean) -> Unit, private val failure: (Throwable) -> Unit) {
   @Volatile var mode = "wake"
   @Volatile var silenced = false; private set
   @Volatile private var stopped = false
   @Volatile private var recorder: AudioRecord? = null
+  private val reset = AtomicInteger(0)
   private var worker: Thread? = null
+  fun listenAgain() { reset.incrementAndGet(); mode = "listening" }
   fun start() {
     worker = thread(name = "BLACK-local-audio") {
-      var kws: KeywordSpotter? = null; var asr: OnlineRecognizer? = null
+      var kws: KeywordSpotter? = null; var asr: OnlineRecognizer? = null; var vad: Vad? = null
       var kwsStream: OnlineStream? = null; var asrStream: OnlineStream? = null
-      var echo: AcousticEchoCanceler? = null
+      var hardwareEcho: AcousticEchoCanceler? = null; var echo: VoiceEcho? = null
       var recordingCallback: AudioManager.AudioRecordingCallback? = null
       try {
         kws = KeywordSpotter(context.assets, KeywordSpotterConfig(
@@ -36,8 +43,10 @@ internal class VoiceAudioEngine(private val context: Context, private val ready:
         asr = OnlineRecognizer(context.assets, OnlineRecognizerConfig(
           modelConfig = OnlineModelConfig(zipformer2Ctc = OnlineZipformer2CtcModelConfig("black-voice/asr/model.int8.onnx"),
             tokens = "black-voice/asr/tokens.txt", numThreads = 2),
-          endpointConfig = EndpointConfig(EndpointRule(false, 15f, 0f), EndpointRule(true, 1.2f, 0f), EndpointRule(false, 0f, 1200f))))
-        kwsStream = kws.createStream(); asrStream = asr.createStream()
+          endpointConfig = EndpointConfig(EndpointRule(false, 15f, 0f), EndpointRule(true, 1.0f, 0f), EndpointRule(false, 0f, 1200f))))
+        vad = Vad(context.assets, VadModelConfig(sileroVadModelConfig = SileroVadModelConfig(
+          model = "black-voice/vad/silero_vad.onnx", windowSize = 512), numThreads = 1))
+        kwsStream = kws.createStream(); asrStream = asr.createStream(); echo = VoiceEcho(512)
         val minimum = AudioRecord.getMinBufferSize(16000, AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT)
         check(minimum > 0) { "系统不支持当前麦克风格式。" }
         val input = AudioRecord(MediaRecorder.AudioSource.VOICE_RECOGNITION, 16000, AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT, maxOf(minimum * 2, 6400))
@@ -50,55 +59,71 @@ internal class VoiceAudioEngine(private val context: Context, private val ready:
             if (silenced != next && !stopped) { silenced = next; microphoneState(next) }
           }
         }.also { input.registerAudioRecordingCallback({ runnable -> Handler(Looper.getMainLooper()).post(runnable) }, it) }
-        if (AcousticEchoCanceler.isAvailable()) echo = AcousticEchoCanceler.create(input.audioSessionId)?.apply { enabled = true }
+        if (AcousticEchoCanceler.isAvailable()) hardwareEcho = AcousticEchoCanceler.create(input.audioSessionId)?.apply { enabled = true }
         input.startRecording()
         check(input.recordingState == AudioRecord.RECORDSTATE_RECORDING) { "系统没有启动麦克风录音。" }
         if (!stopped) ready()
-        val samples = ShortArray(1600)
-        var previous = ""
+        val samples = ShortArray(512); val stamp = AudioTimestamp(); val gate = VoiceSpeechGate()
+        val preRoll = ArrayDeque<FloatArray>()
+        var totalRead = 0L; var previousReset = -1; var previousMode = ""; var speech = false; var lastText = ""
         var heardAt = SystemClock.elapsedRealtime()
-        var listenStarted = heardAt
         while (!stopped) {
-          val count = input.read(samples, 0, samples.size)
-          if (count < 0) error("麦克风读取失败 ($count)。")
-          if (count == 0) continue
-          val state = mode
-          if (state != previous) {
-            kws.reset(kwsStream); asr.reset(asrStream)
-            listenStarted = SystemClock.elapsedRealtime(); heardAt = listenStarted; previous = state
+          var filled = 0
+          while (!stopped && filled < samples.size) {
+            val count = input.read(samples, filled, samples.size - filled)
+            if (count < 0) error("麦克风读取失败 ($count)。")
+            if (count > 0) { filled += count; totalRead += count }
           }
+          if (stopped) break
+          val state = mode; val resetId = reset.get()
+          if (state == "listening" && previousMode != "listening") heardAt = SystemClock.elapsedRealtime()
+          if (previousReset != resetId || state == "wake" && previousMode != "wake") {
+            asr.reset(asrStream); kws.reset(kwsStream); vad.reset(); gate.reset(); preRoll.clear()
+            speech = false; lastText = ""; heardAt = SystemClock.elapsedRealtime(); previousReset = resetId
+          }
+          previousMode = state
           if (silenced) continue
-          val floats = FloatArray(count) { samples[it] / 32768f }
-          // The name also re-wakes an ongoing dialogue or interrupts a pending model request.
-          kwsStream.acceptWaveform(floats, 16000)
-          var triggered = false
-          while (kws.isReady(kwsStream)) {
-            kws.decode(kwsStream)
-            if (kws.getResult(kwsStream).keyword.isNotBlank()) {
-              kws.reset(kwsStream); mode = "speaking"; triggered = true; wake(); break
+          val startNs = if (input.getTimestamp(stamp, AudioTimestamp.TIMEBASE_MONOTONIC) == AudioRecord.SUCCESS)
+            stamp.nanoTime + (totalRead - samples.size - stamp.framePosition) * 1_000_000_000L / 16000
+            else System.nanoTime() - samples.size * 1_000_000_000L / 16000
+          val floats = echo.process(samples, reference.frame(startNs, samples.size))
+          if (state == "wake") {
+            kwsStream.acceptWaveform(floats, 16000)
+            while (kws.isReady(kwsStream)) {
+              kws.decode(kwsStream)
+              if (kws.getResult(kwsStream).keyword.isNotBlank()) { kws.reset(kwsStream); mode = "acknowledging"; wake(); break }
             }
+            continue
           }
-          if (triggered) continue
-          // Keep local name detection for barge-in; do not send the assistant's own speech to ASR.
-          if (state == "speaking") continue
-          if (state == "listening") {
-            asrStream.acceptWaveform(floats, 16000)
+          if (state !in listOf("acknowledging", "listening", "processing", "speaking")) continue
+          val probability = vad.compute(floats)
+          val now = SystemClock.elapsedRealtime()
+          if (probability >= .55f) heardAt = now
+          preRoll.addLast(floats); if (preRoll.size > 16) preRoll.removeFirst()
+          if (!speech && gate.observe(probability)) {
+            speech = true; asr.reset(asrStream); lastText = ""
+            // Preserve the first syllable while the local detector decides; do not require BLACK again.
+            preRoll.forEach { asrStream.acceptWaveform(it, 16000) }
+            if (state != "listening") { mode = "listening"; barge() }
+          } else if (speech) asrStream.acceptWaveform(floats, 16000)
+          if (speech) {
             while (asr.isReady(asrStream)) asr.decode(asrStream)
             val text = asr.getResult(asrStream).text.trim()
-            val now = SystemClock.elapsedRealtime()
-            if (floats.any { kotlin.math.abs(it) > .02f }) heardAt = now
+            if (text != lastText) { lastText = text; partial(text) }
             if (asr.isEndpoint(asrStream)) {
-              asr.reset(asrStream)
+              asr.reset(asrStream); speech = false; gate.reset(); preRoll.clear(); lastText = ""
               if (text.isNotEmpty()) { mode = "processing"; utterance(text) }
-              else if (now - listenStarted > 15000) { mode = "wake"; idle() }
-            } else if (text.isEmpty() && now - heardAt > 20000) { mode = "wake"; idle() }
+              else partial("")
+            }
+          } else if (state == "listening" && now - heardAt > 20000) {
+            mode = "wake"; idle()
           }
         }
       } catch (error: Throwable) { if (!stopped) failure(error) }
       finally {
         recordingCallback?.let { callback -> runCatching { recorder?.unregisterAudioRecordingCallback(callback) } }
         runCatching { recorder?.stop() }; recorder?.release(); recorder = null
-        echo?.release(); kwsStream?.release(); asrStream?.release(); kws?.release(); asr?.release()
+        hardwareEcho?.release(); echo?.close(); vad?.release(); kwsStream?.release(); asrStream?.release(); kws?.release(); asr?.release()
       }
     }
   }

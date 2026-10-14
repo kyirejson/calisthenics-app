@@ -1,6 +1,8 @@
 // Real browser chat flow, mocked model, isolated personal records. No live API or user data.
 const assert = require('node:assert/strict');
 const { chromium } = require(process.env.PLAYWRIGHT_PATH || 'playwright');
+const baseUrl = process.env.CHAT_QA_URL || 'http://127.0.0.1:8081/';
+const withoutContext = value => Object.fromEntries(Object.entries(value).filter(([key]) => key !== 'uncover.agent.conversation.v1'));
 (async () => {
   const browser = await chromium.launch({ headless: true, channel: 'chrome' });
   try {
@@ -16,13 +18,13 @@ const { chromium } = require(process.env.PLAYWRIGHT_PATH || 'playwright');
       let fail = false;
       await context.route('**/*', route => {
         const url = route.request().url();
-        if (!url.startsWith('https://api.deepseek.com/')) return /^(http:\/\/127\.0\.0\.1:8081\/|data:|blob:)/.test(url) ? route.continue() : route.abort();
+        if (!url.startsWith('https://api.deepseek.com/')) return url.startsWith(baseUrl) || /^(data:|blob:)/.test(url) ? route.continue() : route.abort();
         requests.push(route.request().postDataJSON());
         if (fail) return route.fulfill({ status: 503, json: {} });
         const content = 'QA 回复 ' + requests.length;
         return route.fulfill({ contentType: 'text/event-stream', body: `data: ${JSON.stringify({ choices: [{ delta: { content }, finish_reason: null }] })}\n\ndata: ${JSON.stringify({ choices: [{ delta: {}, finish_reason: 'stop' }] })}\n\ndata: [DONE]\n\n` });
       });
-      await page.goto('http://127.0.0.1:8081/', { waitUntil: 'domcontentloaded' });
+      await page.goto(baseUrl, { waitUntil: 'domcontentloaded' });
       await page.getByRole('button', { name: '打开 DeepSeek 聊天', exact: true }).click();
       const input = page.getByLabel('聊天输入', { exact: true });
       const send = page.getByRole('button', { name: '发送聊天消息', exact: true });
@@ -35,7 +37,9 @@ const { chromium } = require(process.env.PLAYWRIGHT_PATH || 'playwright');
       assert.equal(await page.getByText('QA 回复 1', { exact: true }).count(), 0);
       assert.equal(await page.getByText('旧对话标记 OLD_CONTEXT', { exact: true }).count(), 0);
       assert.equal(await input.inputValue(), '');
-      assert.deepEqual(await page.evaluate(() => Object.fromEntries(Object.entries(localStorage))), before, 'Clear does not write or delete any persistent domain or memory');
+      const cleared = await page.evaluate(() => Object.fromEntries(Object.entries(localStorage)));
+      assert.equal(cleared['uncover.agent.conversation.v1'], undefined, 'Clear removes only the common conversation context');
+      assert.deepEqual(withoutContext(cleared), withoutContext(before), 'Clear preserves every persistent domain and memory');
       await input.fill('新问题 NEW_CONTEXT'); await send.click();
       await page.getByText('QA 回复 2', { exact: true }).waitFor();
       assert.deepEqual(requests[1].messages.filter(row => row.role !== 'system'), [{ role: 'user', content: '新问题 NEW_CONTEXT' }]);
@@ -57,7 +61,7 @@ const { chromium } = require(process.env.PLAYWRIGHT_PATH || 'playwright');
       assert.equal(await page.getByRole('alert').count(), 0);
       assert.equal(await page.getByTestId('chat-pending-files').count(), 0);
       assert.equal(await page.getByText('QA 回复 2', { exact: true }).count(), 0);
-      assert.deepEqual(await page.evaluate(() => Object.fromEntries(Object.entries(localStorage))), before);
+      assert.deepEqual(withoutContext(await page.evaluate(() => Object.fromEntries(Object.entries(localStorage)))), withoutContext(before));
       assert.deepEqual(errors, []);
       await context.close();
       console.log(`PASS /clear + Chinese alias + new context isolation + bad attachment + failure + storage preservation ${width}px`);

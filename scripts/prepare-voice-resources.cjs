@@ -8,11 +8,13 @@ const artifacts = [
     'encoder-epoch-13-avg-2-chunk-8-left-64.int8.onnx': 'kws/encoder.onnx', 'decoder-epoch-13-avg-2-chunk-8-left-64.onnx': 'kws/decoder.onnx', 'joiner-epoch-13-avg-2-chunk-8-left-64.int8.onnx': 'kws/joiner.onnx', 'tokens.txt': 'kws/tokens.txt',
   } },
   { name: 'asr.tar.bz2', sha256: 'b3b309f7ce4a737195fcc6963ea19b0653a7d3401580af5ae0d3e284cbb71f0b', url: 'https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/sherpa-onnx-streaming-zipformer-small-ctc-zh-int8-2025-04-01.tar.bz2', directory: 'sherpa-onnx-streaming-zipformer-small-ctc-zh-int8-2025-04-01', files: { 'model.int8.onnx': 'asr/model.int8.onnx', 'tokens.txt': 'asr/tokens.txt' } },
+  { name: 'silero_vad.onnx', sha256: '9e2449e1087496d8d4caba907f23e0bd3f78d91fa552479bb9c23ac09cbb1fd6', url: 'https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/silero_vad.onnx', destination: 'src/main/assets/black-voice/vad/silero_vad.onnx' },
+  { name: 'speexdsp-1.2.1.tar.gz', sha256: '8c777343e4a6399569c72abc38a95b24db56882c83dbdb6c6424a5f4aeb54d3d', url: 'https://downloads.xiph.org/releases/speex/speexdsp-1.2.1.tar.gz', directory: 'speexdsp-1.2.1', vendor: true },
 ];
 const digest = file => crypto.createHash('sha256').update(fs.readFileSync(file)).digest('hex');
 async function main() {
   fs.mkdirSync(cache, { recursive: true });
-  const manifest = { version: 1, artifacts, files: [], license: 'Apache-2.0', name: 'BLACK' };
+  const manifest = { version: 1, artifacts, files: [], license: 'Apache-2.0 AND MIT AND BSD-3-Clause', name: 'BLACK' };
   for (const artifact of artifacts) {
     const source = path.join(cache, artifact.name);
     if (!fs.existsSync(source)) {
@@ -28,7 +30,13 @@ async function main() {
       const entries = execFileSync('tar', ['-tf', source], { encoding: 'utf8', windowsHide: true }).trim().split(/\r?\n/);
       if (entries.some(name => path.isAbsolute(name) || name.replace(/\\/g, '/').split('/').includes('..'))) throw Error('Unsafe upstream archive');
       execFileSync('tar', ['-xf', source, '-C', cache], { windowsHide: true });
-      for (const [from, to] of Object.entries(artifact.files)) {
+      if (artifact.vendor) {
+        const extracted = path.join(cache, artifact.directory), target = path.join(moduleRoot, 'native/vendor', artifact.directory);
+        fs.mkdirSync(target, { recursive: true });
+        for (const directory of ['include', 'libspeexdsp']) fs.cpSync(path.join(extracted, directory), path.join(target, directory), { recursive: true });
+        fs.copyFileSync(path.join(extracted, 'COPYING'), path.join(assets, 'SPEEX-DSP-LICENSE.txt'));
+      }
+      for (const [from, to] of Object.entries(artifact.files || {})) {
         const target = path.join(assets, to); fs.mkdirSync(path.dirname(target), { recursive: true }); fs.copyFileSync(path.join(cache, artifact.directory, from), target);
         manifest.files.push({ path: 'src/main/assets/black-voice/' + to, sha256: digest(target), bytes: fs.statSync(target).size });
       }

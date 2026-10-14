@@ -13,7 +13,7 @@
 | 浏览器验收 | `smoke-*.cjs` | 按功能运行的隔离会话，需启动 Web 预览及 Playwright |
 | 发布/原生验证 | `publish-app-release.ps1`、`check-android-native.ps1`、`build-android-ui-dump.ps1` | 仅在需要构建/发布/设备检查时调用 |
 | 本地语音构建 | `prepare-voice-resources.cjs`、`build-agent-ack.py`、`build-running-voices.py` | 下载哈希固定的原生库/模型，或在隔离工具环境重生成带来源的离线提示音；构建工具不进入 App |
-| 语音验证 | `test-voice-agent.cjs`、`check-voice-models.py`、`build-wake-fixtures.ps1`、`inspect-apk-voice.cjs` | 对话所有权/取消回归、合成语音识别、最终 APK 资源与原生类检查；不冒充真机唤醒验收 |
+| 语音验证 | `test-voice-agent.cjs`、`test-agent-conversation.cjs`、`check-voice-models.py`、`build-wake-fixtures.ps1`、`build-voice-dialogue-fixtures.py`、`check-voice-echo.py`、`native/voice-echo-probe.c`、`inspect-apk-voice.cjs` | 共用对话/取消/文字流回归、合成唤醒/回声/插话与真实本地模型检查、最终 APK 资源/原生类检查；不冒充真机验收 |
 | 历史研究 | `audit*`、图片研究 `.py`/`.json` | 手工研究/一次性素材工具，不属于发版门禁 |
 
 本轮已删除四个对应已退场相机/条码功能的 smoke。`test-nutrition-photo-history` 只保护历史营养照片、份量快照与照片存储兼容，不提供新拍照功能。
