@@ -1,7 +1,8 @@
 import { changeMusicPreferences, musicProvider, normalizeMusicPreferences } from './preferences';
 import type { Settings } from '../types';
 import type { MusicCommand, MusicTransport } from './types';
-type Context = { requestId: string; executionId?: string; readSettings: () => Settings; updateSettings: (patch: Partial<Settings>) => Promise<void> };
+type Context = { requestId: string; executionId?: string; readSettings: () => Settings; updateSettings: (patch: Partial<Settings>) => Promise<void>;
+  onInterruptedResult?: (call: { name: string; args: Record<string, unknown>; result: unknown }) => void };
 const record = (input: unknown): Record<string, unknown> => {
   if (input === undefined) return {};
   if (!input || typeof input !== 'object' || Array.isArray(input)) throw Error('音乐工具参数应为对象。');
@@ -43,7 +44,11 @@ export function createMusicRuntime(transport: MusicTransport, context: Context) 
     try {
       if (signal?.aborted) { cancel(); throw Error('请求已取消。'); }
       const result = await (fused ? transport.executeAndObserve(context.requestId, command, executionId) : transport.execute(context.requestId, command, executionId));
-      if (signal?.aborted) throw Error('请求已取消；已执行的音乐操作可通过状态工具核对。');
+      if (signal?.aborted) {
+        // Stop the turn without erasing the factual result of an already-dispatched action.
+        context.onInterruptedResult?.({ name, args, result });
+        throw Error('请求已取消；已执行的音乐操作可通过状态工具核对。');
+      }
       return result;
     } finally { signal?.removeEventListener('abort', cancel); }
   };

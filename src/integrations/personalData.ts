@@ -14,7 +14,8 @@ import type { StoreActions } from '../store/contracts';
 import { musicTools } from '../music/modelTools.mjs';
 export type PersonalData = { profile: Profile | null; sessions: TrainingSession[]; dailyEdits: DailyWorkoutEdits; nutritionJournal: NutritionJournal; settings?: Settings };
 export async function executePersonalTool(name: string, input: unknown, data: PersonalData, signal?: AbortSignal,
- writes?: { requestId: string; executionId?: string; apply: StoreActions['applyMealOperations']; updateSettings?: StoreActions['updateSettings'] }) {
+ writes?: { requestId: string; executionId?: string; apply: StoreActions['applyMealOperations']; updateSettings?: StoreActions['updateSettings'];
+   onInterruptedMusicResult?: (call: { name: string; args: Record<string, unknown>; result: unknown }) => void }) {
  if (signal?.aborted) throw Error('请求已取消。');
  if(knowledgeTools.some(tool=>tool.function.name===name))return executeKnowledgeTool(name,input,loadKnowledgeLibraries,signal);
  if (musicTools.some(tool => tool.function.name === name)) {
@@ -23,6 +24,7 @@ export async function executePersonalTool(name: string, input: unknown, data: Pe
    return createMusicRuntime(musicTransport, {
      requestId: writes?.requestId ?? '', executionId: writes?.executionId, readSettings: () => data.settings ?? { vibration: true, restSeconds: 120 },
      updateSettings: async patch => { if (!writes?.updateSettings) throw Error('音乐预设保存接口未连接。'); await writes.updateSettings(patch); },
+     onInterruptedResult: writes?.onInterruptedMusicResult,
    })(name, input, signal);
  }
  const date=localWeightDate(new Date());

@@ -52,6 +52,29 @@ test('fused cancellation is still scoped and malformed arguments never execute',
   controller.abort(); release({ ok: true, action: { status: 'dispatched' } }); await assert.rejects(pending, /取消/);
   assert.deepEqual(h.calls, [{ cancel: 'attempt-1' }]);
 });
+test('interruption preserves a dispatched music receipt but prevents all following model and tool calls', async () => {
+  const { personalChat } = await import('../src/integrations/personalTools.mjs');
+  const h = harness(), controller = new AbortController(), receipts = [];
+  let release, generations = 0;
+  h.transport.executeAndObserve = () => new Promise(resolve => { release = resolve; });
+  const execute = createMusicRuntime(h.transport, { requestId: 'user-1', executionId: 'attempt-1', readSettings: () => ({}), updateSettings: async () => {}, onInterruptedResult: call => receipts.push(call) });
+  const pending = personalChat({ date: '2026-10-15', signal: controller.signal, messages: [{ role: 'user', content: '换一首歌' }], execute,
+    onToolResult: call => receipts.push(call), client: { generate: async () => {
+      generations++;
+      return { tool_calls: [
+        { id: 'first', function: { name: 'control_music_and_observe', arguments: JSON.stringify({ operationKey: 'next', action: 'next' }) } },
+        { id: 'must-not-run', function: { name: 'open_music_and_observe', arguments: JSON.stringify({ operationKey: 'after-cancel' }) } },
+      ] };
+    } },
+  });
+  await new Promise(resolve => setImmediate(resolve));
+  controller.abort(); release({ ok: true, action: { ok: true, status: 'dispatched' }, playback: { verifiedPlaying: true } });
+  await assert.rejects(pending, /取消/);
+  assert.equal(generations, 1); assert.equal(receipts.length, 1); assert.equal(receipts[0].name, 'control_music_and_observe');
+  assert.equal(receipts[0].result.action.status, 'dispatched'); assert.equal(receipts[0].result.playback.verifiedPlaying, true);
+  assert.deepEqual(h.calls, [{ cancel: 'attempt-1' }]);
+  assert.match(read('src/integrations/runAgentTurn.ts'), /onInterruptedMusicResult: onToolResult/);
+});
 test('the same model-planned three actions need four tool rounds instead of seven separate observations', async () => {
   const { personalChat } = await import('../src/integrations/personalTools.mjs'), h = harness();
   const steps = [['read_music_settings', {}], ['open_music_and_observe', { operationKey: 'open' }], ['music_ui_action_and_observe', { operationKey: 'search', action: 'set_text', snapshotId: 'fresh', nodeId: 'observed-1', text: '由模型自主决定的版本' }], ['music_ui_action_and_observe', { operationKey: 'choose', action: 'click', snapshotId: 'fresh', nodeId: 'observed-1' }]];

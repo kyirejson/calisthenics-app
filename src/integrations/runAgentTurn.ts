@@ -30,7 +30,7 @@ export async function runAgentTurn({ repository, messages, requestId, executionI
         .map(row => ({ operationKey: row.id.slice(requestId.length + 1), entryIds: row.entryIds })) ?? [],
       musicReceipts, signal: controller.signal,
       execute: (name: string, input: unknown, signal?: AbortSignal) => executePersonalTool(name, input, repository.getSnapshot(), signal,
-        { requestId, executionId, apply: repository.getSnapshot().applyMealOperations, updateSettings: repository.getSnapshot().updateSettings }),
+        { requestId, executionId, apply: repository.getSnapshot().applyMealOperations, updateSettings: repository.getSnapshot().updateSettings, onInterruptedMusicResult: onToolResult }),
       onToolCall, onToolResult, onDelta, onRoundStart, responseMode,
     });
   } finally {
