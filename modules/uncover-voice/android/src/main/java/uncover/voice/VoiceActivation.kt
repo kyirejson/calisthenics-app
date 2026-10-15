@@ -1,12 +1,11 @@
 package uncover.voice
 
-/** One acknowledgement per activation. Already-awake requests stop/listen instead of replaying the cue. */
+/** A wake is input to the model, never a second local reply. */
 internal object VoiceActivation {
-  enum class Action { WAIT, ACKNOWLEDGE, LISTEN, IGNORE }
+  enum class Action { WAIT, REQUEST, LISTEN }
   fun decide(ready: Boolean, phase: String): Action = when {
     !ready -> Action.WAIT
-    phase == "acknowledging" -> Action.IGNORE
     phase in listOf("listening", "speaking", "processing") -> Action.LISTEN
-    else -> Action.ACKNOWLEDGE
+    else -> Action.REQUEST
   }
 }

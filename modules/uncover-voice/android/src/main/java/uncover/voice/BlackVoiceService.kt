@@ -64,7 +64,7 @@ class BlackVoiceService : Service() {
     val app = packageManager.getLaunchIntentForPackage(packageName)!!
     val open = PendingIntent.getActivity(this, 718, app, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
     return Notification.Builder(this, "black_voice").setSmallIcon(android.R.drawable.ic_btn_speak_now).setContentTitle("BLACK 语音唤醒")
-      .setContentText(when (phase) { "acknowledging" -> "我在"; "listening" -> "正在听你说话"; "processing" -> "正在处理你的请求"; "speaking" -> "正在回答，可直接说话打断"; "blocked" -> "麦克风被系统静音或暂时被其他应用占用"; "starting" -> "正在准备本地语音模型"; else -> "本地监听 BLACK，可锁屏使用" })
+      .setContentText(when (phase) { "listening" -> "正在听你说话"; "processing" -> "正在处理你的请求"; "speaking" -> "正在回答，可直接说话打断"; "blocked" -> "麦克风被系统静音或暂时被其他应用占用"; "starting" -> "正在准备本地语音模型"; else -> "本地监听 BLACK，可锁屏使用" })
       .setContentIntent(open).setOngoing(true).addAction(Notification.Action.Builder(null, "停止监听", stop).build()).build()
   }
   override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -102,20 +102,15 @@ class BlackVoiceService : Service() {
     if (!VoiceState.enabled(this)) return
     when (VoiceActivation.decide(listening, phase)) {
       VoiceActivation.Action.WAIT -> { pendingWake = true; return }
-      VoiceActivation.Action.IGNORE -> return
       VoiceActivation.Action.LISTEN -> { interrupt(); return }
-      VoiceActivation.Action.ACKNOWLEDGE -> {}
+      VoiceActivation.Action.REQUEST -> {}
     }
-    val token = ++generation
+    ++generation
     VoiceState.clearError(this)
     presentationError = null
     requestId = null; replyId = null; transcript = ""; segmentId = UUID.randomUUID().toString()
-    engine?.listenAgain(); engine?.mode = "acknowledging"; notifyState("acknowledging")
-    runCatching { speaker?.acknowledge { error ->
-      if (!listening || generation != token) return@acknowledge
-      if (error != null) fail("acknowledgement_failed", error)
-      engine?.mode = "listening"; notifyState("listening")
-    } }.onFailure { fail("speaker_failed", it.message ?: "系统未允许语音回应。"); engine?.mode = "listening"; notifyState("listening") }
+    engine?.listenAgain(); engine?.mode = "processing"
+    request("BLACK")
   }
   private fun interrupt(preserveSpeech: Boolean = false) {
     val interrupted = requestId ?: replyId
@@ -146,6 +141,11 @@ class BlackVoiceService : Service() {
   internal fun active(id: String) = listening && requestId == id && engine?.mode == "processing" && VoiceState.enabled(this)
   internal fun reply(id: String, text: String) {
     if (!active(id)) return
+    if (text.isBlank()) {
+      // An explicit model continue_listening tool result. No TTS, canned response or error.
+      requestId = null; replyId = null; transcript = ""; segmentId = UUID.randomUUID().toString()
+      engine?.listenAgain(); notifyState("listening"); return
+    }
     val token = ++generation
     requestId = null; replyId = id; spokenEnd = 0; speechStart = 0; speechEnd = 0
     transcript = ""; engine?.mode = "speaking"; notifyState("speaking")

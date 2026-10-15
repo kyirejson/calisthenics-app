@@ -4,6 +4,9 @@ Historical v1.7.13 candidate baseline. The playback gating and separate voice
 context below have been replaced in v1.7.14; see
 [current interaction implementation](release-v1.7.14-2026-10-15.md).
 
+Later changes: v1.7.16 removes the local cue entirely, adds local AEC3/acoustic
+ownership and model-selected silence. See [current local implementation](voice-local-echo-2026-10-15.md).
+
 Status: final local Android candidate build and code/resource validation passed.
 Signing and device acceptance remain separate gates. No v1.7.13 formal publication.
 The user agreed to install a formally signed candidate on ColorOS for lock-screen,

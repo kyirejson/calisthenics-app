@@ -10,6 +10,7 @@ const artifacts = [
   { name: 'asr.tar.bz2', sha256: 'b3b309f7ce4a737195fcc6963ea19b0653a7d3401580af5ae0d3e284cbb71f0b', url: 'https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/sherpa-onnx-streaming-zipformer-small-ctc-zh-int8-2025-04-01.tar.bz2', directory: 'sherpa-onnx-streaming-zipformer-small-ctc-zh-int8-2025-04-01', files: { 'model.int8.onnx': 'asr/model.int8.onnx', 'tokens.txt': 'asr/tokens.txt' } },
   { name: 'silero_vad.onnx', sha256: '9e2449e1087496d8d4caba907f23e0bd3f78d91fa552479bb9c23ac09cbb1fd6', url: 'https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/silero_vad.onnx', destination: 'src/main/assets/black-voice/vad/silero_vad.onnx' },
   { name: 'speexdsp-1.2.1.tar.gz', sha256: '8c777343e4a6399569c72abc38a95b24db56882c83dbdb6c6424a5f4aeb54d3d', url: 'https://downloads.xiph.org/releases/speex/speexdsp-1.2.1.tar.gz', directory: 'speexdsp-1.2.1', vendor: true },
+  { name: 'webrtc-aec3-2cec2f5.tar.gz', sha256: '3bc3423e71b7280cf96d87b2e429444ed3fee364b94648ce9875ee95b8f485f8', url: 'https://codeload.github.com/Enaium/webrtc-aec3/tar.gz/2cec2f52e26646f93bd2d5498bbabf59cba18da9', directory: 'webrtc-aec3-2cec2f52e26646f93bd2d5498bbabf59cba18da9', aec: true },
 ];
 const digest = file => crypto.createHash('sha256').update(fs.readFileSync(file)).digest('hex');
 async function main() {
@@ -36,15 +37,20 @@ async function main() {
         for (const directory of ['include', 'libspeexdsp']) fs.cpSync(path.join(extracted, directory), path.join(target, directory), { recursive: true });
         fs.copyFileSync(path.join(extracted, 'COPYING'), path.join(assets, 'SPEEX-DSP-LICENSE.txt'));
       }
+      if (artifact.aec) {
+        const extracted = path.join(cache, artifact.directory), target = path.join(moduleRoot, 'native/vendor/webrtc-aec3');
+        fs.mkdirSync(target, { recursive: true });
+        fs.cpSync(path.join(extracted, 'src'), path.join(target, 'src'), { recursive: true });
+        fs.copyFileSync(path.join(extracted, 'LICENSE'), path.join(assets, 'WEBRTC-AEC3-LICENSE.txt'));
+      }
       for (const [from, to] of Object.entries(artifact.files || {})) {
         const target = path.join(assets, to); fs.mkdirSync(path.dirname(target), { recursive: true }); fs.copyFileSync(path.join(cache, artifact.directory, from), target);
         manifest.files.push({ path: 'src/main/assets/black-voice/' + to, sha256: digest(target), bytes: fs.statSync(target).size });
       }
     }
   }
-  fs.copyFileSync(path.join(root, 'modules/uncover-running/android/src/main/assets/run-voices/LICENSE.txt'), path.join(assets, 'LICENSE.txt'));
   fs.writeFileSync(path.join(assets, 'resources.json'), JSON.stringify(manifest, null, 2));
-  console.log('Verified BLACK resources:', manifest.files.length, 'files; wake audio stays local.');
+  console.log('Verified BLACK resources:', manifest.files.length, 'files; wake/ASR/AEC processing stays local.');
 }
 if (require.main === module) main().catch(error => { console.error(error.message); process.exitCode = 1; });
 module.exports = { artifacts };

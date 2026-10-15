@@ -17,17 +17,25 @@ export function createVoiceDialogue(dependencies: Dependencies) {
     if (!input || typeof input.requestId !== 'string' || typeof input.sessionId !== 'string' || typeof input.text !== 'string' || !input.text.trim() || running.has(input.requestId)) return;
     running.add(input.requestId);
     const controller = new AbortController();
+    let delivered = false;
     const cancelled = () => { conversation.interrupt(input.requestId); void dependencies.cancel(input.requestId).catch(() => {}); };
     controller.signal.addEventListener('abort', cancelled, { once: true });
     const unlisten = dependencies.subscribeReset(() => controller.abort());
-    const timer = setInterval(() => { void dependencies.active(input.requestId).then(active => { if (!active) controller.abort(); }).catch(() => controller.abort()); }, 500);
+    const timer = setInterval(() => { void dependencies.active(input.requestId).then(active => { if (!delivered && !active) controller.abort(); }).catch(() => { if (!delivered) controller.abort(); }); }, 500);
+    const deliver = async (text: string) => {
+      // Native transfers ownership from processing to playback/listening here.
+      // A previously issued active() poll may resolve false after this transfer;
+      // that is completion, not cancellation of the newly playing answer.
+      delivered = true; clearInterval(timer);
+      await dependencies.reply(input.requestId, text);
+    };
     let handle: TurnHandle | null = null;
     try {
       await conversation.load();
       if (!(await dependencies.active(input.requestId)) || controller.signal.aborted) return;
       if (isClearContextCommand(input.text)) {
         await conversation.clear();
-        if (await dependencies.active(input.requestId)) await dependencies.reply(input.requestId, '上下文已清空，个人记忆和记录保留。');
+        if (await dependencies.active(input.requestId)) await deliver('上下文已清空，个人记忆和记录保留。');
         return;
       }
       handle = await conversation.begin({ requestId: input.requestId, source: 'voice', user: { content: input.text }, controller });
@@ -39,13 +47,13 @@ export function createVoiceDialogue(dependencies: Dependencies) {
         onToolCall: call => conversation.tool(activeHandle, call), onToolResult: call => conversation.receipt(activeHandle, call),
       });
       if (!controller.signal.aborted && await dependencies.active(input.requestId) && conversation.complete(handle, answer)) {
-        await dependencies.reply(input.requestId, answer);
+        await deliver(answer);
       } else controller.abort();
     } catch (error) {
       if (!controller.signal.aborted && await dependencies.active(input.requestId).catch(() => false)) {
         const message = error instanceof Error ? error.message : '对话暂时不可用，请稍后重试。';
         if (handle) conversation.fail(handle, message);
-        await dependencies.reply(input.requestId, message);
+        await deliver(message);
       } else controller.abort();
     } finally {
       clearInterval(timer); unlisten(); controller.signal.removeEventListener('abort', cancelled); running.delete(input.requestId);

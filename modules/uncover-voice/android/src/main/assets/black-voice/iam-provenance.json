@@ -1,9 +1,0 @@
-{
-  "text": "\u6211\u5728\u3002",
-  "model": "hexgrad/Kokoro-82M-v1.1-zh",
-  "revision": "01e7505bd6a7a2ac4975463114c3a7650a9f7218",
-  "modelSha256": "b1d8410fa44dfb5c15471fd6c4225ea6b4e9ac7fa03c98e8bea47a9928476e2b",
-  "voice": "zf_001",
-  "license": "Apache-2.0",
-  "sha256": "9531307796da18a350f9d548906b7b91ae6c0e45bef4fea68847dc4ef7d2c1bb"
-}

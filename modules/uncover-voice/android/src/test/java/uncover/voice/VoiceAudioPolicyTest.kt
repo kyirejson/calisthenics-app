@@ -6,11 +6,18 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class VoiceAudioPolicyTest {
-  @Test fun oneActivationAcknowledgesOnlyOnce() {
-    assertEquals(VoiceActivation.Action.ACKNOWLEDGE, VoiceActivation.decide(true, "wake"))
-    assertEquals(VoiceActivation.Action.IGNORE, VoiceActivation.decide(true, "acknowledging"))
+  @Test fun oneActivationRequestsModelInsteadOfPlayingAnotherReply() {
+    assertEquals(VoiceActivation.Action.REQUEST, VoiceActivation.decide(true, "wake"))
     for (phase in listOf("speaking", "processing", "listening")) assertEquals(VoiceActivation.Action.LISTEN, VoiceActivation.decide(true, phase))
     assertEquals(VoiceActivation.Action.WAIT, VoiceActivation.decide(false, "starting"))
+  }
+  @Test fun captureFallbackDoesNotTreatBufferedSamplesAsNewAudio() {
+    val clock = VoiceCaptureClock(1_000_000_000L)
+    assertEquals(1_000_000_000L, clock.frame(512, 512))
+    // Inference can take arbitrarily long; no wall-clock read time enters the fallback.
+    assertEquals(1_032_000_000L, clock.frame(1024, 512))
+    assertEquals(1_100_000_000L, clock.frame(2112, 512, 1600, 1_100_000_000L))
+    assertEquals(1_132_000_000L, clock.frame(2624, 512))
   }
   @Test fun clicksDoNotBargeButOrdinarySustainedSpeechDoes() {
     val gate = VoiceSpeechGate()

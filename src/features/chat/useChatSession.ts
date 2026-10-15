@@ -87,7 +87,7 @@ export function useChatSession({ visible, onClose }: { visible: boolean; onClose
       if (request.current === controller) { locked.current = false; request.current = null; }
     }
   };
-  const busy = conversation.generating || ['speaking', 'acknowledging'].includes(conversation.voice.phase);
+  const busy = conversation.generating || conversation.voice.phase === 'speaking';
   return { visible, onClose, turns: conversation.turns, voice: conversation.voice, preview: conversation.preview,
     draft, setDraft, busy, inputBusy: locked.current, error: error || conversation.error || conversation.voice.error || '', contextNotice,
     settingsOpen, setSettingsOpen, memoryOpen, setMemoryOpen, filesOpen, setFilesOpen,

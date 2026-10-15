@@ -1,9 +1,10 @@
-"""Test the production echo_core.c on an owned Android emulator with generated audio.
+"""Test the production echo core on an owned Android emulator with generated audio.
 No device microphone, live API, private user data, or production test hooks are used.
 """
 import argparse
 import json
 import subprocess
+import re
 import wave
 from pathlib import Path
 import numpy as np
@@ -17,15 +18,18 @@ parser.add_argument("--probe", type=Path, required=True)
 parser.add_argument("--resources", type=Path, required=True)
 parser.add_argument("--fixtures", type=Path, required=True)
 parser.add_argument("--output", type=Path, required=True)
+parser.add_argument("--closed-loop", action="store_true", help="Also stop assistant render on the first detected real interruption")
 args = parser.parse_args()
 args.output.mkdir(parents=True, exist_ok=True)
-remote = "/data/local/tmp/black-echo-fixtures-20261014"
+remote = "/data/local/tmp/black-echo-" + re.sub(r"[^A-Za-z0-9_-]", "-", args.output.name)
 
 def adb(*values):
     return subprocess.run([args.adb, "-s", args.serial, *map(str, values)], check=True, capture_output=True, text=True).stdout
 
 adb("shell", "mkdir", "-p", remote)
 adb("push", args.probe, remote + "/probe")
+library = args.probe.parent / "libblack-echo.so"
+if library.exists(): adb("push", library, remote + "/libblack-echo.so")
 adb("shell", "chmod", "700", remote + "/probe")
 
 def samples(path):
@@ -53,7 +57,9 @@ def probability(values):
         feed = {**state, audio_name: audio.reshape(1, -1)}
         if "sr" in inputs: feed["sr"] = np.array(16000, dtype=np.int64)
         output = session.run(None, feed)
-        probabilities.append(float(output[0].reshape(-1)[0]))
+        # Same onset evidence as VoiceAudioEngine: recurrent VAD tail is not a
+        # new microphone source in an acoustically zeroed frame.
+        probabilities.append(float(output[0].reshape(-1)[0]) if np.any(block) else 0.)
         if v5: state["state"] = output[1]; context = block[-64:]
         else: state["h"], state["c"] = output[1], output[2]
     return np.asarray(probabilities)
@@ -70,7 +76,11 @@ def process(name, rendered, captured):
     for suffix, values in [("far", rendered), ("mic", captured)]:
         pcm = (np.clip(np.pad(values, (0, count - len(values))), -1, 1) * 32767).astype("<i2")
         file = args.output / f"{name}-{suffix}.pcm"; pcm.tofile(file); adb("push", file, f"{remote}/{name}-{suffix}.pcm")
-    adb("shell", remote + "/probe", f"{remote}/{name}-far.pcm", f"{remote}/{name}-mic.pcm", f"{remote}/{name}-out.pcm")
+    timing = adb("shell", "env", f"LD_LIBRARY_PATH={remote}", remote + "/probe", f"{remote}/{name}-far.pcm", f"{remote}/{name}-mic.pcm", f"{remote}/{name}-out.pcm")
+    print(name, timing.strip(), flush=True)
+    metrics = dict(re.findall(r"(dsp_cpu_ms|audio_ms)=([0-9.]+)", timing))
+    if metrics:
+        assert float(metrics["dsp_cpu_ms"]) < float(metrics["audio_ms"]) * .5, "AEC CPU is not safely faster than real time; do not ship a backlog-prone implementation"
     output = args.output / f"{name}-out.pcm"; adb("pull", f"{remote}/{name}-out.pcm", output)
     return np.fromfile(output, dtype="<i2").astype(np.float32) / 32768
 
@@ -81,7 +91,9 @@ def echo(rendered, delay, gain=.45):
         result[offset:] += rendered[:len(rendered) - offset] * scale
     return result
 
-cue = samples(args.resources / "iam.wav")
+assistant = samples(args.fixtures / "assistant.wav")
+# A short playback fixture, not a shipped or hardcoded wake acknowledgement.
+cue = assistant[:12000]
 reports = []; failures = []
 for delay in [.0, .02, .08, .16]:
     far = np.pad(cue, (6400, 32000)); mic = echo(far, delay)
@@ -90,9 +102,17 @@ for delay in [.0, .02, .08, .16]:
     reports.append({"case": f"own-cue-{delay}", "falseSpeechStarts": starts, "maxSpeechProbability": round(peak, 4)})
     if starts: failures.append(reports[-1])
 
-assistant = samples(args.fixtures / "assistant.wav")
 far = np.pad(assistant, (6400, 32000))
-for name, mic in [("own-long-reply", echo(far, .08)), ("own-reply-noise", echo(far, .08) + np.random.default_rng(15).normal(0, .0006, len(far)))]:
+room = echo(far, .08)
+shift = len(room) // 2
+gain_change = room.copy(); gain_change[shift:] *= .4
+delay_change = room.copy(); delay_change[shift:] = echo(far, .18)[shift:]
+# Loudspeaker distortion, longer acoustic paths and route changes were absent from the old tests.
+for name, mic in [("own-long-reply", room), ("own-reply-noise", room + np.random.default_rng(15).normal(0, .0006, len(far))),
+                  ("own-speaker-compression", np.tanh(room * 5) / 5),
+                  ("own-speaker-clipping", np.clip(room, -.07, .07)),
+                  ("own-gain-change", gain_change), ("own-delay-change", delay_change),
+                  ("own-long-delay", echo(far, .32))]:
     cleaned = process(name, far, mic); starts, peak = speech_starts(cleaned)
     reports.append({"case": name, "falseSpeechStarts": starts, "maxSpeechProbability": round(peak, 4)})
     if starts: failures.append(reports[-1])
@@ -117,8 +137,22 @@ for user_file, near_gain in [("user.wav", .65), ("user-same-voice.wav", .65), ("
     reports.append(report)
     if detection is None or detection - at / 16000 > 1.0 or any(start < at / 16000 for start in starts) or not text:
         failures.append(report)
+    if args.closed_loop and detection is not None:
+        # The service stops AudioTrack on barge-in. Keep the physical echo tail
+        # of already rendered PCM; don't erase it or give AEC future speech.
+        stopped_far = far.copy(); stopped_far[round((detection + .032) * 16000):] = 0
+        stopped_mic = echo(stopped_far, .08); stopped_mic[at:at + len(user)] += user * near_gain
+        stopped = process("stopped-" + user_file.replace(".wav", "") + str(round(near_gain * 100)), stopped_far, stopped_mic)
+        recognizer = sherpa_onnx.OnlineRecognizer.from_zipformer2_ctc(model=str(args.resources / "asr/model.int8.onnx"), tokens=str(args.resources / "asr/tokens.txt"), num_threads=2)
+        target = recognizer.create_stream(); target.accept_waveform(16000, stopped[begin:at + len(user) + 16000]); target.input_finished()
+        while recognizer.is_ready(target): recognizer.decode_stream(target)
+        recognized = recognizer.get_result(target)
+        after, _ = speech_starts(stopped)
+        report = {"case": "closed-loop-" + user_file, "nearGain": near_gain, "transcript": recognized, "afterUserFinishedSpeechStarts": [t for t in after if t > (at + len(user)) / 16000 + .5]}
+        reports.append(report)
+        if not recognized or report["afterUserFinishedSpeechStarts"]: failures.append(report)
 
-# The legitimate words "我在" are not blacklisted; acoustic ownership alone distinguishes playback echo.
+# No words are blacklisted; the same speech is legitimate when no assistant render exists.
 near = np.pad(cue, (6400, 32000)); cleaned = process("real-cue-words-no-render", np.zeros(len(near)), near)
 starts, peak = speech_starts(cleaned); reports.append({"case": "real-cue-words-no-render", "speechStarts": starts})
 if not starts: failures.append(reports[-1])

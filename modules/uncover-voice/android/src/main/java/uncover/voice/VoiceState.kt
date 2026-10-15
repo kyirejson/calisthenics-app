@@ -24,5 +24,5 @@ internal object VoiceState {
     .put("assistant", VoiceInteractionService.isActiveService(context, ComponentName(context, BlackAssistantService::class.java)))
     .put("microphone", context.checkSelfPermission(Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED)
     .put("error", preferences(context).getString("error", null) ?: JSONObject.NULL)
-    .put("message", preferences(context).getString("message", "喊 BLACK 唤醒，回答“我在”后即可说话。") ?: "")
+    .put("message", preferences(context).getString("message", "喊 BLACK 唤醒，可直接说话；回答由现有 Agent 决定。") ?: "")
 }

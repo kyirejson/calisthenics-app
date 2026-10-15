@@ -41,6 +41,13 @@
       "url": "https://downloads.xiph.org/releases/speex/speexdsp-1.2.1.tar.gz",
       "directory": "speexdsp-1.2.1",
       "vendor": true
+    },
+    {
+      "name": "webrtc-aec3-2cec2f5.tar.gz",
+      "sha256": "3bc3423e71b7280cf96d87b2e429444ed3fee364b94648ce9875ee95b8f485f8",
+      "url": "https://codeload.github.com/Enaium/webrtc-aec3/tar.gz/2cec2f52e26646f93bd2d5498bbabf59cba18da9",
+      "directory": "webrtc-aec3-2cec2f52e26646f93bd2d5498bbabf59cba18da9",
+      "aec": true
     }
   ],
   "files": [

@@ -8,7 +8,7 @@ import android.media.AudioTrack
 import android.test.InstrumentationTestCase
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
-import java.util.concurrent.atomic.AtomicReference
+import java.util.concurrent.atomic.AtomicBoolean
 
 /** Real Android AudioTrack, not a mocked player or the service's fall-through listening state. */
 @Suppress("DEPRECATION")
@@ -27,7 +27,7 @@ class VoiceSpeakerPlaybackTest : InstrumentationTestCase() {
     super.tearDown()
   }
   fun testStaticTrackNeedsAudioBeforeItBecomesReady() {
-    val audio = VoicePcm.read(instrumentation.targetContext.assets.open("black-voice/iam.wav").use { it.readBytes() })
+    val audio = VoicePcm(ShortArray(8000) { (2000 * kotlin.math.sin(it * .1)).toInt().toShort() }, 16000)
     val output = AudioTrack.Builder().setAudioAttributes(AudioAttributes.Builder()
       .setUsage(AudioAttributes.USAGE_ASSISTANT).setContentType(AudioAttributes.CONTENT_TYPE_SPEECH).build())
       .setAudioFormat(AudioFormat.Builder().setSampleRate(audio.sampleRate)
@@ -40,23 +40,50 @@ class VoiceSpeakerPlaybackTest : InstrumentationTestCase() {
     } finally { output.release() }
   }
 
-  fun testPackagedAcknowledgementActuallyPlaysAndCanPlayAgain() {
-    val speaker = AtomicReference<VoiceSpeaker>()
-    instrumentation.runOnMainSync {
-      speaker.set(VoiceSpeaker(instrumentation.targetContext, VoiceRenderReference()) { _, _, _ -> })
-    }
+  fun testProductionPcmPlayerActuallyPlaysAndCanPlayAgain() {
+    val player = VoicePcmPlayer(VoiceRenderReference(), AudioAttributes.Builder()
+      .setUsage(AudioAttributes.USAGE_ASSISTANT).setContentType(AudioAttributes.CONTENT_TYPE_SPEECH).build())
     try {
       repeat(2) {
-        val complete = CountDownLatch(1)
-        val error = AtomicReference<String?>()
-        instrumentation.runOnMainSync {
-          try { speaker.get().acknowledge { value -> error.set(value); complete.countDown() } }
-          catch (failure: Exception) { error.set(failure.message ?: failure.javaClass.simpleName); complete.countDown() }
-        }
-        assertTrue("AudioTrack must finish rendering, not just enter listening", complete.await(10, TimeUnit.SECONDS))
-        assertNull("Acknowledgement failed: ${error.get()}", error.get())
+        var started = false
+        val pcm = ShortArray(8000) { (2000 * kotlin.math.sin(it * .1)).toInt().toShort() }
+        val played = player.play(pcm, { true }) { started = true }
+        assertTrue("Actual playback head must advance", started)
+        assertEquals("Actual rendered frames, not service listening state", pcm.size, played)
       }
-    } finally { instrumentation.runOnMainSync { speaker.get().close() } }
+    } finally { player.stop() }
+  }
+  fun testPcmCancellationStopsRealPlaybackWithoutCompletingTheQueue() {
+    val player = VoicePcmPlayer(VoiceRenderReference(), AudioAttributes.Builder()
+      .setUsage(AudioAttributes.USAGE_ASSISTANT).setContentType(AudioAttributes.CONTENT_TYPE_SPEECH).build())
+    val active = AtomicBoolean(true); val begun = CountDownLatch(1); val complete = CountDownLatch(1)
+    var played = -1; var error: Throwable? = null
+    val worker = Thread {
+      try { played = player.play(ShortArray(160000) { 2000 }, { active.get() }) { begun.countDown() } }
+      catch (failure: Throwable) { error = failure }
+      finally { complete.countDown() }
+    }
+    try {
+      worker.start(); assertTrue(begun.await(5, TimeUnit.SECONDS))
+      active.set(false); player.stop()
+      assertTrue("Stop must not wait for the ten-second PCM", complete.await(1, TimeUnit.SECONDS))
+      assertNull(error); assertTrue(played in 1 until 160000)
+    } finally { active.set(false); player.stop(); worker.join(1000) }
+  }
+  fun testProductionEchoJniPreservesIndependentInputAndResamples() {
+    VoiceEcho(512).use { echo ->
+      var power = 0.0
+      repeat(20) { frame ->
+        val input = ShortArray(512) { (5000 * kotlin.math.sin((frame * 512 + it) * .12)).toInt().toShort() }
+        echo.process(input, ShortArray(512)).forEach { power += it * it }
+      }
+      assertTrue("No render reference must not mute independent microphone PCM", power > 1)
+      for (rate in listOf(8000, 22050, 24000, 44100, 48000)) {
+        val resampled = echo.resample(ShortArray(rate) { 1000 }, rate)
+        assertEquals("Complete output duration at $rate Hz", 16000, resampled.size)
+        assertTrue("Filter tail must not erase the last samples", resampled.last() > 0)
+      }
+    }
   }
 }
 

@@ -5,6 +5,7 @@ group = 'uncover.voice'
 version = '1.0.0'
 android {
   namespace 'uncover.voice'
+  ndkVersion rootProject.ext.ndkVersion
   useLibrary 'android.test.runner'
   useLibrary 'android.test.base'
   // The isolated playback test includes both this CMake module and React Native's runtime.

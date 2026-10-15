@@ -60,6 +60,7 @@ test('concise style is a prompt only, preserving all tools and unrestricted mode
     client: { generate: async (history, value) => { prompt = history[0].content; options = value; return ++count <= 12 ? { role: 'assistant', tool_calls: [{ id: String(count), function: { name: 'read_memory', arguments: '{}' } }] } : { content: '必要的完整解释'.repeat(100) }; } },
     execute: async () => ({ ok: true }),
   });
-  assert.equal(count, 13); assert.equal(answer, '必要的完整解释'.repeat(100)); assert.equal(options.tools, personalTools); assert.equal(options.maxTokens, undefined);
+  assert.equal(count, 13); assert.equal(answer, '必要的完整解释'.repeat(100));
+  assert.deepEqual(options.tools.slice(0, personalTools.length), personalTools); assert.equal(options.tools.at(-1).function.name, 'continue_listening'); assert.equal(options.maxTokens, undefined);
   assert.match(prompt, /简洁、干练、自然/); assert.match(prompt, /当前是语音对话/); assert.match(prompt, /保留必要信息/);
 });

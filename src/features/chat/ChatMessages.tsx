@@ -150,7 +150,7 @@ export function ChatMessages({
       {turns.map((turn) =>
         turn.role === 'user' ? (
           renderUser(turn, turn.id)
-        ) : (
+        ) : turn.status === 'silent' ? null : (
           <View key={turn.id} style={s.assistant} testID={turn.status === 'generating' ? 'chat-streaming-answer' : undefined}>
             <View style={s.assistantHeader}>
               <ChatMark size={28} />
@@ -172,10 +172,10 @@ export function ChatMessages({
         ),
       )}
       {preview ? <View testID="chat-voice-transcript" style={s.user}><Text selectable style={s.userText}>{preview.text}</Text><Text style={s.busyText}>正在听…</Text></View> : null}
-      {voice.phase === 'acknowledging' || voice.phase === 'listening' && !preview ? (
+      {voice.phase === 'listening' && !preview ? (
         <View style={s.busyRow}>
           <AppGlyph name="speaker" size={18} color={lime} />
-          <Text testID="chat-voice-status" accessibilityLiveRegion="polite" style={s.busyText}>{voice.phase === 'acknowledging' ? '我在' : '正在听你说话…'}</Text>
+          <Text testID="chat-voice-status" accessibilityLiveRegion="polite" style={s.busyText}>正在听你说话…</Text>
         </View>
       ) : null}
     </ScrollView>

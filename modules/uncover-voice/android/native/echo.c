@@ -1,6 +1,8 @@
 #include <jni.h>
 #include <stdint.h>
 #include <stdlib.h>
+#include <limits.h>
+#include <string.h>
 #include <speex/speex_resampler.h>
 #include "echo_core.h"
 
@@ -23,17 +25,26 @@ JNIEXPORT void JNICALL Java_uncover_voice_VoiceEcho_nativeRelease(JNIEnv *env, j
 }
 JNIEXPORT jshortArray JNICALL Java_uncover_voice_VoiceEcho_nativeResample(JNIEnv *env, jobject self, jshortArray audio, jint rate) {
   if (rate < 8000 || rate > 192000) return NULL;
-  spx_uint32_t inputSize = (*env)->GetArrayLength(env, audio), outputSize = ((uint64_t)inputSize * 16000 + rate - 1) / rate + 64;
+  spx_uint32_t originalSize = (*env)->GetArrayLength(env, audio);
+  uint64_t expected = ((uint64_t)originalSize * 16000 + rate - 1) / rate;
+  if (expected > INT_MAX) return NULL;
+  if (!originalSize) return (*env)->NewShortArray(env, 0);
   int error = 0; SpeexResamplerState *state = speex_resampler_init(1, rate, 16000, 5, &error);
   if (!state || error) { if (state) speex_resampler_destroy(state); return NULL; }
   jshort *input = (*env)->GetShortArrayElements(env, audio, NULL);
+  // skip_zeros removes the leading filter latency, but EOF must still flush
+  // the corresponding input tail. Keep precisely the original audio duration.
+  spx_uint32_t inputSize = originalSize + speex_resampler_get_input_latency(state) + 1;
+  spx_uint32_t outputSize = (spx_uint32_t)expected;
+  spx_int16_t *padded = calloc(inputSize, sizeof(spx_int16_t));
   spx_int16_t *output = calloc(outputSize, sizeof(spx_int16_t));
   jshortArray result = NULL;
-  if (input && output) {
+  if (input && padded && output) {
+    memcpy(padded, input, originalSize * sizeof(spx_int16_t));
     speex_resampler_skip_zeros(state);
-    error = speex_resampler_process_int(state, 0, input, &inputSize, output, &outputSize);
-    if (!error) { result = (*env)->NewShortArray(env, outputSize); if (result) (*env)->SetShortArrayRegion(env, result, 0, outputSize, output); }
+    error = speex_resampler_process_int(state, 0, padded, &inputSize, output, &outputSize);
+    if (!error && outputSize == expected) { result = (*env)->NewShortArray(env, outputSize); if (result) (*env)->SetShortArrayRegion(env, result, 0, outputSize, output); }
   }
   if (input) (*env)->ReleaseShortArrayElements(env, audio, input, JNI_ABORT);
-  free(output); speex_resampler_destroy(state); return result;
+  free(padded); free(output); speex_resampler_destroy(state); return result;
 }

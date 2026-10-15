@@ -49,7 +49,7 @@ internal class VoiceAudioEngine(private val context: Context, private val refere
         kwsStream = kws.createStream(); asrStream = asr.createStream(); echo = VoiceEcho(512)
         val minimum = AudioRecord.getMinBufferSize(16000, AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT)
         check(minimum > 0) { "系统不支持当前麦克风格式。" }
-        val input = AudioRecord(MediaRecorder.AudioSource.VOICE_RECOGNITION, 16000, AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT, maxOf(minimum * 2, 6400))
+        val input = AudioRecord(MediaRecorder.AudioSource.VOICE_COMMUNICATION, 16000, AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT, maxOf(minimum * 2, 6400))
         recorder = input
         check(input.state == AudioRecord.STATE_INITIALIZED) { "麦克风初始化失败，可能被其他应用或系统占用。" }
         recordingCallback = object : AudioManager.AudioRecordingCallback() {
@@ -61,6 +61,7 @@ internal class VoiceAudioEngine(private val context: Context, private val refere
         }.also { input.registerAudioRecordingCallback({ runnable -> Handler(Looper.getMainLooper()).post(runnable) }, it) }
         if (AcousticEchoCanceler.isAvailable()) hardwareEcho = AcousticEchoCanceler.create(input.audioSessionId)?.apply { enabled = true }
         input.startRecording()
+        val captureClock = VoiceCaptureClock(System.nanoTime())
         check(input.recordingState == AudioRecord.RECORDSTATE_RECORDING) { "系统没有启动麦克风录音。" }
         if (!stopped) ready()
         val samples = ShortArray(512); val stamp = AudioTimestamp(); val gate = VoiceSpeechGate()
@@ -83,20 +84,23 @@ internal class VoiceAudioEngine(private val context: Context, private val refere
           }
           previousMode = state
           if (silenced) continue
-          val startNs = if (input.getTimestamp(stamp, AudioTimestamp.TIMEBASE_MONOTONIC) == AudioRecord.SUCCESS)
-            stamp.nanoTime + (totalRead - samples.size - stamp.framePosition) * 1_000_000_000L / 16000
-            else System.nanoTime() - samples.size * 1_000_000_000L / 16000
+          val timestamped = input.getTimestamp(stamp, AudioTimestamp.TIMEBASE_MONOTONIC) == AudioRecord.SUCCESS
+          val startNs = captureClock.frame(totalRead, samples.size,
+            if (timestamped) stamp.framePosition else null, if (timestamped) stamp.nanoTime else null)
           val floats = echo.process(samples, reference.frame(startNs, samples.size))
           if (state == "wake") {
             kwsStream.acceptWaveform(floats, 16000)
             while (kws.isReady(kwsStream)) {
               kws.decode(kwsStream)
-              if (kws.getResult(kwsStream).keyword.isNotBlank()) { kws.reset(kwsStream); mode = "acknowledging"; wake(); break }
+              if (kws.getResult(kwsStream).keyword.isNotBlank()) { kws.reset(kwsStream); mode = "processing"; wake(); break }
             }
             continue
           }
-          if (state !in listOf("acknowledging", "listening", "processing", "speaking")) continue
-          val probability = vad.compute(floats)
+          if (state !in listOf("listening", "processing", "speaking")) continue
+          val detected = vad.compute(floats)
+          // Silero keeps recurrent state across frames. Its trailing confidence
+          // is not new speech when the acoustic stage has removed all own-render PCM.
+          val probability = if (floats.any { it != 0f }) detected else 0f
           val now = SystemClock.elapsedRealtime()
           if (probability >= .55f) heardAt = now
           preRoll.addLast(floats); if (preRoll.size > 16) preRoll.removeFirst()

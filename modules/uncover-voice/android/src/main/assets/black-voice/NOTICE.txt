@@ -17,14 +17,22 @@ Speech activity: Silero VAD, Silero Team, MIT (SILERO-LICENSE.txt).
 Model distribution is SHA-256 pinned in resources.json.
 Source and license: https://github.com/snakers4/silero-vad
 
-Local acoustic echo cancellation, residual suppression and resampling:
-SpeexDSP 1.2.1, Xiph.org contributors, BSD-3-Clause (SPEEX-DSP-LICENSE.txt).
+Local resampling: SpeexDSP 1.2.1, Xiph.org contributors,
+BSD-3-Clause (SPEEX-DSP-LICENSE.txt).
 Source: https://downloads.xiph.org/releases/speex/speexdsp-1.2.1.tar.gz
 Only app-rendered audio is used as the playback reference; microphone audio stays in RAM.
 
-Local acknowledgement is synthetic audio generated with Kokoro-82M-v1.1-zh
-(hexgrad, Apache-2.0), voice zf_001. It is not a Doubao/XiaoAi recording or clone.
-Its model revision and audio SHA-256 are recorded in iam-provenance.json.
+Local echo cancellation: WebRTC AEC3, The WebRTC Project Authors,
+BSD-3-Clause (WEBRTC-AEC3-LICENSE.txt). Standalone extraction by Enaium,
+fixed revision 2cec2f52e26646f93bd2d5498bbabf59cba18da9:
+https://github.com/Enaium/webrtc-aec3
+Source archive hash is pinned in resources.json. No WebRTC network transport
+or third-party real-time voice service is included. Android CPU feature
+detection uses the Android NDK's BSD-licensed cpufeatures implementation.
+Scoped denormal handling follows WebRTC's BSD-licensed
+rtc_base/denormal_disabler.cc; the original thread FP mode is restored after DSP.
+There is no prerecorded wake response. Every spoken response comes from the
+configured Agent and the installed system TTS engine.
 
 The bundled native AAR and model archives are fixed by SHA-256 in resources.json
 and scripts/prepare-voice-resources.cjs. No audio recordings, passwords or accounts
