@@ -4,7 +4,6 @@
   <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />
   <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
   <uses-permission android:name="android.permission.WAKE_LOCK" />
-  <queries><intent><action android:name="android.intent.action.TTS_SERVICE" /></intent></queries>
   <application>
     <service android:name="uncover.voice.BlackVoiceService" android:exported="false" android:foregroundServiceType="microphone" android:stopWithTask="false" />
     <service android:name="uncover.voice.VoiceAgentTaskService" android:exported="false" />

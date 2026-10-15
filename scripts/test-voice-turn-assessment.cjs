@@ -13,7 +13,7 @@ test('slow speech can wait then submit accumulated text without creating partial
   await h.assess({ kind: 'decision', requestId: 'p1', sessionId: 's', text: '帮我播放', silenceMs: 900 });
   await h.assess({ kind: 'decision', requestId: 'p2', sessionId: 's', text: '帮我播放 我喜欢的歌曲', silenceMs: 1300 });
   assert.deepEqual(h.decisions.map(x => x[1]), ['wait', 'respond']); assert.equal(h.conversation.getSnapshot().turns.length, 0);
-  assert.equal(JSON.parse(h.calls[1][0].at(-1).content).ownerVerified, true);
+  assert.equal('ownerVerified' in JSON.parse(h.calls[1][0].at(-1).content), false);
 });
 test('ignoring an unrelated owner remark is a model decision, not a keyword filter', async () => {
   const h = harness(async () => ({ action: 'ignore', reason: '主人在回复旁人' }));

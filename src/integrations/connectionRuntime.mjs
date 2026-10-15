@@ -1,6 +1,7 @@
 export const DEFAULT_PERSONAL_MODEL = 'deepseek-flash';
 let current = null, resetter = null, modelVerified = false;
 const subscribers = new Set();
+const changes = new Set();
 export function normalizeConnection(value) {
   if (!value || typeof value !== 'object' || Array.isArray(value)) value = {};
   const key = (input, prefix) => {
@@ -17,8 +18,10 @@ export function normalizeConnection(value) {
 export function getConnection() { return { ...(current || normalizeConnection(null)) }; }
 export function installConnection(value) {
   const next = normalizeConnection(value), old = getConnection();
+  const changed = current !== null && (next.deepseekKey !== old.deepseekKey || next.model !== old.model);
   if (next.deepseekKey !== old.deepseekKey || next.model !== old.model) modelVerified = false;
   current = Object.freeze(next);
+  if (changed) for (const listener of changes) { try { listener(); } catch { /* Isolated change observer. */ } }
   for (const listener of subscribers) { try { listener(); } catch { /* Observer cannot break saved configuration. */ } }
 }
 export function connectionSummary() {
@@ -36,6 +39,8 @@ export function setModelConnectionVerified(tested, verified) {
 }
 
 export function subscribeConnection(listener) { subscribers.add(listener); return () => { subscribers.delete(listener); }; }
+// Initial hydration and verification badges are not cancellation events.
+export function subscribeConnectionChanges(listener) { changes.add(listener); return () => { changes.delete(listener); }; }
 export function registerConnectionResetter(callback) { resetter = callback; }
 export async function resetConnection() {
   if (resetter) await resetter();

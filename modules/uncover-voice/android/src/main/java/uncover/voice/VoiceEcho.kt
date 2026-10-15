@@ -1,6 +1,6 @@
 package uncover.voice
 
-/** Local AEC3 and acoustic ownership processing. Owned only by the mic worker. */
+/** Local AEC3 processing. Each native instance belongs to one processing worker. */
 internal class VoiceEcho(frameSize: Int) : AutoCloseable {
   private var pointer = nativeCreate(frameSize)
   init { check(pointer != 0L) { "本地回声消除器初始化失败。" } }

@@ -3,77 +3,97 @@ package uncover.voice
 import android.app.Activity
 import android.content.Intent
 import android.media.AudioAttributes
-import android.media.AudioFormat
-import android.media.AudioTrack
 import android.test.InstrumentationTestCase
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
-import com.k2fsa.sherpa.onnx.*
-import android.content.ContextWrapper
-import java.io.File
-import java.util.UUID
-import org.json.JSONObject
 
-/** Real Android AudioTrack, not a mocked player or the service's fall-through listening state. */
+/** Actual local model and Android audio backend; no system TTS fixture or enrolled identity. */
 @Suppress("DEPRECATION")
 class VoiceSpeakerPlaybackTest : InstrumentationTestCase() {
   private lateinit var activity: Activity
   override fun setUp() {
     super.setUp()
-    // Android 15 requires the foreground app or a real FGS to obtain audio focus.
-    // This test-only activity grants neither microphone consent nor a service exemption.
-    activity = instrumentation.startActivitySync(Intent(instrumentation.targetContext, VoicePlaybackActivity::class.java)
-      .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+    activity = instrumentation.startActivitySync(Intent(instrumentation.targetContext, VoicePlaybackActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
     instrumentation.waitForIdleSync()
   }
-  override fun tearDown() {
-    instrumentation.runOnMainSync { activity.finish() }
-    super.tearDown()
-  }
-  fun testStaticTrackNeedsAudioBeforeItBecomesReady() {
-    val audio = VoicePcm(ShortArray(8000) { (2000 * kotlin.math.sin(it * .1)).toInt().toShort() }, 16000)
-    val output = AudioTrack.Builder().setAudioAttributes(AudioAttributes.Builder()
-      .setUsage(AudioAttributes.USAGE_ASSISTANT).setContentType(AudioAttributes.CONTENT_TYPE_SPEECH).build())
-      .setAudioFormat(AudioFormat.Builder().setSampleRate(audio.sampleRate)
-        .setEncoding(AudioFormat.ENCODING_PCM_16BIT).setChannelMask(AudioFormat.CHANNEL_OUT_MONO).build())
-      .setTransferMode(AudioTrack.MODE_STATIC).setBufferSizeInBytes(audio.samples.size * 2).build()
-    try {
-      assertEquals(AudioTrack.STATE_NO_STATIC_DATA, output.state)
-      assertEquals(audio.samples.size, output.write(audio.samples, 0, audio.samples.size))
-      assertEquals(AudioTrack.STATE_INITIALIZED, output.state)
-    } finally { output.release() }
-  }
-
+  override fun tearDown() { instrumentation.runOnMainSync { activity.finish() }; super.tearDown() }
+  private fun player() = VoicePcmPlayer(VoiceRenderReference(), AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_ASSISTANT).build())
   fun testProductionPcmPlayerActuallyPlaysAndCanPlayAgain() {
-    val player = VoicePcmPlayer(VoiceRenderReference(), AudioAttributes.Builder()
-      .setUsage(AudioAttributes.USAGE_ASSISTANT).setContentType(AudioAttributes.CONTENT_TYPE_SPEECH).build())
+    val player = player()
+    try { repeat(2) {
+      var started = false; val pcm = ShortArray(8000) { (2000 * kotlin.math.sin(it * .1)).toInt().toShort() }
+      val played = player.play(pcm, { true }) { started = true }
+      assertTrue(started); assertEquals(pcm.size, played)
+    } } finally { player.stop() }
+  }
+  fun testSubThresholdPcmStartsWithoutWaitingForMoreSpeech() {
+    val player = player()
     try {
-      repeat(2) {
-        var started = false
-        val pcm = ShortArray(8000) { (2000 * kotlin.math.sin(it * .1)).toInt().toShort() }
-        val played = player.play(pcm, { true }) { started = true }
-        assertTrue("Actual playback head must advance", started)
-        assertEquals("Actual rendered frames, not service listening state", pcm.size, played)
-      }
+      var started = false
+      assertEquals(80, player.play(ShortArray(80) { 1200 }, { true }) { started = true })
+      assertTrue(started)
+      assertEquals(160, player.play(ShortArray(160) { 800 }, { true }) {})
     } finally { player.stop() }
   }
   fun testPcmCancellationStopsRealPlaybackWithoutCompletingTheQueue() {
-    val player = VoicePcmPlayer(VoiceRenderReference(), AudioAttributes.Builder()
-      .setUsage(AudioAttributes.USAGE_ASSISTANT).setContentType(AudioAttributes.CONTENT_TYPE_SPEECH).build())
-    val active = AtomicBoolean(true); val begun = CountDownLatch(1); val complete = CountDownLatch(1)
+    val player = player(); val active = AtomicBoolean(true); val begun = CountDownLatch(1); val done = CountDownLatch(1)
     var played = -1; var error: Throwable? = null
     val worker = Thread {
-      try { played = player.play(ShortArray(160000) { 2000 }, { active.get() }) { begun.countDown() } }
-      catch (failure: Throwable) { error = failure }
-      finally { complete.countDown() }
+      try { played = player.play(ShortArray(160000) { 1200 }, { active.get() }) { begun.countDown() } }
+      catch (failure: Throwable) { error = failure } finally { done.countDown() }
     }
     try {
-      worker.start(); assertTrue(begun.await(5, TimeUnit.SECONDS))
-      active.set(false); player.stop()
-      assertTrue("Stop must not wait for the ten-second PCM", complete.await(1, TimeUnit.SECONDS))
-      assertNull(error); assertTrue(played in 1 until 160000)
+      worker.start(); assertTrue(begun.await(5, TimeUnit.SECONDS)); active.set(false); player.stop()
+      assertTrue(done.await(2, TimeUnit.SECONDS)); assertNull(error); assertTrue(played in 1 until 160000)
     } finally { active.set(false); player.stop(); worker.join(1000) }
+  }
+  fun testCandidatePauseKeepsPlaybackAndResumesRemainingSamples() {
+    val player = player(); val active = AtomicBoolean(true); val begun = CountDownLatch(1); val done = CountDownLatch(1)
+    var played = -1
+    val worker = Thread { try { played = player.play(ShortArray(16000) { 1200 }, { active.get() }) { begun.countDown() } } finally { done.countDown() } }
+    try {
+      player.pause(); worker.start(); assertFalse(begun.await(200, TimeUnit.MILLISECONDS)); player.resume()
+      assertTrue(begun.await(3, TimeUnit.SECONDS)); player.pause(); assertFalse(done.await(200, TimeUnit.MILLISECONDS))
+      player.resume(); assertTrue(done.await(4, TimeUnit.SECONDS)); assertEquals(16000, played)
+    } finally { active.set(false); player.stop(); worker.join(1000) }
+  }
+  fun testBundledChineseModelActuallySynthesizesWithoutPhoneTts() {
+    val synth = LocalVoiceSynthesizer(instrumentation.targetContext)
+    try {
+      synth.prepare()
+      for (text in listOf("我在。", "今天已经跑了三公里。")) {
+        val audio = synth.generate(text)
+        assertEquals(44100, audio.sampleRate); assertTrue(audio.samples.size > 5000)
+        assertTrue(audio.samples.any { it != 0.toShort() })
+      }
+    } finally { synth.close() }
+  }
+  fun testLocalSynthesisAndPlaybackCompleteExactlyOnce() {
+    val done = CountDownLatch(1); var completions = 0; var error: String? = null; var spoken = 0
+    lateinit var speaker: VoiceSpeaker
+    instrumentation.runOnMainSync {
+      speaker = VoiceSpeaker(activity, VoiceRenderReference()) { _, _, end -> spoken = end }
+      speaker.speak("我在。可以开始训练。") { failure -> error = failure; completions++; done.countDown() }
+    }
+    try {
+      assertTrue(done.await(60, TimeUnit.SECONDS)); assertNull(error); assertEquals(1, completions); assertEquals("我在。可以开始训练。".length, spoken)
+    } finally { instrumentation.runOnMainSync { speaker.close() } }
+  }
+  fun testSynthesisFailurePreservesOneRealErrorWithoutSystemFallback() {
+    val done = CountDownLatch(1); var error: String? = null
+    val failing = object : VoiceSynthesizer {
+      override fun prepare() {}
+      override fun generate(text: String): VoicePcm = throw IllegalStateException("fixture synthesis failure")
+      override fun close() {}
+    }
+    lateinit var speaker: VoiceSpeaker
+    instrumentation.runOnMainSync {
+      speaker = VoiceSpeaker(activity, VoiceRenderReference(), failing) { _, _, _ -> }
+      speaker.speak("测试。") { failure -> error = failure; done.countDown() }
+    }
+    try { assertTrue(done.await(5, TimeUnit.SECONDS)); assertTrue(error!!.contains("fixture synthesis failure")); assertFalse(error!!.contains("-4")) }
+    finally { instrumentation.runOnMainSync { speaker.close() } }
   }
   fun testProductionEchoJniPreservesIndependentInputAndResamples() {
     VoiceEcho(512).use { echo ->
@@ -82,157 +102,62 @@ class VoiceSpeakerPlaybackTest : InstrumentationTestCase() {
         val input = ShortArray(512) { (5000 * kotlin.math.sin((frame * 512 + it) * .12)).toInt().toShort() }
         echo.process(input, ShortArray(512)).forEach { power += it * it }
       }
-      assertTrue("No render reference must not mute independent microphone PCM", power > 1)
+      assertTrue(power > 1)
       for (rate in listOf(8000, 22050, 24000, 44100, 48000)) {
-        val resampled = echo.resample(ShortArray(rate) { 1000 }, rate)
-        assertEquals("Complete output duration at $rate Hz", 16000, resampled.size)
-        assertTrue("Filter tail must not erase the last samples", resampled.last() > 0)
+        val pcm = echo.resample(ShortArray(rate) { 1000 }, rate)
+        assertEquals(16000, pcm.size); assertTrue(pcm.last() > 0)
       }
     }
   }
-  fun testTtsFileSynthesisReconnectsOnceAndCompletesOnlyOnce() {
-    VoiceFixtureTtsService.failures.set(1); VoiceFixtureTtsService.requests.set(0)
-    val done = CountDownLatch(1); var completions = 0; var failure: String? = null; var spokenEnd = 0
-    lateinit var speaker: VoiceSpeaker
-    instrumentation.runOnMainSync {
-      speaker = VoiceSpeaker(activity, VoiceRenderReference(), instrumentation.context.packageName) { _, _, end -> spokenEnd = end }
-      speaker.speak("第一句。第二句。") { error -> completions++; failure = error; done.countDown() }
-    }
-    try {
-      assertTrue("System synthesis + retry + actual PCM playback must finish", done.await(25, TimeUnit.SECONDS))
-      assertNull(failure); assertEquals(1, completions); assertEquals("第一句。第二句。".length, spokenEnd)
-      assertEquals("One failed synthesis then exactly two successful chunks", 3, VoiceFixtureTtsService.requests.get())
-    } finally { instrumentation.runOnMainSync { speaker.close() } }
-  }
-  fun testCandidatePauseKeepsPlaybackAndResumesRemainingSamples() {
-    val player = VoicePcmPlayer(VoiceRenderReference(), AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_ASSISTANT).build())
-    val started = CountDownLatch(1); val complete = CountDownLatch(1); val active = AtomicBoolean(true); var played = -1; var failure: Throwable? = null
-    val thread = Thread { try { played = player.play(ShortArray(32000) { 1500 }, { active.get() }) { started.countDown() } } catch (error: Throwable) { failure = error } finally { complete.countDown() } }
-    try {
-      player.pause(); thread.start()
-      assertFalse("Paused candidate cannot start or discard the answer", started.await(200, TimeUnit.MILLISECONDS))
-      player.resume(); assertTrue(started.await(3, TimeUnit.SECONDS)); player.pause()
-      assertFalse("Temporary pause is not completion/cancellation", complete.await(250, TimeUnit.MILLISECONDS))
-      player.resume(); assertTrue(complete.await(5, TimeUnit.SECONDS)); assertNull(failure); assertEquals(32000, played)
-    } finally { active.set(false); player.stop(); thread.join(1000) }
-  }
-  fun testRealSpeakerModelAcceptsHeldOutOwnerSpeechAndRejectsAnotherSpeaker() {
-    val extractor = SpeakerEmbeddingExtractor(instrumentation.targetContext.assets, SpeakerEmbeddingExtractorConfig(model = "black-voice/speaker/campplus.onnx", numThreads = 1))
-    fun audio(name: String): FloatArray {
-      val pcm = VoicePcm.read(instrumentation.context.assets.open("voice-speaker-fixtures/$name").use { it.readBytes() })
-      assertEquals(16000, pcm.sampleRate); return FloatArray(pcm.samples.size) { pcm.samples[it] / 32768f }
-    }
-    fun embedding(samples: FloatArray): FloatArray {
-      val stream = extractor.createStream()
-      try { stream.acceptWaveform(samples, 16000); stream.inputFinished(); assertTrue(extractor.isReady(stream)); return extractor.compute(stream) }
-      finally { stream.release() }
-    }
-    try {
-      val a = audio("speaker1_a_cn_16k.wav")
-      val b = audio("speaker1_b_cn_16k.wav")
-      val stranger = audio("speaker2_a_cn_16k.wav")
-      val profile = VoiceIdentity.enroll(listOf(embedding(a.copyOfRange(0, 48000)), embedding(a.copyOfRange(8000, 56000)), embedding(FloatArray(a.size) { a[it] * .7f })))
-      val ownEmbedding = embedding(b); val strangerEmbedding = embedding(stranger)
-      val quiet = FloatArray(b.size) { b[it] * .5f + .001f * kotlin.math.sin(it * .87).toFloat() }
-      val quietEmbedding = embedding(quiet)
-      fun scores(vector: FloatArray) = profile.embeddings.map { VoiceIdentity.similarity(it, VoiceIdentity.normalized(vector)) }
-      val metrics = "threshold=${VoiceIdentity.THRESHOLD}; held-out=${scores(ownEmbedding)}; stranger=${scores(strangerEmbedding)}; gain/noise=${scores(quietEmbedding)}"
-      android.util.Log.i("VoiceSpeakerFixture", metrics)
-      assertTrue("Held-out recording must match enrolled speaker: $metrics", VoiceIdentity.accepts(profile, ownEmbedding, b.size / 16L))
-      assertFalse("Different actual speaker must not enter the Agent: $metrics", VoiceIdentity.accepts(profile, strangerEmbedding, stranger.size / 16L))
-      assertTrue("Moderate gain/noise must not change owner identity: $metrics", VoiceIdentity.accepts(profile, quietEmbedding, quiet.size / 16L))
-    } finally { extractor.release() }
-  }
-  fun testOwnerStoreEncryptsEmbeddingsAndCancelledEnrollmentCannotReplaceThem() {
-    val directory = File(instrumentation.targetContext.noBackupFilesDir, "owner-fixture-${UUID.randomUUID()}").apply { mkdirs() }
-    val context = object : ContextWrapper(instrumentation.targetContext) { override fun getNoBackupFilesDir() = directory }
-    val store = VoiceOwnerStore(context)
-    val profile = VoiceIdentity.enroll(listOf(floatArrayOf(1f, .1f), floatArrayOf(1f, .12f), floatArrayOf(1f, .08f)))
-    try {
-      val enrolled = VoiceIdentity.complete(profile, List(3) { listOf(profile.embeddings.first()) }, List(3) { profile.embeddings.first() }, profile.embeddings.first(), 400)
-      store.commitEnrollment(enrolled, store.beginEnrollment()); assertTrue(store.exists()); assertNotNull(store.read())
-      val bytes = File(directory, "black-owner-v1.sealed").readBytes()
-      assertFalse("Plain embeddings must never be persisted", bytes.toString(Charsets.UTF_8).contains("embeddings"))
-      val cancelled = store.beginEnrollment(); store.cancelEnrollment()
-      try { store.commitEnrollment(enrolled, cancelled); fail("Cancelled enrollment must not commit") } catch (_: IllegalStateException) {}
-      assertNotNull(store.read()); assertFalse(File(directory, "black-owner-v1.pending").exists())
-      store.clear(); assertFalse(store.exists()); assertNull(store.read())
-      val deleted = store.beginEnrollment(); store.clear()
-      try { store.commitEnrollment(enrolled, deleted); fail("Deleted owner must not return") } catch (_: IllegalStateException) {}
-    } finally { store.clear(); directory.listFiles()?.forEach { it.delete() }; directory.delete() }
-  }
-  fun testRealModelVerifiesEachShortPacketWithoutIdentityInheritance() {
-    val extractor = SpeakerEmbeddingExtractor(instrumentation.targetContext.assets, SpeakerEmbeddingExtractorConfig(model = "black-voice/speaker/campplus.onnx", numThreads = 1))
-    val biometrics = VoiceBiometrics(extractor)
-    fun audio(name: String): FloatArray {
-      val pcm = VoicePcm.read(instrumentation.context.assets.open("voice-speaker-fixtures/$name").use { it.readBytes() })
-      assertEquals(16000, pcm.sampleRate); return FloatArray(pcm.samples.size) { pcm.samples[it] / 32768f }
-    }
-    try {
-      val enrollment = audio("speaker1_a_cn_16k.wav")
-      val owner = audio("speaker1_b_cn_16k.wav"); val other = audio("speaker2_a_cn_16k.wav")
-      val references = listOf(enrollment.copyOfRange(0, 48000), enrollment.copyOfRange(8000, 56000), FloatArray(enrollment.size) { enrollment[it] * .7f })
-      val base = VoiceIdentity.enroll(references.map { biometrics.embedding(it)!! })
-      val profile = base.copy(shortGroups = references.map(biometrics::shortViews))
-      var comparisons = 0
-      val packets = VoicePacketGate { frames, voiced -> comparisons++; VoiceIdentity.accepts(profile, biometrics.embedding(frames)!!, voiced) }
-      fun append(samples: FloatArray, start: Int, count: Int) { repeat(count) { index -> packets.append(VoiceAudioFrame(samples.copyOfRange(start + index * 512, start + (index + 1) * 512), true)) } }
-      // Separate recording, different words: two independent 640 ms owner clips.
-      for (start in listOf(8192, 16384)) { append(owner, start, 20); assertTrue("Held-out short owner packet at $start", packets.resolve(false)!!.accepted) }
-      append(other, 8192, 10)
-      assertFalse("A stranger immediately following the owner cannot inherit permission", packets.resolve(true)!!.accepted)
-      val before = comparisons; append(other, 8192, 6)
-      assertFalse("An unverifiable 192 ms tail stays out instead of borrowing old owner PCM", packets.resolve(true)!!.accepted)
-      assertEquals(before, comparisons); assertFalse(packets.pending)
-    } finally { extractor.release() }
-  }
-  fun testPersonalWakeRegistrationRequiresHeldOutKeywordAndRejectsOtherVoice() {
-    val assets = instrumentation.targetContext.assets
-    val extractor = SpeakerEmbeddingExtractor(assets, SpeakerEmbeddingExtractorConfig(model = "black-voice/speaker/campplus.onnx", numThreads = 1))
-    val biometrics = VoiceBiometrics(extractor)
-    val kws = KeywordSpotter(assets, KeywordSpotterConfig(modelConfig = OnlineModelConfig(
-      transducer = OnlineTransducerModelConfig("black-voice/kws/encoder.onnx", "black-voice/kws/decoder.onnx", "black-voice/kws/joiner.onnx"),
-      tokens = "black-voice/kws/tokens.txt", modelType = "zipformer2", numThreads = 1), keywordsFile = "black-voice/keywords.txt", keywordsScore = 1f, keywordsThreshold = .5f, numTrailingBlanks = 1))
-    val vad = Vad(assets, VadModelConfig(sileroVadModelConfig = SileroVadModelConfig(model = "black-voice/vad/silero_vad.onnx", windowSize = 512), numThreads = 1))
-    fun audio(name: String): FloatArray {
-      val wav = VoicePcm.read(instrumentation.context.assets.open("voice-speaker-fixtures/" + name + ".wav").use { it.readBytes() })
-      val pcm = VoiceEcho(512).use { it.resample(wav.samples, wav.sampleRate) }
-      return FloatArray(pcm.size + 16000) { if (it < pcm.size) pcm[it] / 32768f else 0f }
-    }
-    fun keyword(samples: FloatArray): VoiceWakeClip {
-      val stream = kws.createStream(); val window = VoiceWakeWindow(); vad.reset()
-      try {
-        for (start in samples.indices step 512) {
-          val block = FloatArray(512) { samples.getOrElse(start + it) { 0f } }
-          window.append(VoiceAudioFrame(block, vad.compute(block) >= .55f)); stream.acceptWaveform(block, 16000)
-          while (kws.isReady(stream)) {
-            kws.decode(stream); val result = kws.getResult(stream)
-            if (result.keyword.isNotBlank()) return window.clip(result.timestamps) ?: error("Keyword timestamp window unavailable")
-          }
+  fun testDelayedEchoIsReducedAndSimultaneousNearEndIsNotFrameMuted() {
+    // Real Chinese speech with a deterministic two-tap acoustic path. A steady
+    // tone is not a speech-preservation fixture: suppression can classify it as
+    // stationary interference. No user microphone or enrolled identity is used.
+    val synth = LocalVoiceSynthesizer(instrumentation.targetContext)
+    val sources = try {
+      synth.prepare()
+      VoiceEcho(512).use { resampler ->
+        listOf("今天已经跑了三公里，现在告诉你今天的训练安排。", "等一下，我想先听音乐，帮我播放我喜欢的歌曲。")
+          .map { text -> synth.generate(text).let { resampler.resample(it.samples, it.sampleRate) } }
+      }
+    } finally { synth.close() }
+    val size = 512; val frames = 400
+    val far = ShortArray(size * frames) { sources[0][it % sources[0].size] }
+    val near = ShortArray(far.size) { if (it >= 250 * size) (sources[1][(it - 250 * size) % sources[1].size] * .5).toInt().toShort() else 0 }
+    val output = FloatArray(far.size)
+    var echoInput = 0.0; var echoOutput = 0.0
+    VoiceEcho(size).use { echo ->
+      repeat(frames) { frame ->
+        val start = frame * size
+        val rendered = far.copyOfRange(start, start + size)
+        val captured = ShortArray(size) { offset ->
+          val i = start + offset
+          val reflected = (if (i >= 800) far[i - 800] * .55 else 0.0) + (if (i >= 1440) far[i - 1440] * .18 else 0.0)
+          (reflected + near[i]).coerceIn(-32768.0, 32767.0).toInt().toShort()
         }
-        error("Synthetic BLACK was not detected")
-      } finally { stream.release() }
+        val clean = echo.process(captured, rendered)
+        clean.copyInto(output, start)
+        if (frame in 180 until 250) for (i in clean.indices) {
+          echoInput += captured[i].toDouble() * captured[i]
+          echoOutput += clean[i].toDouble() * clean[i] * 32768.0 * 32768.0
+        }
+      }
     }
-    try {
-      val clips = (1..3).map { audio("owner-enroll-" + it) }
-      val long = clips.map { biometrics.embedding(it)!! }
-      val groups = clips.map(biometrics::shortViews)
-      val wakes = clips.map { biometrics.embedding(keyword(it).frames)!! }
-      val heldOut = keyword(audio("owner-wake-check")); val vector = biometrics.embedding(heldOut.frames)!!
-      val voiced = heldOut.frames.count { it.speech } * 32L
-      val profile = VoiceIdentity.complete(VoiceIdentity.enroll(long), groups, wakes, vector, voiced)
-      assertTrue(VoiceIdentity.acceptsWake(profile, vector, voiced))
-      val other = keyword(audio("other-wake"))
-      assertFalse("Correct word spoken by a different voice must not wake the Agent", VoiceIdentity.acceptsWake(profile, biometrics.embedding(other.frames)!!, other.frames.count { it.speech } * 32L))
-      assertTrue("Test must exercise short speech rather than only a long sentence", heldOut.frames.size * 32L < 1600)
-    } finally { vad.release(); kws.release(); extractor.release() }
-  }
-  fun testAndroidPublicWebSearchUsesRealNetworkAndRejectsPrivateTargets() {
-    val reader = uncover.web.UncoverWebModule()
-    val page = JSONObject(reader.readPublicPage("https://www.bing.com/search?format=rss&q=Android+TextToSpeech+documentation&count=10"))
-    assertTrue(page.getString("text").contains("<rss")); assertTrue(page.getString("text").contains("<item>"))
-    try { reader.readPublicPage("http://127.0.0.1/"); fail("Private address must not be contacted") } catch (_: IllegalArgumentException) {}
+    val echoRatio = echoOutput / echoInput
+    var nearGain = 0.0
+    // Alignment includes AEC's fixed internal framing latency. Measure the
+    // retained independent speech, not just residual echo energy in the output.
+    for (delay in 0..1024 step 16) {
+      var cross = 0.0; var power = 0.0
+      for (i in 300 * size until near.size) {
+        cross += output[i] * 32768.0 * near[i - delay]
+        power += near[i - delay].toDouble() * near[i - delay]
+      }
+      if (power > 0) nearGain = maxOf(nearGain, cross / power)
+    }
+    android.util.Log.i("BLACK-EchoTest", "speech echo energy ratio=$echoRatio; double-talk near gain=$nearGain")
+    assertTrue("Delayed echo was not reduced: $echoRatio", echoRatio < .2)
+    assertTrue("Independent near-end speech was suppressed: $nearGain", nearGain > .2)
   }
 }
-
 class VoicePlaybackActivity : Activity()

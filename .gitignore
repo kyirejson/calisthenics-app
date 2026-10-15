@@ -56,6 +56,7 @@ yarn-error.*
 /modules/uncover-voice/android/src/main/assets/black-voice/asr/
 /modules/uncover-voice/android/src/main/assets/black-voice/vad/
 /modules/uncover-voice/android/src/main/assets/black-voice/speaker/
+/modules/uncover-voice/android/src/main/assets/black-voice/tts/
 /modules/uncover-voice/android/src/androidTest/assets/voice-speaker-fixtures/
 /modules/uncover-web/android/build/
 /modules/uncover-web/android/.gradle/

@@ -36,10 +36,19 @@
       "destination": "src/main/assets/black-voice/vad/silero_vad.onnx"
     },
     {
-      "name": "3dspeaker_speech_campplus_sv_zh-cn_16k-common.onnx",
-      "sha256": "f682b514c05d947ee3fa91cd6ec6c5c7543479a128373fa29b1faedccd21fd11",
-      "url": "https://github.com/k2-fsa/sherpa-onnx/releases/download/speaker-recongition-models/3dspeaker_speech_campplus_sv_zh-cn_16k-common.onnx",
-      "destination": "src/main/assets/black-voice/speaker/campplus.onnx"
+      "name": "vits-melo-tts-zh_en.tar.bz2",
+      "sha256": "e58351ed7149f290a54534538badd4077cdbe6fddc964b24d0bee870415d1514",
+      "url": "https://github.com/k2-fsa/sherpa-onnx/releases/download/tts-models/vits-melo-tts-zh_en.tar.bz2",
+      "directory": "vits-melo-tts-zh_en",
+      "files": {
+        "model.onnx": "tts/model.onnx",
+        "lexicon.txt": "tts/lexicon.txt",
+        "tokens.txt": "tts/tokens.txt",
+        "phone.fst": "tts/phone.fst",
+        "date.fst": "tts/date.fst",
+        "number.fst": "tts/number.fst",
+        "LICENSE": "TTS-LICENSE.txt"
+      }
     },
     {
       "name": "speexdsp-1.2.1.tar.gz",
@@ -98,9 +107,39 @@
       "bytes": 643854
     },
     {
-      "path": "src/main/assets/black-voice/speaker/campplus.onnx",
-      "sha256": "f682b514c05d947ee3fa91cd6ec6c5c7543479a128373fa29b1faedccd21fd11",
-      "bytes": 28281138
+      "path": "src/main/assets/black-voice/tts/model.onnx",
+      "sha256": "bf30582eb1b012250a35b1a4a80e7dfbcf8485e7bb9de0d95efbbeef0e4ad86d",
+      "bytes": 170429550
+    },
+    {
+      "path": "src/main/assets/black-voice/tts/lexicon.txt",
+      "sha256": "7236884b02435ac5d10cf69b4be40a61b45aa676b5300f0e412f185748fee528",
+      "bytes": 6837671
+    },
+    {
+      "path": "src/main/assets/black-voice/tts/tokens.txt",
+      "sha256": "d18664a7e12bd7ea1022ddaf951e534e136815016c5a809d6b64156bffb4369d",
+      "bytes": 655
+    },
+    {
+      "path": "src/main/assets/black-voice/tts/phone.fst",
+      "sha256": "1ac2b6fa56b1442320c4de7db08353bab8963a2b57f365eebcdd3a2d3562f8d7",
+      "bytes": 88630
+    },
+    {
+      "path": "src/main/assets/black-voice/tts/date.fst",
+      "sha256": "eb8aa079ae3cb81d8f4404992f39d61a0cb990947512b5b8d1e54d1f6980e718",
+      "bytes": 59154
+    },
+    {
+      "path": "src/main/assets/black-voice/tts/number.fst",
+      "sha256": "743f402181fcfebf76cc2f0546b71fa26476e626fbe4e460fb7b4c3a7a8bd5bd",
+      "bytes": 64482
+    },
+    {
+      "path": "src/main/assets/black-voice/TTS-LICENSE.txt",
+      "sha256": "88a50e5a02bbc2a5c2f084dc19da751aa97b1690f5fda76cd8005c8634d1ca70",
+      "bytes": 1053
     }
   ],
   "license": "Apache-2.0 AND MIT AND BSD-3-Clause",

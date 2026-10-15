@@ -9,13 +9,22 @@ const artifacts = [
   } },
   { name: 'asr.tar.bz2', sha256: 'b3b309f7ce4a737195fcc6963ea19b0653a7d3401580af5ae0d3e284cbb71f0b', url: 'https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/sherpa-onnx-streaming-zipformer-small-ctc-zh-int8-2025-04-01.tar.bz2', directory: 'sherpa-onnx-streaming-zipformer-small-ctc-zh-int8-2025-04-01', files: { 'model.int8.onnx': 'asr/model.int8.onnx', 'tokens.txt': 'asr/tokens.txt' } },
   { name: 'silero_vad.onnx', sha256: '9e2449e1087496d8d4caba907f23e0bd3f78d91fa552479bb9c23ac09cbb1fd6', url: 'https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/silero_vad.onnx', destination: 'src/main/assets/black-voice/vad/silero_vad.onnx' },
-  { name: '3dspeaker_speech_campplus_sv_zh-cn_16k-common.onnx', sha256: 'f682b514c05d947ee3fa91cd6ec6c5c7543479a128373fa29b1faedccd21fd11', url: 'https://github.com/k2-fsa/sherpa-onnx/releases/download/speaker-recongition-models/3dspeaker_speech_campplus_sv_zh-cn_16k-common.onnx', destination: 'src/main/assets/black-voice/speaker/campplus.onnx' },
+  { name: 'vits-melo-tts-zh_en.tar.bz2', sha256: 'e58351ed7149f290a54534538badd4077cdbe6fddc964b24d0bee870415d1514', url: 'https://github.com/k2-fsa/sherpa-onnx/releases/download/tts-models/vits-melo-tts-zh_en.tar.bz2', directory: 'vits-melo-tts-zh_en', files: {
+    'model.onnx': 'tts/model.onnx', 'lexicon.txt': 'tts/lexicon.txt', 'tokens.txt': 'tts/tokens.txt',
+    'phone.fst': 'tts/phone.fst', 'date.fst': 'tts/date.fst', 'number.fst': 'tts/number.fst', 'LICENSE': 'TTS-LICENSE.txt',
+  } },
   { name: 'speexdsp-1.2.1.tar.gz', sha256: '8c777343e4a6399569c72abc38a95b24db56882c83dbdb6c6424a5f4aeb54d3d', url: 'https://downloads.xiph.org/releases/speex/speexdsp-1.2.1.tar.gz', directory: 'speexdsp-1.2.1', vendor: true },
   { name: 'webrtc-aec3-2cec2f5.tar.gz', sha256: '3bc3423e71b7280cf96d87b2e429444ed3fee364b94648ce9875ee95b8f485f8', url: 'https://codeload.github.com/Enaium/webrtc-aec3/tar.gz/2cec2f52e26646f93bd2d5498bbabf59cba18da9', directory: 'webrtc-aec3-2cec2f52e26646f93bd2d5498bbabf59cba18da9', aec: true },
 ];
 const digest = file => crypto.createHash('sha256').update(fs.readFileSync(file)).digest('hex');
 async function main() {
   fs.mkdirSync(cache, { recursive: true });
+  // Retire only the previously pinned public model, never private enrollment files.
+  const retiredSpeaker = path.join(assets, 'speaker/campplus.onnx');
+  if (fs.existsSync(retiredSpeaker)) {
+    if (digest(retiredSpeaker) !== 'f682b514c05d947ee3fa91cd6ec6c5c7543479a128373fa29b1faedccd21fd11') throw Error('Retired speaker asset has unexpected contents; remove it explicitly before building');
+    fs.unlinkSync(retiredSpeaker);
+  }
   const manifest = { version: 1, artifacts, files: [], license: 'Apache-2.0 AND MIT AND BSD-3-Clause', name: 'BLACK' };
   for (const artifact of artifacts) {
     const source = path.join(cache, artifact.name);

@@ -2,6 +2,7 @@ import { isClearContextCommand } from '../features/chat/commands';
 import type { AgentConversation, ModelMessage, ToolReceipt, TurnHandle } from '../agent/conversation';
 export type VoiceInput = { requestId: string; sessionId: string; text: string; wake?: boolean };
 type Dependencies = {
+  prepare?(): Promise<void>;
   conversation: AgentConversation;
   active(id: string): Promise<boolean>; reply(id: string, text: string): Promise<void>; cancel(id: string): Promise<void>;
   turn(input: { messages: ModelMessage[]; requestId: string; controller: AbortController;
@@ -31,6 +32,7 @@ export function createVoiceDialogue(dependencies: Dependencies) {
     };
     let handle: TurnHandle | null = null;
     try {
+      await dependencies.prepare?.();
       await conversation.load();
       if (!(await dependencies.active(input.requestId)) || controller.signal.aborted) return;
       if (isClearContextCommand(input.text)) {
@@ -42,7 +44,7 @@ export function createVoiceDialogue(dependencies: Dependencies) {
       if (!handle) return;
       const activeHandle = handle;
       const answer = await dependencies.turn({
-        messages: [...(input.wake ? [{ role: 'system', content: JSON.stringify({ type: 'voice_input_state', ownerVerified: true, wakeDetected: true }) }] : []), ...conversation.messages(handle)], requestId: input.requestId, controller,
+        messages: [...(input.wake ? [{ role: 'system', content: JSON.stringify({ type: 'voice_input_state', wakeDetected: true }) }] : []), ...conversation.messages(handle)], requestId: input.requestId, controller,
         onRoundStart: () => conversation.round(activeHandle), onDelta: (_delta, accumulated) => conversation.delta(activeHandle, accumulated),
         onToolCall: call => conversation.tool(activeHandle, call), onToolResult: call => conversation.receipt(activeHandle, call),
       });

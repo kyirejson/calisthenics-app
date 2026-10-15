@@ -8,8 +8,6 @@ import android.service.voice.VoiceInteractionService
 import org.json.JSONObject
 
 internal object VoiceState {
-  @Volatile var enrollmentProgress = 0
-  @Volatile var enrollmentStage = "voice_1"
   private fun preferences(context: Context) = context.getSharedPreferences("black_voice_v1", Context.MODE_PRIVATE)
   fun enabled(context: Context) = preferences(context).getBoolean("enabled", false)
   fun setEnabled(context: Context, value: Boolean) {
@@ -23,8 +21,7 @@ internal object VoiceState {
   fun snapshot(context: Context): JSONObject = JSONObject()
     .put("name", "BLACK").put("enabled", enabled(context)).put("running", BlackVoiceService.instance?.listening == true)
     .put("phase", BlackVoiceService.instance?.phase ?: "stopped")
-    .put("ownerRegistered", VoiceOwnerStore(context).exists()).put("enrolling", BlackVoiceService.instance?.enrolling == true).put("enrollmentProgress", enrollmentProgress)
-    .put("enrollmentStage", enrollmentStage)
+    .put("legacyVoiceData", VoiceLegacyData.exists(context))
     .put("assistant", VoiceInteractionService.isActiveService(context, ComponentName(context, BlackAssistantService::class.java)))
     .put("microphone", context.checkSelfPermission(Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED)
     .put("error", preferences(context).getString("error", null) ?: JSONObject.NULL)

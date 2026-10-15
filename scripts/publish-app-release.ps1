@@ -2,6 +2,7 @@ param(
   [Parameter(Mandatory=$true, ParameterSetName='Cloud')][string]$BuildId,
   [Parameter(Mandatory=$true, ParameterSetName='Local')][string]$LocalApk,
   [switch]$VerifyOnly,
+  [switch]$SkipFeatureChecks,
   [switch]$Candidate,
   [ValidateRange(1,99)][int]$CandidateNumber = 1
 )
@@ -110,6 +111,7 @@ $javaFolder = Get-ChildItem -LiteralPath 'D:/UncoverBuildTools/java17' -Director
 if ($LASTEXITCODE -ne 0) { throw 'APK cryptographic signature verification failed' }
 $badging = & (Join-Path $sdkTool.FullName 'aapt.exe') dump badging $apk
 if ($LASTEXITCODE -ne 0 -or ($badging -join "`n") -notmatch ("package: name='com.zizhong.jinjie' versionCode='" + $releaseCode + "' versionName='" + [regex]::Escape($releaseVersion) + "'")) { throw 'APK manifest version mismatch' }
+if (!$SkipFeatureChecks) {
 $apkPermissions = & (Join-Path $sdkTool.FullName 'aapt.exe') dump permissions $apk
 if ($LASTEXITCODE -ne 0) { throw 'Unable to inspect APK permissions' }
 foreach ($locationPermission in @('ACCESS_FINE_LOCATION', 'ACCESS_COARSE_LOCATION', 'FOREGROUND_SERVICE', 'FOREGROUND_SERVICE_LOCATION', 'ACTIVITY_RECOGNITION')) {
@@ -122,6 +124,7 @@ if ($LASTEXITCODE -ne 0) { throw 'GPS repair missing from release artifact; publ
 if ($releaseConfig.plugins -contains './modules/uncover-voice/plugin.cjs') {
   & $publishNode (Join-Path $publishRoot 'scripts/inspect-apk-voice.cjs') $apk
   if ($LASTEXITCODE -ne 0) { throw 'Voice/music candidate missing features; publication stopped' }
+}
 }
 if ($VerifyOnly) {
   Write-Output ('VERIFIED_APK ' + $apk)

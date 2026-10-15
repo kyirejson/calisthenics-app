@@ -1,0 +1,8 @@
+BLACK local synthesis: MeloTTS Chinese-English, MyShell.ai, MIT license.
+Upstream model: https://huggingface.co/myshell-ai/MeloTTS-Chinese
+ONNX distribution: https://github.com/k2-fsa/sherpa-onnx/releases/tag/tts-models
+Archive: vits-melo-tts-zh_en.tar.bz2
+SHA-256: e58351ed7149f290a54534538badd4077cdbe6fddc964b24d0bee870415d1514
+The original MIT license is included in TTS-LICENSE.txt.
+Synthesis is local; no phone-system TTS fallback and no cloned user voice.
+Chinese and lexicon-covered English are supported; this is not a full-duplex speech reasoning model.

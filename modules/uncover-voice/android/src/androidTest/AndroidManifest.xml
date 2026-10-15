@@ -1,9 +1,5 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
   <application>
     <activity android:name="uncover.voice.VoicePlaybackActivity" android:exported="false" />
-    <service android:name="uncover.voice.VoiceFixtureTtsService" android:exported="true" android:label="Uncover instrumentation TTS">
-      <intent-filter><action android:name="android.intent.action.TTS_SERVICE" /><category android:name="android.intent.category.DEFAULT" /></intent-filter>
-      <meta-data android:name="android.speech.tts" android:resource="@xml/fixture_tts_engine" />
-    </service>
   </application>
 </manifest>

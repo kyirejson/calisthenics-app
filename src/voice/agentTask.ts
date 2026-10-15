@@ -1,18 +1,18 @@
 import { runAgentTurn } from '../integrations/runAgentTurn';
 import { appRepository } from '../store/runtime';
 import { voiceTransport } from './transport';
-import { subscribeConnection } from '../integrations/connectionRuntime.mjs';
+import { subscribeConnectionChanges } from '../integrations/connectionRuntime.mjs';
 import { createVoiceDialogue } from './dialogue';
 import { agentConversation } from '../agent/runtime';
 import { createVoiceTurnAssessor, type VoiceProbe } from './turnAssessment';
 import { createDeepseekClient } from '../integrations/deepseekClient.mjs';
 import { currentConnection, loadConnection } from '../integrations/credentials';
+import { createVoiceEventOrder } from './eventOrder';
 
 // Installed even for a headless JS runtime. Opening the panel later reads this same snapshot.
-let lastSequence = -1;
+const ordered = createVoiceEventOrder();
 const present = (event: import('./transport').VoiceEvent) => {
-  if (event.sequence < lastSequence) return;
-  lastSequence = event.sequence;
+  if (!ordered(event)) return;
   if (event.kind === 'interrupt' && event.requestId) agentConversation.interrupt(event.requestId);
   if (event.kind === 'playback_error' && event.requestId) agentConversation.deliveryError(event.requestId, event.error || '语音播放失败。');
   if (event.kind === 'transcript') {
@@ -33,7 +33,8 @@ const dialogue = createVoiceDialogue({
   conversation: agentConversation,
   active: id => voiceTransport.active(id), reply: (id, text) => voiceTransport.reply(id, text),
   cancel: id => voiceTransport.cancel(id),
-  subscribeReset: subscribeConnection,
+  prepare: loadConnection,
+  subscribeReset: subscribeConnectionChanges,
   turn: ({ messages, requestId, controller, ...progress }) => runAgentTurn({ repository: appRepository, messages, requestId, executionId: requestId, controller, ...progress, responseMode: 'voice', restoreUi: false }),
 });
 const assess = createVoiceTurnAssessor({

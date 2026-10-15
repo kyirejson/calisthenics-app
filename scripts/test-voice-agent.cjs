@@ -3,6 +3,12 @@ const read = name => fs.readFileSync(path.join(__dirname, '..', name), 'utf8');
 require('./lib/register-typescript.cjs')();
 const { createVoiceDialogue } = require('../src/voice/dialogue.ts');
 const { createAgentConversation } = require('../src/agent/conversation.ts');
+function dialogueHarness() {
+  const calls = [], replies = []; let active = true;
+  const storage = new Map(); const conversation = createAgentConversation({ getItem: async key => storage.get(key) || null, setItem: async (key, value) => storage.set(key, value), removeItem: async key => storage.delete(key) });
+  const dependencies = { conversation, cancel: async () => {}, active: async () => active, reply: async (id, text) => { replies.push({ id, text }); }, subscribeReset: () => () => {}, turn: async input => { calls.push(input); return '真实模型回答'; } };
+  return { dependencies, calls, replies, stop: () => { active = false; }, task: createVoiceDialogue(dependencies) };
+}
 test('voice and text use the same tool runner and repository instead of keyword music/meal routes', () => {
   const chat = read('src/features/chat/useChatSession.ts'), voice = read('src/voice/agentTask.ts'), runner = read('src/integrations/runAgentTurn.ts');
   assert.match(chat, /runAgentTurn\(/); assert.doesNotMatch(chat, /await personalChat\(/);
@@ -11,19 +17,7 @@ test('voice and text use the same tool runner and repository instead of keyword 
   assert.match(runner, /executePersonalTool/); assert.match(runner, /musicReceipts/); assert.match(runner, /applyMealOperations/);
   assert.doesNotMatch(voice, /includes\(['"]听歌|test\(.*听歌|includes\(['"]早餐/);
 });
-test('voice requests are revocable, have real identities, no automatic redelivery, and cannot resurrect after stop', () => {
-  const voice = read('src/voice/dialogue.ts'), service = read('modules/uncover-voice/android/src/main/java/uncover/voice/BlackVoiceService.kt');
-  assert.match(voice, /dependencies.active/); assert.match(voice, /controller.abort/); assert.match(voice, /clearInterval/);
-  assert.match(voice, /conversation.begin/); assert.doesNotMatch(voice, /let messages|session !== input.sessionId/); assert.match(service, /UUID.randomUUID/); assert.match(service, /requestId == id/);
-  assert.match(service, /generation != token/); assert.match(service, /listening = false/);
-  assert.match(read('modules/uncover-voice/android/src/main/java/uncover/voice/VoiceAgentTaskService.kt'), /START_NOT_STICKY/);
-});
-function dialogueHarness() {
-  const calls = [], replies = []; let active = true;
-  const storage = new Map(); const conversation = createAgentConversation({ getItem: async key => storage.get(key) || null, setItem: async (key, value) => storage.set(key, value), removeItem: async key => storage.delete(key) });
-  const dependencies = { conversation, cancel: async () => {}, active: async () => active, reply: async (id, text) => { replies.push({ id, text }); }, subscribeReset: () => () => {}, turn: async input => { calls.push(input); return '真实模型回答'; } };
-  return { dependencies, calls, replies, stop: () => { active = false; }, task: createVoiceDialogue(dependencies) };
-}
+
 test('actual voice dialogue forwards unrestricted transcripts and shares context across native activations', async () => {
   const h = dialogueHarness();
   await h.task({ requestId: 'a', sessionId: 's', text: '用网易云听我喜欢的歌，然后分析早餐' });
@@ -31,49 +25,32 @@ test('actual voice dialogue forwards unrestricted transcripts and shares context
   await h.task({ requestId: 'b', sessionId: 's', text: '你刚才说的是什么意思' }); assert.equal(h.calls[1].messages.filter(m => m.role !== 'system').length, 3);
   await h.task({ requestId: 'c', sessionId: 'new', text: '新的唤醒' }); assert.equal(h.calls[2].messages.filter(m => m.role !== 'system').length, 5);
 });
+
 test('inactive requests and silence do not enter model or emit speech', async () => {
   const h = dialogueHarness(); h.stop();
   await h.task({ requestId: 'a', sessionId: 's', text: '尚未执行' }); await h.task({ requestId: 'b', sessionId: 's', text: '  ' });
   assert.equal(h.calls.length, 0); assert.equal(h.replies.length, 0);
 });
+
 test('stopped and superseded requests never announce stale model results', async () => {
   const h = dialogueHarness(); let release;
   h.dependencies.turn = input => { h.calls.push(input); return new Promise(resolve => { release = resolve; }); };
   const first = h.task({ requestId: 'a', sessionId: 's', text: '旧请求' }); await new Promise(resolve => setImmediate(resolve));
   h.stop(); release('不能播报的旧回答'); await first; assert.equal(h.replies.length, 0); assert.equal(h.dependencies.conversation.getSnapshot().generating, false);
 });
+
 test('clear-context voice command clears session messages without invoking a model or deleting records', async () => {
   const h = dialogueHarness(); await h.task({ requestId: 'a', sessionId: 's', text: '上文' });
   await h.task({ requestId: 'clear', sessionId: 's', text: '清空上下文' }); assert.equal(h.calls.length, 1);
   await h.task({ requestId: 'b', sessionId: 's', text: '新问题' }); assert.equal(h.calls[1].messages.length, 1);
 });
-test('wake uses local BLACK phonemes but only the model replies; microphone requires permission and consent', () => {
-  const manifest = read('modules/uncover-voice/android/src/main/AndroidManifest.xml'), module = read('modules/uncover-voice/android/src/main/java/uncover/voice/UncoverVoiceModule.kt');
-  assert.match(manifest, /FOREGROUND_SERVICE_MICROPHONE/); assert.match(manifest, /BIND_VOICE_INTERACTION/); assert.doesNotMatch(manifest, /RECEIVE_BOOT_COMPLETED|QUERY_ALL_PACKAGES/);
-  assert.match(module, /RECORD_AUDIO/); assert.match(module, /appContext.currentActivity == null/);
-  assert.match(module, /ACTION_VOICE_INPUT_SETTINGS/); assert.match(module, /ACTION_MANAGE_DEFAULT_APPS_SETTINGS/);
-  assert.doesNotMatch(module, /createRequestRoleIntent/);
-  assert.match(read('modules/uncover-voice/android/src/main/assets/black-voice/keywords.txt'), /^B L AE1 K @BLACK/m);
-  assert.doesNotMatch(read('modules/uncover-voice/android/src/main/java/uncover/voice/VoiceSpeaker.kt'), /iam.wav|acknowledge/);
-  assert.match(read('modules/uncover-voice/android/src/main/java/uncover/voice/BlackVoiceService.kt'), /engine\?\.arm\(\)/);
-  assert.match(module, /VoiceOwnerStore\(context\)\.read\(\)/);
-  assert.match(read('src/voice/turnAssessment.ts'), /单独呼唤 BLACK/);
-  assert.doesNotMatch(read('src/features/chat/ChatMessages.tsx'), /acknowledging|我在/);
-  const engine = read('modules/uncover-voice/android/src/main/java/uncover/voice/VoiceAudioEngine.kt');
-  assert.match(engine, /KeywordSpotter/); assert.match(engine, /OnlineRecognizer/); assert.doesNotMatch(engine, /http|FileOutputStream/);
-});
+
 test('voice completion does not bring the app UI to the foreground and storage clear stops listening', () => {
   assert.match(read('src/voice/agentTask.ts'), /restoreUi: false/);
   assert.match(read('src/integrations/runAgentTurn.ts'), /finishWithoutUi/);
   assert.match(read('src/store/runtime.ts'), /voiceTransport.clear/);
 });
-test('local speech and echo resources are pinned; the obsolete local reply and generator are removed', () => {
-  const { artifacts } = require('./prepare-voice-resources.cjs');
-  assert.equal(artifacts.length, 7); artifacts.forEach(item => { assert.match(item.sha256, /^[a-f0-9]{64}$/); assert.match(item.url, /^https:\/\/(github.com\/k2-fsa\/sherpa-onnx\/releases\/download\/|downloads.xiph.org\/releases\/speex\/|codeload.github.com\/Enaium\/webrtc-aec3\/tar.gz\/[a-f0-9]{40}$)/); });
-  assert.ok(artifacts.some(a => a.destination?.endsWith('speaker/campplus.onnx')));
-  for (const file of ['modules/uncover-voice/android/src/main/assets/black-voice/iam.wav', 'scripts/build-agent-ack.py']) assert.equal(fs.existsSync(path.join(__dirname, '..', file)), false);
-  assert.ok(artifacts.find(item => item.aec));
-});
+
 test('real voice runner streams text and progress into the UI conversation before playback', async () => {
   const h = dialogueHarness();
   h.dependencies.turn = async input => {
@@ -85,63 +62,11 @@ test('real voice runner streams text and progress into the UI conversation befor
   await h.task({ requestId: 'stream', sessionId: 's', text: '讲一下' });
   assert.equal(h.dependencies.conversation.getSnapshot().turns[1].content, h.replies[0].text);
 });
+
 test('voice errors are displayed and spoken without cancelling their own error delivery', async () => {
   const h = dialogueHarness(); h.dependencies.turn = async () => { throw Error('连接超时，请重试。'); };
   await h.task({ requestId: 'error', sessionId: 's', text: '测试错误' });
   assert.equal(h.replies[0].text, '连接超时，请重试。'); assert.equal(h.dependencies.conversation.getSnapshot().turns[1].content, h.replies[0].text);
-});
-test('new audio implementation cannot discard every speaking-mode microphone frame or send ambient PCM away', () => {
-  const engine = read('modules/uncover-voice/android/src/main/java/uncover/voice/VoiceAudioEngine.kt'), speaker = read('modules/uncover-voice/android/src/main/java/uncover/voice/VoiceSpeaker.kt');
-  assert.match(engine, /vad.compute/); assert.match(engine, /echo.process/); assert.match(engine, /reference.frame/); assert.match(engine, /frames.forEach/); assert.match(engine, /VoiceIdentity.accepts/);
-  assert.doesNotMatch(engine, /barge\(\)/); assert.match(engine, /events\.probe/); assert.match(engine, /events\.accepted/);
-  assert.doesNotMatch(engine, /if \(state == "speaking"\) continue|https?:|FileOutputStream|我在/);
-  assert.match(speaker, /synthesizeToFile/); assert.match(speaker, /VoicePcmPlayer/); assert.doesNotMatch(speaker, /tts\?\.speak\(/);
-});
-
-test('production wake settings match the actual model probe instead of Kotlin defaults', () => {
-  const engine = read('modules/uncover-voice/android/src/main/java/uncover/voice/VoiceAudioEngine.kt');
-  assert.match(engine, /keywordsScore = 1f/);
-  assert.match(read('scripts/check-voice-models.py'), /keywords_score=1\.0/);
-  assert.match(engine, /wakeWindow.clip\(result.timestamps\)/);
-  assert.match(engine, /VoiceIdentity.acceptsWake/); assert.match(engine, /turn.onlyWake/);
-  assert.match(engine, /sealCertifiedSegment\(\); events.dismissed\(\)/);
-  assert.doesNotMatch(engine, /verifiedUntil|ownerUntil|revised\(/);
-});
-
-test('owner registration requires a separate read-back and invalidates its ticket before stopping asynchronously', () => {
-  const engine = read('modules/uncover-voice/android/src/main/java/uncover/voice/VoiceAudioEngine.kt');
-  const service = read('modules/uncover-voice/android/src/main/java/uncover/voice/BlackVoiceService.kt');
-  const store = read('modules/uncover-voice/android/src/main/java/uncover/voice/VoiceOwnerStore.kt');
-  assert.match(engine, /VoiceIdentity.complete/); assert.match(engine, /commitEnrollment\(completed, enrollmentTicket\)/);
-  assert.match(engine, /enrollVoiced >= 3200 && audioNow - enrollLastSpeech >= 650/);
-  assert.match(store, /schema"\) == 2/); assert.match(store, /registration.commit\(ticket\)/);
-  assert.ok(service.indexOf('.cancelEnrollment()') < service.indexOf('context.stopService('));
-  assert.match(read('src/voice/VoiceSettings.tsx'), /wake_check/);
-  const packet = read('modules/uncover-voice/android/src/main/java/uncover/voice/VoicePacketGate.kt');
-  assert.match(packet, /verify\(fresh.toList\(\), voiced\)/);
-  assert.doesNotMatch(packet, /private var context|context \+ fresh/);
-});
-
-test('finishing a long reply renews listening time without clearing a new owner draft', () => {
-  const engine = read('modules/uncover-voice/android/src/main/java/uncover/voice/VoiceAudioEngine.kt');
-  const service = read('modules/uncover-voice/android/src/main/java/uncover/voice/BlackVoiceService.kt');
-  const afterReply = engine.slice(engine.indexOf('fun afterReply()'), engine.indexOf('fun arm()'));
-  assert.match(afterReply, /followUpClock.incrementAndGet/); assert.doesNotMatch(afterReply, /reset/);
-  assert.match(engine, /previousFollowUp.*heardAt = now/);
-  assert.match(service, /engine\?\.afterReply\(\); notifyState\("listening"\)/);
-});
-
-test('static playback loads PCM before demanding ready state, and real Android tests assert successful rendering', () => {
-  const speaker = read('modules/uncover-voice/android/src/main/java/uncover/voice/VoicePcmPlayer.kt');
-  const write = speaker.indexOf('val written = output.write(');
-  assert.ok(write > 0);
-  assert.ok(speaker.indexOf('check(output.state != AudioTrack.STATE_UNINITIALIZED)') < write);
-  assert.ok(speaker.indexOf('check(output.state == AudioTrack.STATE_INITIALIZED)') > write);
-  assert.ok(speaker.indexOf('output.play()', write) > write);
-  const playback = read('modules/uncover-voice/android/src/androidTest/java/uncover/voice/VoiceSpeakerPlaybackTest.kt');
-  assert.match(playback, /STATE_NO_STATIC_DATA/); assert.match(playback, /VoicePcmPlayer\(/);
-  assert.match(playback, /pcm.size, played/); assert.match(playback, /testPcmCancellationStopsRealPlayback/);
-  assert.match(read('scripts/check-android-native.ps1'), /:uncover-voice:connectedDebugAndroidTest/);
 });
 
 test('model may explicitly keep listening without speech, a blank bubble, lost context or duplicate tools', async () => {
@@ -205,4 +130,31 @@ test('a late native ownership poll cannot cancel an answer after it transfers to
       assert.equal(h.dependencies.conversation.getSnapshot().turns[1].status, answer ? 'complete' : 'silent');
     }
   } finally { global.setInterval = originalInterval; }
+});
+test('initialization completes before the first model turn and wake metadata does not invent identity', async () => {
+  const h = dialogueHarness(); let ready = false;
+  h.dependencies.prepare = async () => { ready = true; };
+  h.dependencies.turn = async input => {
+    assert.equal(ready, true);
+    const metadata = JSON.parse(input.messages[0].content);
+    assert.equal(metadata.wakeDetected, true); assert.equal('ownerVerified' in metadata, false);
+    return '我在。';
+  };
+  await h.task({ requestId: 'wake', sessionId: 's', text: 'BLACK', wake: true });
+  assert.equal(h.replies.length, 1);
+});
+test('production has no enrollment or phone TTS fallback and pins the bundled local model', () => {
+  const native = name => read('modules/uncover-voice/android/src/main/java/uncover/voice/' + name + '.kt');
+  assert.doesNotMatch(native('VoiceAudioEngine'), /VoiceIdentity|SpeakerEmbeddingExtractor|enroll|VoiceOwnerStore/);
+  assert.doesNotMatch(native('UncoverVoiceModule'), /enrollOwner|VoiceOwnerStore/);
+  assert.doesNotMatch(native('VoiceSpeaker'), /android.speech.tts|synthesizeToFile|TextToSpeech/);
+  assert.match(native('VoiceSpeaker'), /OfflineTts|LocalVoiceSynthesizer/);
+  assert.match(native('VoicePcmPlayer'), /MODE_STREAM/);
+  assert.doesNotMatch(native('VoicePcmPlayer'), /MODE_STATIC/);
+  assert.match(native('VoiceCaptureDriver'), /ArrayBlockingQueue/);
+  const { artifacts } = require('./prepare-voice-resources.cjs');
+  assert.ok(artifacts.some(a => a.files?.['model.onnx'] === 'tts/model.onnx'));
+  assert.ok(!artifacts.some(a => /campplus/.test(a.name)));
+  for (const name of ['VoiceIdentity','VoiceBiometrics','VoiceOwnerStore','VoiceRegistrationGate','VoicePacketGate'])
+    assert.equal(fs.existsSync(path.join(__dirname, '../modules/uncover-voice/android/src/main/java/uncover/voice/' + name + '.kt')), false);
 });

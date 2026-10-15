@@ -32,7 +32,8 @@ detection uses the Android NDK's BSD-licensed cpufeatures implementation.
 Scoped denormal handling follows WebRTC's BSD-licensed
 rtc_base/denormal_disabler.cc; the original thread FP mode is restored after DSP.
 There is no prerecorded wake response. Every spoken response comes from the
-configured Agent and the installed system TTS engine.
+configured Agent and the bundled local MeloTTS synthesis model (MIT,
+TTS-LICENSE.txt and TTS-NOTICE.txt). There is no phone-system TTS fallback.
 
 The bundled native AAR and model archives are fixed by SHA-256 in resources.json
 and scripts/prepare-voice-resources.cjs. No audio recordings, passwords or accounts

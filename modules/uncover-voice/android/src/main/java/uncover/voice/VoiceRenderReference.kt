@@ -6,6 +6,7 @@ internal class VoiceRenderReference {
   private val clips = mutableListOf<Clip>()
   private var sequence = 0L
   @Synchronized fun begin(pcm: ShortArray, startNs: Long): Long {
+    clips.removeAll { startNs > it.startNs + it.limit * 1_000_000_000L / 16000 + 700_000_000L }
     val id = ++sequence; clips.add(Clip(id, pcm, startNs, pcm.size)); return id
   }
   @Synchronized fun clock(id: Long, frame: Long, timeNs: Long) {
