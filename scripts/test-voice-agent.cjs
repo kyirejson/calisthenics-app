@@ -91,3 +91,16 @@ test('new audio implementation cannot discard every speaking-mode microphone fra
   assert.doesNotMatch(engine, /if \(state == "speaking"\) continue|https?:|FileOutputStream|我在/);
   assert.match(speaker, /synthesizeToFile/); assert.match(speaker, /AudioTrack/); assert.doesNotMatch(speaker, /tts\?\.speak\(/);
 });
+
+test('static playback loads PCM before demanding ready state, and real Android tests assert successful rendering', () => {
+  const speaker = read('modules/uncover-voice/android/src/main/java/uncover/voice/VoiceSpeaker.kt');
+  const write = speaker.indexOf('val written = output.write(');
+  assert.ok(write > 0);
+  assert.ok(speaker.indexOf('check(output.state != AudioTrack.STATE_UNINITIALIZED)') < write);
+  assert.ok(speaker.indexOf('check(output.state == AudioTrack.STATE_INITIALIZED)') > write);
+  assert.ok(speaker.indexOf('output.play()', write) > write);
+  const playback = read('modules/uncover-voice/android/src/androidTest/java/uncover/voice/VoiceSpeakerPlaybackTest.kt');
+  assert.match(playback, /STATE_NO_STATIC_DATA/); assert.match(playback, /VoiceSpeaker\(/);
+  assert.match(playback, /assertNull\("Acknowledgement failed/);
+  assert.match(read('scripts/check-android-native.ps1'), /:uncover-voice:connectedDebugAndroidTest/);
+});

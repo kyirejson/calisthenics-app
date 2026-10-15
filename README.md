@@ -6,7 +6,7 @@
 
 永不言弃，积极向上，奋斗终生。
 
-源码配置版本：1.7.14 · Expo / React Native（正式发布状态以 Releases 为准）
+源码配置版本：1.7.15 · Expo / React Native（正式发布状态以 Releases 为准）
 
 [安装包发布页](https://github.com/kyirejson/calisthenics-app/releases) · [反馈问题](https://github.com/kyirejson/calisthenics-app/issues)
 

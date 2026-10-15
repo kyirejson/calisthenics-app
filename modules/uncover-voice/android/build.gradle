@@ -5,8 +5,14 @@ group = 'uncover.voice'
 version = '1.0.0'
 android {
   namespace 'uncover.voice'
+  useLibrary 'android.test.runner'
+  useLibrary 'android.test.base'
+  // The isolated playback test includes both this CMake module and React Native's runtime.
+  packaging { jniLibs { pickFirsts += ['**/libc++_shared.so'] } }
   defaultConfig {
     versionCode 1; versionName '1.0.0'; consumerProguardFiles 'consumer-rules.pro'
+    testInstrumentationRunner 'android.test.InstrumentationTestRunner'
+    testInstrumentationRunnerArguments['class'] = 'uncover.voice.VoiceSpeakerPlaybackTest'
     externalNativeBuild { cmake { arguments '-DANDROID_STL=c++_shared' } }
   }
   externalNativeBuild { cmake { path 'native/CMakeLists.txt'; version '3.22.1' } }

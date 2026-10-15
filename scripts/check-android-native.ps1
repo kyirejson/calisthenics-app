@@ -5,7 +5,7 @@ param(
   [string]$NodeExecutable,
   [string]$ProjectRoot,
   [string]$BuildToolsRoot = 'D:/UncoverBuildTools',
-  [ValidateSet('Native', 'DebugApk', 'ModuleTests', 'VerifiedApk', 'StandaloneQaApk')][string]$Target = 'Native'
+  [ValidateSet('Native', 'DebugApk', 'ModuleTests', 'VoicePlaybackTests', 'VerifiedApk', 'StandaloneQaApk')][string]$Target = 'Native'
 )
 
 $ErrorActionPreference = 'Stop'
@@ -55,7 +55,12 @@ try {
   Write-Host $buildJavaVersion.Trim()
   Push-Location (Join-Path $buildRepoPath 'android')
   try {
-    $buildModuleTests = @(':uncover-running:testDebugUnitTest', ':uncover-music:testDebugUnitTest')
+    $buildModuleTests = @(':uncover-running:testDebugUnitTest', ':uncover-music:testDebugUnitTest', ':uncover-voice:testDebugUnitTest')
+    if ($Target -eq 'VoicePlaybackTests') {
+      if ($env:ANDROID_SERIAL -notmatch '^emulator-\d+$') { throw 'VoicePlaybackTests requires ANDROID_SERIAL for an owned Android emulator; physical devices are not selected automatically.' }
+      & (Join-Path $env:ANDROID_HOME 'platform-tools/adb.exe') -s $env:ANDROID_SERIAL get-state | Out-Null
+      if ($LASTEXITCODE -ne 0) { throw 'Selected playback-test emulator is not available.' }
+    }
     if ($Target -eq 'StandaloneQaApk') {
       $buildQaGradle = Get-Content -LiteralPath (Join-Path $buildRepoPath 'android/app/build.gradle') -Raw
       # A local test package must never overwrite the production app or use its signing key.
@@ -67,9 +72,9 @@ try {
         throw 'Run Expo prebuild with the music config plugin first: .mjs/.cjs changes must invalidate the embedded JS bundle.'
       }
     }
-    $buildGradleTask = if ($Target -eq 'StandaloneQaApk') { $buildModuleTests + ':app:assembleRelease' } elseif ($Target -eq 'VerifiedApk') { $buildModuleTests + ':app:assembleDebug' } elseif ($Target -eq 'DebugApk') { ':app:assembleDebug' } elseif ($Target -eq 'ModuleTests') { $buildModuleTests } else { ':app:compileDebugKotlin' }
+    $buildGradleTask = if ($Target -eq 'VoicePlaybackTests') { ':uncover-voice:connectedDebugAndroidTest' } elseif ($Target -eq 'StandaloneQaApk') { $buildModuleTests + ':app:assembleRelease' } elseif ($Target -eq 'VerifiedApk') { $buildModuleTests + ':app:assembleDebug' } elseif ($Target -eq 'DebugApk') { ':app:assembleDebug' } elseif ($Target -eq 'ModuleTests') { $buildModuleTests } else { ':app:compileDebugKotlin' }
     # UTF-8 fixes Kotlin/Node path decoding, but C++ still needs an ASCII build snapshot.
-    if ($Target -in @('DebugApk', 'ModuleTests', 'VerifiedApk', 'StandaloneQaApk') -and $buildRepoPath -match '[^\x00-\x7F]') {
+    if ($Target -in @('DebugApk', 'ModuleTests', 'VoicePlaybackTests', 'VerifiedApk', 'StandaloneQaApk') -and $buildRepoPath -match '[^\x00-\x7F]') {
       throw 'Windows C++ builds and JVM test workers require an ASCII-path snapshot. Pass -ProjectRoot with that snapshot; do not move the original repository.'
     }
     $buildGradleArgs = @('-Dfile.encoding=UTF-8')

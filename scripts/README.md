@@ -29,3 +29,9 @@
 退场索引已归档到 `D:/UncoverBuildTools/archives/uncover-retired-server-index-20261009/`，可恢复，不参与命令或安装包。研究工具保留原名称以保护外部调用，但不属于应用运行时或发布门禁。
 
 跑步行为专项：`test-running-behaviors` 验证自动暂停的连续速度证据、手动暂停不自动恢复、校准计步来源和中断配速保护。浏览器 GPS 隔离工具集中在 `lib/browser-running-harness.cjs`。原生 MotionGate、RunDistance、StepEvidence 的 JUnit 使用 `check-android-native.ps1 -Target ModuleTests -ProjectRoot <英文路径副本>`；Windows JVM 测试进程及 C++ 完整构建需英文路径副本，原仓库不需移动。模拟测试不能证明真机计步精度。
+
+BLACK 播放专项：设置 `ANDROID_SERIAL=emulator-<编号>` 后运行
+`check-android-native.ps1 -Target VoicePlaybackTests -ProjectRoot <英文路径副本> -AndroidSdk <SDK路径>`。
+Android instrumentation 测试直接调用生产 `VoiceSpeaker`，验证静态 AudioTrack 的装载状态，
+并要求两次确认音都实际播完且回调无错误。仅进入“倾听”状态不算播放成功；不自动选中实体手机，
+不授予麦克风权限、不访问个人资料，测试 Activity 不进入正式 App。

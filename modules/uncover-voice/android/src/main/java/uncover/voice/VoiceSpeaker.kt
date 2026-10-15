@@ -137,10 +137,15 @@ internal class VoiceSpeaker(private val context: Context, private val reference:
       .setTransferMode(AudioTrack.MODE_STATIC).setBufferSizeInBytes(pcm.size * 2).build()
     var referenceId = 0L; var actualPlayed = 0; var announced = false
     try {
-      check(output.state == AudioTrack.STATE_INITIALIZED) { "系统未能初始化语音播放。" }
+      // MODE_STATIC starts in STATE_NO_STATIC_DATA even when creation succeeded.
+      // It becomes STATE_INITIALIZED only after the first successful write.
+      check(output.state != AudioTrack.STATE_UNINITIALIZED) { "系统未能创建语音播放器（状态 ${output.state}）。" }
       if (generation != token) return
       track.set(output)
-      check(output.write(pcm, 0, pcm.size) == pcm.size) { "语音音频未完整送入播放缓冲区。" }
+      val written = output.write(pcm, 0, pcm.size)
+      check(written == pcm.size) { "语音音频未完整送入播放缓冲区（$written/${pcm.size}）。" }
+      check(output.state == AudioTrack.STATE_INITIALIZED) { "语音音频已写入，但播放器尚未就绪（状态 ${output.state}）。" }
+      if (generation != token) return
       referenceId = reference.begin(pcm, System.nanoTime())
       output.play()
       val stamp = AudioTimestamp(); val startNs = System.nanoTime()
