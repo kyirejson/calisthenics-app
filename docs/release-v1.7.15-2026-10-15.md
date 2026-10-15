@@ -39,4 +39,5 @@ Android [AudioTrack 官方文档](https://developer.android.com/reference/androi
 
 529 项 Node 回归和 TypeScript 检查通过。正式交付仍需要完整签名 APK，
 沿用应用 ID 和签名、递增 Android versionCode 24，可覆盖安装并保留数据。
+最终 APK 门禁要求包含装载后的就绪判断、不能再带旧的错误判断文案，且不能包含测试类或测试 Activity。
 模拟器测试不等于 ColorOS 实体扬声器、蓝牙或复杂环境的声学验收。
