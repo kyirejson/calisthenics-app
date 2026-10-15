@@ -78,7 +78,7 @@ export function DeepseekChat(props: { visible: boolean; onClose: () => void }) {
                 <ChatMark size={32} />
                 <View style={s.brandCopy}>
                   <Text style={s.title}>AI 助手</Text>
-                  <Text style={s.model}>DeepSeek · Flash</Text>
+                  <Text style={s.model}>DeepSeek</Text>
                 </View>
               </View>
               <View style={s.headerActions}>

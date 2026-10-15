@@ -21,7 +21,7 @@ test('provider transport returns ordinary text without old prompts, memory or JS
 });
 test('connection verification is bound to the exact key and obsolete provider settings are pruned', async () => {
   const normalized = runtime.normalizeConnection({ ...config, tavilyKey: 'invalid obsolete data', asrKey: 123, model: 'obsolete' });
-  assert.equal(normalized.model, 'deepseek-flash');
+  assert.equal(normalized.model, 'obsolete'); // An explicit ID is never silently downgraded to Flash.
   assert.equal(normalized.tavilyKey, undefined); assert.equal(normalized.asrKey, undefined);
   runtime.installConnection(normalized);
   assert.equal(runtime.setModelConnectionVerified(normalized, true), true);

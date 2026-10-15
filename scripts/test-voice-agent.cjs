@@ -28,8 +28,8 @@ test('actual voice dialogue forwards unrestricted transcripts and shares context
   const h = dialogueHarness();
   await h.task({ requestId: 'a', sessionId: 's', text: '用网易云听我喜欢的歌，然后分析早餐' });
   assert.equal(h.calls[0].messages[0].content, '用网易云听我喜欢的歌，然后分析早餐');
-  await h.task({ requestId: 'b', sessionId: 's', text: '你刚才说的是什么意思' }); assert.equal(h.calls[1].messages.length, 3);
-  await h.task({ requestId: 'c', sessionId: 'new', text: '新的唤醒' }); assert.equal(h.calls[2].messages.length, 5);
+  await h.task({ requestId: 'b', sessionId: 's', text: '你刚才说的是什么意思' }); assert.equal(h.calls[1].messages.filter(m => m.role !== 'system').length, 3);
+  await h.task({ requestId: 'c', sessionId: 'new', text: '新的唤醒' }); assert.equal(h.calls[2].messages.filter(m => m.role !== 'system').length, 5);
 });
 test('inactive requests and silence do not enter model or emit speech', async () => {
   const h = dialogueHarness(); h.stop();
@@ -55,7 +55,9 @@ test('wake uses local BLACK phonemes but only the model replies; microphone requ
   assert.doesNotMatch(module, /createRequestRoleIntent/);
   assert.match(read('modules/uncover-voice/android/src/main/assets/black-voice/keywords.txt'), /^B L AE1 K @BLACK/m);
   assert.doesNotMatch(read('modules/uncover-voice/android/src/main/java/uncover/voice/VoiceSpeaker.kt'), /iam.wav|acknowledge/);
-  assert.match(read('modules/uncover-voice/android/src/main/java/uncover/voice/BlackVoiceService.kt'), /request\("BLACK"\)/);
+  assert.match(read('modules/uncover-voice/android/src/main/java/uncover/voice/BlackVoiceService.kt'), /engine\?\.arm\(\)/);
+  assert.match(module, /VoiceOwnerStore\(context\)\.read\(\)/);
+  assert.match(read('src/voice/turnAssessment.ts'), /单独呼唤 BLACK/);
   assert.doesNotMatch(read('src/features/chat/ChatMessages.tsx'), /acknowledging|我在/);
   const engine = read('modules/uncover-voice/android/src/main/java/uncover/voice/VoiceAudioEngine.kt');
   assert.match(engine, /KeywordSpotter/); assert.match(engine, /OnlineRecognizer/); assert.doesNotMatch(engine, /http|FileOutputStream/);
@@ -67,7 +69,8 @@ test('voice completion does not bring the app UI to the foreground and storage c
 });
 test('local speech and echo resources are pinned; the obsolete local reply and generator are removed', () => {
   const { artifacts } = require('./prepare-voice-resources.cjs');
-  assert.equal(artifacts.length, 6); artifacts.forEach(item => { assert.match(item.sha256, /^[a-f0-9]{64}$/); assert.match(item.url, /^https:\/\/(github.com\/k2-fsa\/sherpa-onnx\/releases\/download\/|downloads.xiph.org\/releases\/speex\/|codeload.github.com\/Enaium\/webrtc-aec3\/tar.gz\/[a-f0-9]{40}$)/); });
+  assert.equal(artifacts.length, 7); artifacts.forEach(item => { assert.match(item.sha256, /^[a-f0-9]{64}$/); assert.match(item.url, /^https:\/\/(github.com\/k2-fsa\/sherpa-onnx\/releases\/download\/|downloads.xiph.org\/releases\/speex\/|codeload.github.com\/Enaium\/webrtc-aec3\/tar.gz\/[a-f0-9]{40}$)/); });
+  assert.ok(artifacts.some(a => a.destination?.endsWith('speaker/campplus.onnx')));
   for (const file of ['modules/uncover-voice/android/src/main/assets/black-voice/iam.wav', 'scripts/build-agent-ack.py']) assert.equal(fs.existsSync(path.join(__dirname, '..', file)), false);
   assert.ok(artifacts.find(item => item.aec));
 });
@@ -89,9 +92,43 @@ test('voice errors are displayed and spoken without cancelling their own error d
 });
 test('new audio implementation cannot discard every speaking-mode microphone frame or send ambient PCM away', () => {
   const engine = read('modules/uncover-voice/android/src/main/java/uncover/voice/VoiceAudioEngine.kt'), speaker = read('modules/uncover-voice/android/src/main/java/uncover/voice/VoiceSpeaker.kt');
-  assert.match(engine, /vad.compute/); assert.match(engine, /echo.process/); assert.match(engine, /reference.frame/); assert.match(engine, /preRoll.forEach/); assert.match(engine, /barge\(\)/);
+  assert.match(engine, /vad.compute/); assert.match(engine, /echo.process/); assert.match(engine, /reference.frame/); assert.match(engine, /frames.forEach/); assert.match(engine, /VoiceIdentity.accepts/);
+  assert.doesNotMatch(engine, /barge\(\)/); assert.match(engine, /events\.probe/); assert.match(engine, /events\.accepted/);
   assert.doesNotMatch(engine, /if \(state == "speaking"\) continue|https?:|FileOutputStream|我在/);
   assert.match(speaker, /synthesizeToFile/); assert.match(speaker, /VoicePcmPlayer/); assert.doesNotMatch(speaker, /tts\?\.speak\(/);
+});
+
+test('production wake settings match the actual model probe instead of Kotlin defaults', () => {
+  const engine = read('modules/uncover-voice/android/src/main/java/uncover/voice/VoiceAudioEngine.kt');
+  assert.match(engine, /keywordsScore = 1f/);
+  assert.match(read('scripts/check-voice-models.py'), /keywords_score=1\.0/);
+  assert.match(engine, /wakeWindow.clip\(result.timestamps\)/);
+  assert.match(engine, /VoiceIdentity.acceptsWake/); assert.match(engine, /turn.onlyWake/);
+  assert.match(engine, /sealCertifiedSegment\(\); events.dismissed\(\)/);
+  assert.doesNotMatch(engine, /verifiedUntil|ownerUntil|revised\(/);
+});
+
+test('owner registration requires a separate read-back and invalidates its ticket before stopping asynchronously', () => {
+  const engine = read('modules/uncover-voice/android/src/main/java/uncover/voice/VoiceAudioEngine.kt');
+  const service = read('modules/uncover-voice/android/src/main/java/uncover/voice/BlackVoiceService.kt');
+  const store = read('modules/uncover-voice/android/src/main/java/uncover/voice/VoiceOwnerStore.kt');
+  assert.match(engine, /VoiceIdentity.complete/); assert.match(engine, /commitEnrollment\(completed, enrollmentTicket\)/);
+  assert.match(engine, /enrollVoiced >= 3200 && audioNow - enrollLastSpeech >= 650/);
+  assert.match(store, /schema"\) == 2/); assert.match(store, /registration.commit\(ticket\)/);
+  assert.ok(service.indexOf('.cancelEnrollment()') < service.indexOf('context.stopService('));
+  assert.match(read('src/voice/VoiceSettings.tsx'), /wake_check/);
+  const packet = read('modules/uncover-voice/android/src/main/java/uncover/voice/VoicePacketGate.kt');
+  assert.match(packet, /verify\(fresh.toList\(\), voiced\)/);
+  assert.doesNotMatch(packet, /private var context|context \+ fresh/);
+});
+
+test('finishing a long reply renews listening time without clearing a new owner draft', () => {
+  const engine = read('modules/uncover-voice/android/src/main/java/uncover/voice/VoiceAudioEngine.kt');
+  const service = read('modules/uncover-voice/android/src/main/java/uncover/voice/BlackVoiceService.kt');
+  const afterReply = engine.slice(engine.indexOf('fun afterReply()'), engine.indexOf('fun arm()'));
+  assert.match(afterReply, /followUpClock.incrementAndGet/); assert.doesNotMatch(afterReply, /reset/);
+  assert.match(engine, /previousFollowUp.*heardAt = now/);
+  assert.match(service, /engine\?\.afterReply\(\); notifyState\("listening"\)/);
 });
 
 test('static playback loads PCM before demanding ready state, and real Android tests assert successful rendering', () => {
@@ -119,7 +156,7 @@ test('model may explicitly keep listening without speech, a blank bubble, lost c
   assert.equal(h.dependencies.conversation.getSnapshot().turns[1].status, 'silent');
   assert.equal(h.dependencies.conversation.getSnapshot().error, '');
   await h.task({ requestId: 'listen', sessionId: 's', text: '那个，我想想' }); assert.equal(generated, 1);
-  h.dependencies.turn = async input => { assert.match(input.messages[1].content, /继续倾听/); return '可以。'; };
+  h.dependencies.turn = async input => { assert.ok(input.messages.some(m => m.role === 'tool' && JSON.parse(m.content).listening)); return '可以。'; };
   await h.task({ requestId: 'next', sessionId: 's', text: '继续聊吧' }); assert.equal(h.replies[1].text, '可以。');
 });
 

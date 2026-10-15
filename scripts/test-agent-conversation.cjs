@@ -24,7 +24,10 @@ test('an ordinary interruption cancels generation immediately and blocks late te
 test('completed tools survive a cancellation race and are provided to the next model turn, not replayed', async () => {
   const { conversation: c } = harness(); const a = await begin(c, 'old', 'voice'); c.interrupt('old');
   c.receipt(a, { name: 'write_meal_records', args: { operationKey: 'meals_1' }, result: { ok: true, entryIds: ['saved'] } });
-  const b = await begin(c, 'new'); assert.match(c.messages(b)[1].content, /工具执行回执/); assert.match(c.messages(b)[1].content, /saved/);
+  const b = await begin(c, 'new'); const messages = c.messages(b);
+  const result = messages.find(m => m.role === 'tool'); assert.match(result.content, /saved/);
+  assert.equal(messages.find(m => m.tool_calls?.[0].id === result.tool_call_id).tool_calls[0].function.name, 'write_meal_records');
+  assert.ok(messages.filter(m => m.role === 'assistant').every(m => !String(m.content).includes('工具执行回执')));
 });
 test('tool rounds replace intermediate text instead of appending it to a final answer', async () => {
   const { conversation: c } = harness(); const a = await begin(c, 'a'); c.delta(a, '先核实'); c.tool(a, { name: 'read_music_playback', args: {} }); c.round(a);
@@ -33,7 +36,9 @@ test('tool rounds replace intermediate text instead of appending it to a final a
 test('only actual spoken progress is retained, and an interrupted answer is marked as not fully heard', async () => {
   const { conversation: c } = harness(); const a = await begin(c, 'a', 'voice'); c.complete(a, '第一句。第二句。');
   c.voice({ phase: 'speaking', requestId: 'a', spokenEnd: 4 }); c.interrupt('a');
-  const b = await begin(c, 'b', 'voice'); assert.match(c.messages(b)[1].content, /已朗读内容：第一句。/); assert.match(c.messages(b)[1].content, /余下内容未向用户播报/);
+  const b = await begin(c, 'b', 'voice'); const state = JSON.parse(c.messages(b).find(m => m.role === 'system').content);
+  assert.equal(state.turns[0].spokenText, '第一句。'); assert.equal(state.turns[0].status, 'interrupted');
+  assert.equal(c.messages(b).find(m => m.role === 'assistant' && m.content).content, '第一句。第二句。');
 });
 test('clear context aborts all in-flight writes and prevents stale results from restoring cleared content', async () => {
   const { conversation: c, data, storage } = harness(); const a = await begin(c, 'a'); c.delta(a, '旧内容');

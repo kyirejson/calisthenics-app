@@ -26,7 +26,7 @@ struct BlackEcho {
   std::array<int16_t, block> mic{}, far{};
   int pending = 0;
   std::deque<int16_t> output = std::deque<int16_t>(block, 0);
-  // Separate acoustic ownership evidence from the ASR/VAD confidence. A tiny
+  // Separate playback coherence evidence from the ASR/VAD confidence. A tiny
   // speech-shaped residual is still "speech" to VAD. It is not necessarily a person.
   std::array<float, 16384> history{};
   double history_power = 0;
@@ -50,8 +50,8 @@ static float render_coherence(BlackEcho *state, const int16_t *captured, const i
   for (int i = 0; i < state->frame; i += 2) mic_power += std::pow(captured[i] / 32768.f, 2);
   if (mic_power < 1e-9f) return 1;
   float best = 0; int best_delay = 0;
-  // Half-rate search plus a one-sample refinement. No transcript matching or
-  // voice/sex identity assumption: two people with the same voice remain separate.
+  // Half-rate search plus one-sample refinement. This is waveform correlation,
+  // not speaker identity; independent owner verification follows the front-end.
   auto score = [&](int delay) {
     float cross = 0, power = 0;
     const float *ref = state->history.data() + tail - delay;

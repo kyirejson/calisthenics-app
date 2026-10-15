@@ -1,10 +1,10 @@
 import { isClearContextCommand } from '../features/chat/commands';
-import type { AgentConversation, ToolReceipt, TurnHandle } from '../agent/conversation';
-export type VoiceInput = { requestId: string; sessionId: string; text: string };
+import type { AgentConversation, ModelMessage, ToolReceipt, TurnHandle } from '../agent/conversation';
+export type VoiceInput = { requestId: string; sessionId: string; text: string; wake?: boolean };
 type Dependencies = {
   conversation: AgentConversation;
   active(id: string): Promise<boolean>; reply(id: string, text: string): Promise<void>; cancel(id: string): Promise<void>;
-  turn(input: { messages: Array<{ role: string; content: string }>; requestId: string; controller: AbortController;
+  turn(input: { messages: ModelMessage[]; requestId: string; controller: AbortController;
     onDelta(delta: string, accumulated: string): void; onRoundStart(): void;
     onToolCall(call: { name: string; args: Record<string, unknown> }): void; onToolResult(call: ToolReceipt): void }): Promise<string>;
   subscribeReset(callback: () => void): () => void;
@@ -42,7 +42,7 @@ export function createVoiceDialogue(dependencies: Dependencies) {
       if (!handle) return;
       const activeHandle = handle;
       const answer = await dependencies.turn({
-        messages: conversation.messages(handle), requestId: input.requestId, controller,
+        messages: [...(input.wake ? [{ role: 'system', content: JSON.stringify({ type: 'voice_input_state', ownerVerified: true, wakeDetected: true }) }] : []), ...conversation.messages(handle)], requestId: input.requestId, controller,
         onRoundStart: () => conversation.round(activeHandle), onDelta: (_delta, accumulated) => conversation.delta(activeHandle, accumulated),
         onToolCall: call => conversation.tool(activeHandle, call), onToolResult: call => conversation.receipt(activeHandle, call),
       });

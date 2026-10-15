@@ -36,6 +36,12 @@
       "destination": "src/main/assets/black-voice/vad/silero_vad.onnx"
     },
     {
+      "name": "3dspeaker_speech_campplus_sv_zh-cn_16k-common.onnx",
+      "sha256": "f682b514c05d947ee3fa91cd6ec6c5c7543479a128373fa29b1faedccd21fd11",
+      "url": "https://github.com/k2-fsa/sherpa-onnx/releases/download/speaker-recongition-models/3dspeaker_speech_campplus_sv_zh-cn_16k-common.onnx",
+      "destination": "src/main/assets/black-voice/speaker/campplus.onnx"
+    },
+    {
       "name": "speexdsp-1.2.1.tar.gz",
       "sha256": "8c777343e4a6399569c72abc38a95b24db56882c83dbdb6c6424a5f4aeb54d3d",
       "url": "https://downloads.xiph.org/releases/speex/speexdsp-1.2.1.tar.gz",
@@ -90,6 +96,11 @@
       "path": "src/main/assets/black-voice/vad/silero_vad.onnx",
       "sha256": "9e2449e1087496d8d4caba907f23e0bd3f78d91fa552479bb9c23ac09cbb1fd6",
       "bytes": 643854
+    },
+    {
+      "path": "src/main/assets/black-voice/speaker/campplus.onnx",
+      "sha256": "f682b514c05d947ee3fa91cd6ec6c5c7543479a128373fa29b1faedccd21fd11",
+      "bytes": 28281138
     }
   ],
   "license": "Apache-2.0 AND MIT AND BSD-3-Clause",

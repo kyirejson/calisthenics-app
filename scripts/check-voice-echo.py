@@ -1,5 +1,7 @@
 """Test the production echo core on an owned Android emulator with generated audio.
 No device microphone, live API, private user data, or production test hooks are used.
+This is an acoustic-front-end regression, not acceptance of owner verification,
+semantic turn-taking, or real phone conversation quality.
 """
 import argparse
 import json
@@ -18,7 +20,7 @@ parser.add_argument("--probe", type=Path, required=True)
 parser.add_argument("--resources", type=Path, required=True)
 parser.add_argument("--fixtures", type=Path, required=True)
 parser.add_argument("--output", type=Path, required=True)
-parser.add_argument("--closed-loop", action="store_true", help="Also stop assistant render on the first detected real interruption")
+parser.add_argument("--closed-loop", action="store_true", help="Also test render removal at an acoustic candidate; not an authorized Agent interruption")
 args = parser.parse_args()
 args.output.mkdir(parents=True, exist_ok=True)
 remote = "/data/local/tmp/black-echo-" + re.sub(r"[^A-Za-z0-9_-]", "-", args.output.name)
@@ -138,8 +140,9 @@ for user_file, near_gain in [("user.wav", .65), ("user-same-voice.wav", .65), ("
     if detection is None or detection - at / 16000 > 1.0 or any(start < at / 16000 for start in starts) or not text:
         failures.append(report)
     if args.closed_loop and detection is not None:
-        # The service stops AudioTrack on barge-in. Keep the physical echo tail
-        # of already rendered PCM; don't erase it or give AEC future speech.
+        # Model only a candidate pause in the acoustic front-end. Production
+        # now verifies the owner first, retains PCM, and needs a semantic
+        # decision before cancelling a turn. Keep the already-rendered tail.
         stopped_far = far.copy(); stopped_far[round((detection + .032) * 16000):] = 0
         stopped_mic = echo(stopped_far, .08); stopped_mic[at:at + len(user)] += user * near_gain
         stopped = process("stopped-" + user_file.replace(".wav", "") + str(round(near_gain * 100)), stopped_far, stopped_mic)
@@ -159,4 +162,4 @@ if not starts: failures.append(reports[-1])
 
 (args.output / "result.json").write_text(json.dumps({"reports": reports, "failures": failures}, ensure_ascii=False, indent=2), encoding="utf8")
 for report in reports: print(json.dumps(report, ensure_ascii=False), flush=True)
-assert not failures, "Echo/barge-in acceptance failed; see result.json, do not claim phone acceptance."
+assert not failures, "Acoustic echo/onset regression failed; see result.json, do not claim phone acceptance."

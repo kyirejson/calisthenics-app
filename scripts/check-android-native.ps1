@@ -55,7 +55,7 @@ try {
   Write-Host $buildJavaVersion.Trim()
   Push-Location (Join-Path $buildRepoPath 'android')
   try {
-    $buildModuleTests = @(':uncover-running:testDebugUnitTest', ':uncover-music:testDebugUnitTest', ':uncover-voice:testDebugUnitTest')
+    $buildModuleTests = @(':uncover-running:testDebugUnitTest', ':uncover-music:testDebugUnitTest', ':uncover-voice:testDebugUnitTest', ':uncover-web:testDebugUnitTest')
     if ($Target -eq 'VoicePlaybackTests') {
       if ($env:ANDROID_SERIAL -notmatch '^emulator-\d+$') { throw 'VoicePlaybackTests requires ANDROID_SERIAL for an owned Android emulator; physical devices are not selected automatically.' }
       & (Join-Path $env:ANDROID_HOME 'platform-tools/adb.exe') -s $env:ANDROID_SERIAL get-state | Out-Null

@@ -54,9 +54,16 @@ Android 跑步由 `modules/uncover-running` 的前台服务记录；浏览器使
 
 文字和后台语音复用 `runAgentTurn` 的模型、全部现有工具、同一 `appRepository`。
 `agentConversation` 是两者唯一会话所有者，生成/播放中止会失效旧回调，工具成功回执仍保留。
-原生语音保持单麦克风、播放参考/回声消除、VAD 和识别；只将实际对话文字送往模型。
+原生语音保持单麦克风、播放参考/回声消除、VAD、CAM++ 主人声纹验证和识别；只将通过声纹验证的对话文字送往模型。
+`VoicePacketGate` 隔离每包身份，`VoiceWakeWindow` 按关键词时间戳取音频，`VoiceTurnControl` 管理只读判定的所有权和超时；`VoiceRegistrationGate` 串行取消、删除与原子保存。主人登记包含三个个人 BLACK 模板及一次独立回读，不沿用先前音频包的身份。
 本地 AEC3、声学相关性和采样时钟负责声源处理，不按文字关键词屏蔽用户输入。
 唤醒事件交给同一模型，不额外播放固定答话；语音模型可用 `continue_listening` 暂不出声，保留上下文和同批工具回执，不渲染空回复。
+
+ASR 分段只更新同一轮草稿。`src/voice/turnAssessment.ts` 使用无工具的只读模型调用判断回应/等待/忽略；正式执行只在回应判定后进入原有 `runAgentTurn`。疑似主人讲话先暂停 PCM，忽略时恢复，确认新轮次时才失效旧请求。登记在已解锁前台主动发起，声纹经 Android Keystore 加密放在不参与备份的私有目录，原始录音不落盘。
+
+历史回执复原为匹配 `tool_call_id` 的工具消息，不再拼入助手口语。播放错误独立记录为投递故障。模型 ID 可在服务设置中配置，不默默降级到 Flash。`src/integrations/webTools.mjs` 提供搜索和分页正文读取；`modules/uncover-web` 负责可取消的公开网络访问，逐跳验证 DNS 并固定解析，不携带登录 Cookie。
+
+实现及验收边界见 [主人验证与语音轮次重构](voice-owner-turns-2026-10-15.md)。
 `responseStyle` 仅引导表达，不截断输出，不规定音乐或饮食意图，不限制工具轮次。
 
 ## 知识库的唯一正文与私人层

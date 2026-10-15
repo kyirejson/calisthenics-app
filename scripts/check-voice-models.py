@@ -23,7 +23,7 @@ def samples(path):
         values = np.interp(np.arange(round(len(values) * 16000 / rate)) * rate / 16000, np.arange(len(values)), values).astype(np.float32)
     return np.concatenate((values, np.zeros(16000, dtype=np.float32)))
 
-kws = sherpa_onnx.KeywordSpotter(tokens=str(args.resources / "kws/tokens.txt"), encoder=str(args.resources / "kws/encoder.onnx"), decoder=str(args.resources / "kws/decoder.onnx"), joiner=str(args.resources / "kws/joiner.onnx"), keywords_file=str(args.resources / "keywords.txt"), keywords_threshold=0.5, num_trailing_blanks=1, num_threads=1)
+kws = sherpa_onnx.KeywordSpotter(tokens=str(args.resources / "kws/tokens.txt"), encoder=str(args.resources / "kws/encoder.onnx"), decoder=str(args.resources / "kws/decoder.onnx"), joiner=str(args.resources / "kws/joiner.onnx"), keywords_file=str(args.resources / "keywords.txt"), keywords_score=1.0, keywords_threshold=0.5, num_trailing_blanks=1, num_threads=1)
 for name in ["black", "hey-black", "negative"]:
     stream = kws.create_stream()
     detected = []

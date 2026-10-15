@@ -11,6 +11,7 @@ import { VoiceSettings } from '../voice/VoiceSettings';
 
 export function ServiceSettings({ onClose }: { onClose: () => void }) {
   const [summary, setSummary] = useState(connectionSummary), [key, setKey] = useState('');
+  const [model, setModel] = useState(connectionSummary().model);
   const [ready, setReady] = useState(false), [busy, setBusy] = useState(false), [editing, setEditing] = useState(false);
   const [visible, setVisible] = useState(false), [message, setMessage] = useState('');
   const mounted = useRef(true), locked = useRef(false), request = useRef<AbortController | null>(null);
@@ -18,10 +19,10 @@ export function ServiceSettings({ onClose }: { onClose: () => void }) {
     mounted.current = true;
     const unsubscribe = subscribeConnection(() => {
       if (!mounted.current) return;
-      const next = connectionSummary(); setSummary(next);
+      const next = connectionSummary(); setSummary(next); setModel(next.model);
       if (!next.hasDeepseek) { setKey(''); setVisible(false); request.current?.abort(); }
     });
-    void loadConnection().then(() => { if (mounted.current) { setSummary(connectionSummary()); setReady(true); } })
+    void loadConnection().then(() => { if (mounted.current) { const next = connectionSummary(); setSummary(next); setModel(next.model); setReady(true); } })
       .catch(e => { if (mounted.current) setMessage(e instanceof Error ? e.message : '密钥读取失败。'); });
     return () => { mounted.current = false; request.current?.abort(); unsubscribe(); };
   }, []);
@@ -29,7 +30,7 @@ export function ServiceSettings({ onClose }: { onClose: () => void }) {
     if (!ready || locked.current) return;
     locked.current = true; setBusy(true); setMessage('');
     try {
-      await saveConnection({ ...currentConnection(), deepseekKey: key.trim() || currentConnection().deepseekKey });
+      await saveConnection({ ...currentConnection(), model: model.trim(), deepseekKey: key.trim() || currentConnection().deepseekKey });
       if (!mounted.current) return;
       setKey(''); setVisible(false);
       const tested = currentConnection(); setModelConnectionVerified(tested, false);
@@ -53,9 +54,11 @@ export function ServiceSettings({ onClose }: { onClose: () => void }) {
       <ScrollView contentContainerStyle={s.content} keyboardShouldPersistTaps="handled">
         <View style={s.card}>
           <Pressable accessibilityRole="button" accessibilityLabel="修改 DeepSeek 连接" disabled={busy} onPress={() => setEditing(v => !v)} style={s.row}>
-            <AppGlyph name="flash" size={24} /><View style={s.flex}><Text style={s.label}>DeepSeek V4.1 Flash</Text><Text style={s.small}>个人 API Key ({summary.model})</Text></View><Text style={s.status}>{summary.modelVerified ? '已连接' : summary.hasDeepseek ? '已保存' : '未连接'}</Text>
+            <AppGlyph name="flash" size={24} /><View style={s.flex}><Text style={s.label}>DeepSeek</Text><Text style={s.small}>个人 API Key ({summary.model})</Text></View><Text style={s.status}>{summary.modelVerified ? '已连接' : summary.hasDeepseek ? '已保存' : '未连接'}</Text>
           </Pressable>
           {expanded ? <>
+            <TextInput accessibilityLabel="DeepSeek 模型 ID" value={model} onChangeText={setModel} editable={!busy && ready} autoCapitalize="none" autoCorrect={false} placeholder="deepseek-flash" placeholderTextColor={c.muted} style={[s.input, { flex: 0 }]} />
+            <Text style={s.small}>可填写账户支持的模型 ID；更换模型会重新验证，不自动替换你的选择。</Text>
             <View style={s.row}><TextInput accessibilityLabel="个人 DeepSeek 密钥" value={key} onChangeText={setKey} editable={!busy && ready} secureTextEntry={!visible} autoCapitalize="none" autoCorrect={false} autoComplete="off" placeholder="粘贴 API Key" placeholderTextColor={c.muted} style={s.input} /><Pressable accessibilityRole="button" accessibilityLabel={visible ? '隐藏密钥' : '显示密钥'} onPress={() => setVisible(v => !v)} style={s.close}><AppGlyph name="eye" /></Pressable></View>
             <Pressable accessibilityRole="button" accessibilityLabel="保存并连接" disabled={busy || !ready} onPress={() => void connect()} style={[s.primary, (busy || !ready) && { opacity: .5 }]}><Text style={s.primaryText}>{busy ? '连接中…' : '保存并连接'}</Text></Pressable>
             <Pressable accessibilityRole="link" onPress={() => void Linking.openURL('https://platform.deepseek.com/api_keys').catch(() => setMessage('无法打开官方平台。'))}><Text style={s.status}>获取 API Key ↗</Text></Pressable>

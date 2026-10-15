@@ -1,4 +1,4 @@
-export const PERSONAL_MODELS = ['deepseek-flash'];
+export const DEFAULT_PERSONAL_MODEL = 'deepseek-flash';
 let current = null, resetter = null, modelVerified = false;
 const subscribers = new Set();
 export function normalizeConnection(value) {
@@ -8,9 +8,10 @@ export function normalizeConnection(value) {
     if (typeof input !== 'string' || !new RegExp('^' + prefix + '[A-Za-z0-9_-]{8,500}$').test(input.trim())) throw Error('密钥格式不正确，请从相应官方平台复制。');
     return input.trim();
   };
-  const provider = 'deepseek', models = PERSONAL_MODELS;
+  const provider = 'deepseek', model = value.model == null || value.model === '' ? DEFAULT_PERSONAL_MODEL : value.model;
+  if (typeof model !== 'string' || !/^[A-Za-z0-9][A-Za-z0-9._/-]{0,127}$/.test(model.trim())) throw Error('模型 ID 格式不正确，请使用 DeepSeek 平台提供的模型 ID。');
   return { version: 1, mode: 'personal',
-    provider, model: models.includes(value.model) ? value.model : models[0],
+    provider, model: model.trim(),
     deepseekKey: key(value.deepseekKey, 'sk-') };
 }
 export function getConnection() { return { ...(current || normalizeConnection(null)) }; }

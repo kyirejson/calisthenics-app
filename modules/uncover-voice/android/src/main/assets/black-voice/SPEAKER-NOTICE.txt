@@ -1,0 +1,9 @@
+BLACK owner verification uses the public CAM++ Chinese 16 kHz speaker embedding model.
+Original model: iic/speech_campplus_sv_zh-cn_16k-common (ModelScope), Apache License 2.0.
+https://www.modelscope.cn/models/iic/speech_campplus_sv_zh-cn_16k-common
+ONNX export distributed by k2-fsa/sherpa-onnx:
+https://github.com/k2-fsa/sherpa-onnx/releases/tag/speaker-recongition-models
+SHA-256: f682b514c05d947ee3fa91cd6ec6c5c7543479a128373fa29b1faedccd21fd11
+The Apache 2.0 license is included in LICENSE.txt.
+This is similarity-based verification, not replay/voice-clone-resistant authentication.
+Owner enrollment embeddings are private device data, never release resources.

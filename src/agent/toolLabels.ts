@@ -4,6 +4,7 @@ export function toolLabel(name: string, args: Record<string, unknown>): string {
   return ({
     read_memory: '读取个人记忆', update_memory: '更新个人记忆', read_today_training: '读取今日训练',
     read_recent_weight: '读取近期体重', read_today_meals: '读取今日饮食', write_meal_records: '处理饮食记录',
+    search_web: '搜索互联网', read_web_page: '阅读网页', continue_listening: '继续倾听',
     read_music_settings: '读取音乐预设', write_music_settings: '保存音乐预设',
     open_music_and_observe: '打开并核实音乐界面', music_ui_action_and_observe: '操作并核实音乐界面',
     control_music_and_observe: '控制并核实音乐播放', open_music: '打开音乐软件',

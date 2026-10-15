@@ -6,10 +6,35 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class VoiceAudioPolicyTest {
-  @Test fun oneActivationRequestsModelInsteadOfPlayingAnotherReply() {
-    assertEquals(VoiceActivation.Action.REQUEST, VoiceActivation.decide(true, "wake"))
-    for (phase in listOf("speaking", "processing", "listening")) assertEquals(VoiceActivation.Action.LISTEN, VoiceActivation.decide(true, phase))
-    assertEquals(VoiceActivation.Action.WAIT, VoiceActivation.decide(false, "starting"))
+  @Test fun recognitionSegmentsKeepOneTurnUntilTheModelCommits() {
+    val turn = VoiceTurnBuffer(); turn.activate()
+    assertEquals("BLACK", turn.text)
+    turn.update("帮我播放"); turn.seal(); turn.update("我喜欢的歌")
+    assertEquals("帮我播放 我喜欢的歌", turn.text)
+    turn.seal(); assertEquals("帮我播放 我喜欢的歌", turn.text)
+    turn.clear(); assertEquals("", turn.text); assertFalse(turn.wake)
+  }
+  @Test fun aPartialRevisionReplacesRatherThanDuplicatesTheAsrHypothesis() {
+    val turn = VoiceTurnBuffer(); turn.update("今天"); turn.update("今天吃了两个鸡蛋")
+    assertEquals("今天吃了两个鸡蛋", turn.text); turn.seal(); turn.update("和牛奶")
+    assertEquals("今天吃了两个鸡蛋 和牛奶", turn.text)
+  }
+  @Test fun ownerVerificationRejectsDifferentSpeakersAndInvalidVectors() {
+    val profile = VoiceIdentity.enroll(listOf(floatArrayOf(1f, .1f, 0f), floatArrayOf(1f, .12f, 0f), floatArrayOf(1f, .08f, 0f)))
+    assertTrue(VoiceIdentity.accepts(profile, floatArrayOf(1f, .13f, 0f), 1500))
+    assertFalse(VoiceIdentity.accepts(profile, floatArrayOf(0f, .1f, 1f), 1500))
+    assertFalse(VoiceIdentity.accepts(profile, floatArrayOf(1f, .1f, 0f), 160))
+    try { VoiceIdentity.enroll(listOf(floatArrayOf(1f, 0f), floatArrayOf(0f, 1f), floatArrayOf(1f, 0f))); fail("Mixed enrollment must not replace owner") } catch (_: IllegalArgumentException) {}
+    try { VoiceIdentity.normalized(floatArrayOf(Float.NaN)); fail("Invalid embedding") } catch (_: IllegalArgumentException) {}
+  }
+  @Test fun nearlyIdenticalEnrollmentDoesNotOverfitTheAcceptanceThreshold() {
+    val profile = VoiceIdentity.enroll(List(3) { floatArrayOf(1f, 0f) })
+    val changedSpeech = floatArrayOf(.55f, kotlin.math.sqrt(1f - .55f * .55f))
+    assertTrue(VoiceIdentity.accepts(profile, changedSpeech, 1600))
+    assertFalse(VoiceIdentity.accepts(profile, floatArrayOf(.35f, kotlin.math.sqrt(1f - .35f * .35f)), 1600))
+    val borderline = floatArrayOf(.45f, kotlin.math.sqrt(1f - .45f * .45f))
+    assertTrue(VoiceIdentity.accepts(profile, borderline, 1600))
+    assertFalse("Short voice needs stronger evidence, not just the wake transcript", VoiceIdentity.accepts(profile, borderline, 500))
   }
   @Test fun captureFallbackDoesNotTreatBufferedSamplesAsNewAudio() {
     val clock = VoiceCaptureClock(1_000_000_000L)
