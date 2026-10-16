@@ -1,6 +1,6 @@
 {
   "name": "uncover-app",
-  "version": "1.7.18",
+  "version": "1.7.19",
   "main": "index.ts",
   "dependencies": {
     "@expo/metro-runtime": "~57.0.16",

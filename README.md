@@ -6,7 +6,7 @@
 
 永不言弃，积极向上，奋斗终生。
 
-源码配置版本：1.7.15 · Expo / React Native（正式发布状态以 Releases 为准）
+源码配置版本：1.7.19 · Expo / React Native（正式发布状态以 Releases 为准）
 
 [安装包发布页](https://github.com/kyirejson/calisthenics-app/releases) · [反馈问题](https://github.com/kyirejson/calisthenics-app/issues)
 
@@ -49,6 +49,8 @@ npm run check
 ```
 
 Android 构建前运行 `npm run prepare:voice` 获取经过 SHA-256 固定的原生语音库、识别模型和本地 WebRTC AEC3 源码；二进制不进入 Git，许可、来源和资源清单随安装包提供。不播放本地固定唤醒答话，由现有 Agent 自主回应或继续倾听；未接入任何新云端语音服务。普通浏览器开发不需要下载模型，也不提供锁屏监听。
+
+正式手机 APK 仅打包 `arm64-v8a`；旧款 ARM32 手机和 x86/x86_64 模拟器不能安装此手机包。`plugins/withAndroidArchitectures.cjs` 在 Expo prebuild 时写入持久默认值，发布检查也拒绝额外架构。模拟器调试请显式使用 Gradle 参数 `-PreactNativeArchitectures=x86_64`，不要把调试架构带入正式手机包。裁剪只去掉不匹配设备的原生库，不删除语音模型、动作图片或业务功能。
 
 `check` 执行 TypeScript 和所有自动发现的有效回归测试。测试转译注册集中在 `scripts/lib/register-typescript.cjs`，不替代类型检查。按改动运行相关隔离浏览器脚本；脚本分类见 [开发工具说明](scripts/README.md)。
 
