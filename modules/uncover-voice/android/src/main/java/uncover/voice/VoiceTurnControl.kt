@@ -9,9 +9,11 @@ internal class VoiceTurnControl {
   private var failures = 0
   private var draft = ""
   @Volatile var hasDraft = false; private set
-  @Synchronized fun revise(text: String) {
-    if (text == draft) return
+  @Synchronized fun revise(text: String): String? {
+    if (text == draft) return null
+    val revoked = pending
     draft = text; pending = null; submitted = null; nextProbeAt = 0; failures = 0; hasDraft = text.isNotBlank()
+    return revoked
   }
   @Synchronized fun issue(id: String, now: Long): Boolean {
     if (!hasDraft || pending != null || now < nextProbeAt) return false
@@ -32,5 +34,9 @@ internal class VoiceTurnControl {
     if (pending == null || now < deadline) return false
     pending = null; submitted = null; failures++; nextProbeAt = if (failures < 2) now + 1200 else Long.MAX_VALUE; return true
   }
-  @Synchronized fun reset() { pending = null; submitted = null; hasDraft = false; draft = ""; failures = 0; nextProbeAt = 0 }
+  @Synchronized fun reset(): String? {
+    val revoked = pending
+    pending = null; submitted = null; hasDraft = false; draft = ""; failures = 0; nextProbeAt = 0
+    return revoked
+  }
 }

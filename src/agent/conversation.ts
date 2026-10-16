@@ -1,6 +1,9 @@
 import type { ChatAttachment } from '../integrations/chatFileTypes';
 import { attachmentMessage } from '../integrations/chatAttachments.mjs';
 import { toolLabel } from './toolLabels';
+import type { VoicePresentation } from '../voice/protocol';
+import { hasVoiceOutput } from '../voice/protocol';
+export type { VoicePresentation } from '../voice/protocol';
 
 export type ToolReceipt = { id?: string; name: string; args: Record<string, unknown>; result: unknown };
 export type ModelMessage = { role: string; content: unknown; tool_calls?: Array<{ id: string; type: 'function'; function: { name: string; arguments: string } }>; tool_call_id?: string };
@@ -8,10 +11,6 @@ export type AgentTurn = {
   id: string; requestId: string; role: 'user' | 'assistant'; source: 'text' | 'voice'; content: string;
   status: 'complete' | 'generating' | 'interrupted' | 'failed' | 'silent'; attachments?: ChatAttachment[];
   toolsUsed?: string[]; receipts?: ToolReceipt[]; spokenEnd?: number; deliveryError?: string;
-};
-export type VoicePresentation = {
-  phase: string; requestId?: string; segmentId?: string; text?: string; spokenEnd?: number;
-  speechStart?: number; speechEnd?: number; error?: string;
 };
 export type ConversationSnapshot = {
   turns: AgentTurn[]; generating: boolean; preview: { segmentId: string; text: string } | null;
@@ -45,7 +44,7 @@ export function createAgentConversation(storage: Storage) {
   const interrupt = (id?: string) => {
     const activeId = current?.id;
     if (current && (!id || id === activeId)) { const old = current; current = null; old.controller.abort(); }
-    const target = id || activeId || (snapshot.voice.phase === 'speaking' ? snapshot.voice.requestId : undefined);
+    const target = id || activeId || (hasVoiceOutput(snapshot.voice) ? snapshot.voice.requestId : undefined);
     if (target) update(target, turn => ({ ...turn, status: 'interrupted' }));
     publish({ generating: current !== null });
     persist();
@@ -136,9 +135,11 @@ export function createAgentConversation(storage: Storage) {
       update(handle.id, turn => ({ ...turn, content: error, status: 'failed' }));
       current = null; publish({ generating: false, error }); persist();
     },
-    preview(segmentId: string, text: string) { publish({ preview: text ? { segmentId, text } : null }); },
     voice(value: VoicePresentation) {
-      publish({ voice: value, ...(value.phase === 'wake' || value.phase === 'stopped' ? { preview: null } : {}) });
+      const preview = value.text !== undefined && value.segmentId !== undefined
+        ? value.text && value.segmentId ? { segmentId: value.segmentId, text: value.text } : null
+        : value.phase === 'wake' || value.phase === 'stopped' || value.phase === 'blocked' ? null : snapshot.preview;
+      publish({ voice: value, preview });
       if (value.requestId && value.spokenEnd !== undefined) {
         update(value.requestId, turn => ({ ...turn, spokenEnd: Math.max(turn.spokenEnd || 0, Math.min(turn.content.length, value.spokenEnd!)) }));
         persist();

@@ -5,9 +5,12 @@ const { createVoiceDialogue } = require('../src/voice/dialogue.ts');
 const { createAgentConversation } = require('../src/agent/conversation.ts');
 function dialogueHarness() {
   const calls = [], replies = []; let active = true;
+  const cancellations = new Map();
   const storage = new Map(); const conversation = createAgentConversation({ getItem: async key => storage.get(key) || null, setItem: async (key, value) => storage.set(key, value), removeItem: async key => storage.delete(key) });
-  const dependencies = { conversation, cancel: async () => {}, active: async () => active, reply: async (id, text) => { replies.push({ id, text }); }, subscribeReset: () => () => {}, turn: async input => { calls.push(input); return '真实模型回答'; } };
-  return { dependencies, calls, replies, stop: () => { active = false; }, task: createVoiceDialogue(dependencies) };
+  const dependencies = { conversation, cancel: async () => {}, active: async () => active, reply: async (id, text) => { replies.push({ id, text }); }, subscribeReset: () => () => {},
+    subscribeCancellation: (id, cancel) => { cancellations.set(id, cancel); return () => cancellations.delete(id); },
+    turn: async input => { calls.push(input); return '真实模型回答'; } };
+  return { dependencies, calls, replies, stop: () => { active = false; }, cancel: id => { active = false; cancellations.get(id)?.(); }, task: createVoiceDialogue(dependencies) };
 }
 test('voice and text use the same tool runner and repository instead of keyword music/meal routes', () => {
   const chat = read('src/features/chat/useChatSession.ts'), voice = read('src/voice/agentTask.ts'), runner = read('src/integrations/runAgentTurn.ts');
@@ -16,6 +19,12 @@ test('voice and text use the same tool runner and repository instead of keyword 
   assert.match(read('src/store/AppStore.tsx'), /const repository = appRepository/);
   assert.match(runner, /executePersonalTool/); assert.match(runner, /musicReceipts/); assert.match(runner, /applyMealOperations/);
   assert.doesNotMatch(voice, /includes\(['"]听歌|test\(.*听歌|includes\(['"]早餐/);
+});
+test('chat configuration hydration cannot act as a second owner of voice cancellation', () => {
+  const chat = read('src/features/chat/useChatSession.ts');
+  assert.match(chat, /subscribeConnectionChanges\(/);
+  assert.doesNotMatch(chat, /subscribeConnection\(|agentConversation\.interrupt\(\)/);
+  assert.match(chat, /if \(request\.current\).*agentConversation\.interrupt\(messageRequest\.current\?\.id\)/);
 });
 
 test('actual voice dialogue forwards unrestricted transcripts and shares context across native activations', async () => {
@@ -115,21 +124,44 @@ test('keep-listening never skips other authorized effects in the same tool batch
   assert.equal(receipts[0].result.pendingReview, true);
 });
 
-test('a late native ownership poll cannot cancel an answer after it transfers to playback or listening', async () => {
+test('native ownership handoff does not poll or cancel a synthesized or silent answer', async () => {
   const originalInterval = global.setInterval;
   try {
     for (const answer of ['我在。', '']) {
-      let poll, pending = false, resolvePoll, seen;
-      global.setInterval = callback => { poll = callback; return 0; };
+      let seen;
+      global.setInterval = () => { throw Error('Native snapshots own cancellation; polling is obsolete'); };
       const h = dialogueHarness();
-      h.dependencies.active = () => pending ? new Promise(resolve => { pending = false; resolvePoll = resolve; }) : Promise.resolve(true);
-      h.dependencies.turn = async input => { seen = input.controller; pending = true; poll(); return answer; };
-      h.dependencies.reply = async () => { resolvePoll(false); await new Promise(resolve => setImmediate(resolve)); };
+      h.dependencies.turn = async input => { seen = input.controller; return answer; };
+      h.dependencies.reply = async () => { h.stop(); await new Promise(resolve => setImmediate(resolve)); };
       await h.task({ requestId: 'handoff', sessionId: 's', text: 'BLACK' });
       assert.equal(seen.signal.aborted, false);
       assert.equal(h.dependencies.conversation.getSnapshot().turns[1].status, answer ? 'complete' : 'silent');
     }
   } finally { global.setInterval = originalInterval; }
+});
+test('a native interruption aborts model work immediately without waiting for an ownership poll', async () => {
+  const h = dialogueHarness(); let seen;
+  h.dependencies.turn = input => { seen = input.controller; return new Promise((_resolve, reject) => input.controller.signal.addEventListener('abort', () => reject(Error('cancelled')), { once: true })); };
+  const pending = h.task({ requestId: 'interrupt', sessionId: 's', text: '正在生成' });
+  await new Promise(resolve => setImmediate(resolve)); h.cancel('interrupt');
+  assert.equal(seen.signal.aborted, true); await pending;
+  assert.equal(h.replies.length, 0); assert.equal(h.dependencies.conversation.getSnapshot().turns[1].status, 'interrupted');
+});
+test('cancellation during initial storage hydration cannot persist an empty replacement history', async () => {
+  const saved = JSON.stringify({ version: 1, turns: [
+    { id: 'saved:user', requestId: 'saved', role: 'user', source: 'text', status: 'complete', content: '已有问题' },
+    { id: 'saved:assistant', requestId: 'saved', role: 'assistant', source: 'text', status: 'complete', content: '已有回答' },
+  ] });
+  let release, cancel; const writes = [], replies = [];
+  const conversation = createAgentConversation({ getItem: () => new Promise(resolve => { release = resolve; }), setItem: async (_key, value) => writes.push(value), removeItem: async () => {} });
+  const task = createVoiceDialogue({ conversation, active: async () => true, cancel: async () => {},
+    reply: async (...args) => replies.push(args), subscribeReset: () => () => {},
+    subscribeCancellation: (_id, callback) => { cancel = callback; return () => {}; },
+    turn: async () => { throw Error('Cancelled initialization must not call the model'); },
+  });
+  const pending = task({ requestId: 'initial', sessionId: 's', text: '尚未加载完的输入' });
+  await new Promise(resolve => setImmediate(resolve)); cancel(); release(saved); await pending; await conversation.flush();
+  assert.equal(writes.length, 0); assert.equal(replies.length, 0); assert.equal(conversation.getSnapshot().turns[0].content, '已有问题');
 });
 test('initialization completes before the first model turn and wake metadata does not invent identity', async () => {
   const h = dialogueHarness(); let ready = false;

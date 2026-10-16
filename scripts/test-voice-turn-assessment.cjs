@@ -3,10 +3,12 @@ require('./lib/register-typescript.cjs')();
 const { createVoiceTurnAssessor } = require('../src/voice/turnAssessment.ts');
 const { createAgentConversation } = require('../src/agent/conversation.ts');
 function harness(generate) {
-  const calls = [], decisions = []; let active = true;
+  const calls = [], decisions = []; let active = true, cancel;
   const conversation = createAgentConversation({ getItem: async () => null, setItem: async () => {}, removeItem: async () => {} });
-  const assess = createVoiceTurnAssessor({ conversation, active: async () => active, decide: async (...args) => decisions.push(args), generate: async (...args) => { calls.push(args); return generate(...args); } });
-  return { calls, decisions, conversation, assess, stop: () => { active = false; } };
+  const assess = createVoiceTurnAssessor({ conversation, active: async () => active, decide: async (...args) => decisions.push(args),
+    subscribeCancellation: (_id, callback) => { cancel = callback; return () => { cancel = undefined; }; },
+    generate: async (...args) => { calls.push(args); return generate(...args); } });
+  return { calls, decisions, conversation, assess, stop: () => { active = false; cancel?.(); } };
 }
 test('slow speech can wait then submit accumulated text without creating partial user turns or running tools', async () => {
   const h = harness(async messages => { const input = JSON.parse(messages.at(-1).content); return { action: input.text === '帮我播放' ? 'wait' : 'respond', reason: '根据累计语义判断' }; });

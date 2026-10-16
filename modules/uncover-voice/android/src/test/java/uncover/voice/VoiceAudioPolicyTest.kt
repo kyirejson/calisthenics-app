@@ -32,6 +32,15 @@ class VoiceAudioPolicyTest {
     repeat(4) { assertFalse(gate.observe(.9f)) }
     assertTrue(gate.observe(.9f)); gate.reset(); assertFalse(gate.observe(.9f))
   }
+  @Test fun aCandidateNeedsBothSustainedCleanSpeechAndTextBeforeHoldingPlayback() {
+    val gate = VoiceSpeechGate()
+    repeat(5) { gate.observe(.95f) }; assertFalse(gate.confirm("停"))
+    repeat(3) { assertFalse(gate.observe(.95f)) }
+    assertFalse(gate.confirm("…")); assertFalse(gate.confirm(""))
+    assertTrue(gate.confirm("停")); assertFalse(gate.confirm("停"))
+    gate.reset(); repeat(7) { gate.observe(.95f) }; gate.observe(.1f)
+    assertFalse(gate.confirm("噪声残留文字"))
+  }
   @Test fun renderClockAlignsReferenceAndNeverFeedsUnplayedAudioAfterStop() {
     val ref = VoiceRenderReference(); val clip = ShortArray(16000) { (it % 1000).toShort() }
     val id = ref.begin(clip, 1_000_000_000L)

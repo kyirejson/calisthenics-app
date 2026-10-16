@@ -72,7 +72,7 @@ internal class VoiceSpeaker(private val context: Context, private val reference:
     Log.i("BLACK-VoiceOutput", "request=$token outcome=${if (error == null) "completed" else "failed"}")
     player.stop(); releaseFocus(); callback?.invoke(error)
   }
-  fun speak(text: String, callback: (String?) -> Unit) {
+  fun speak(text: String, playback: (Boolean) -> Unit = {}, callback: (String?) -> Unit) {
     stop(); check(!closed) { "语音输出已关闭。" }; done = callback
     val token = generation; val queue = ArrayBlockingQueue<Packet>(2)
     val blocks = VoiceSpeechChunks.split(text, 40)
@@ -140,10 +140,15 @@ internal class VoiceSpeaker(private val context: Context, private val reference:
       }
     }
     renderWorker.execute {
+      var playing = false
       try {
         while (active()) {
           val packet = queue.poll(100, TimeUnit.MILLISECONDS)
           if (packet == null) {
+            if (playing) {
+              playing = false
+              handler.post { if (active()) playback(false) }
+            }
             // Only waiting for missing audio is timed. Player consumption has its own watchdog.
             work.timeout(SystemClock.elapsedRealtime())?.let { error(it) }
             continue
@@ -151,7 +156,10 @@ internal class VoiceSpeaker(private val context: Context, private val reference:
           if (packet is Packet.End) { handler.post { finish(token, packet.error) }; break }
           packet as Packet.Audio
           Log.i("BLACK-VoiceOutput", "request=$token event=playback_start range=${packet.start}:${packet.end}")
-          val played = player.play(packet.pcm, ::active) { handler.post { if (active()) progress(packet.start, packet.end, packet.start) } }
+          val played = player.play(packet.pcm, ::active) {
+            playing = true
+            handler.post { if (active()) { playback(true); progress(packet.start, packet.end, packet.start) } }
+          }
           if (active() && played != packet.pcm.size) error("音频未完整播放。")
           handler.post { if (active()) progress(packet.start, packet.end, packet.end) }
           Log.i("BLACK-VoiceOutput", "request=$token event=playback_end range=${packet.start}:${packet.end} played=$played/${packet.pcm.size}")
@@ -164,7 +172,7 @@ internal class VoiceSpeaker(private val context: Context, private val reference:
       }
     }
   }
-  fun duck(value: Boolean) { player.duck(value) }
+  fun hold(value: Boolean) { if (value) player.pause() else player.resume() }
   fun stop() {
     if (done != null) Log.i("BLACK-VoiceOutput", "request=$generation event=cancelled")
     generation++; done = null

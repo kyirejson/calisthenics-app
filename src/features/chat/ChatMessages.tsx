@@ -5,6 +5,7 @@ import { ActivityIndicator, Pressable, ScrollView, Text, View, useWindowDimensio
 
 import { AppGlyph } from '../../components/AppGlyph';
 import { ChatMark } from './ChatMark';
+import { voicePresentation } from '../../voice/presentation';
 import { LinearGradient } from 'expo-linear-gradient';
 
 import { MarkdownView } from '../../components/MarkdownView';
@@ -90,6 +91,7 @@ export function ChatMessages({
     following,
     openFiles,
   } = model;
+  const voiceUi = voicePresentation(voice);
   const renderUser = (turn: Turn, key: string) => (
     <View key={key} style={s.user}>
       {turn.content ? (
@@ -156,12 +158,12 @@ export function ChatMessages({
               <ChatMark size={28} />
               <Text style={s.assistantName}>DeepSeek</Text>
               {turn.status === 'interrupted' ? <Text style={s.busyText}>已打断</Text> :
-                voice.phase === 'speaking' && voice.requestId === turn.requestId ? <Text style={[s.busyText, { color: lime }]}>朗读中</Text> : null}
+                voiceUi.outputBusy && voice.requestId === turn.requestId ? <Text style={[s.busyText, { color: lime }]}>{voice.held ? '已暂停' : voiceUi.label}</Text> : null}
             </View>
             {turn.toolsUsed?.length ? (
               <Text style={s.toolText}>{turn.toolsUsed.join(' · ')}</Text>
             ) : null}
-            {turn.content ? turn.source === 'voice' && voice.phase === 'speaking' && voice.requestId === turn.requestId ?
+            {turn.content ? turn.source === 'voice' && voiceUi.speaking && voice.requestId === turn.requestId ?
               <Text testID="chat-spoken-answer" selectable style={{ color: '#F1F4EC', fontSize: 16, lineHeight: 27 }}>
                 {turn.content.slice(0, voice.speechStart || 0)}
                 <Text style={{ color: lime }}>{turn.content.slice(voice.speechStart || 0, voice.speechEnd || 0)}</Text>
@@ -171,11 +173,11 @@ export function ChatMessages({
           </View>
         ),
       )}
-      {preview ? <View testID="chat-voice-transcript" style={s.user}><Text selectable style={s.userText}>{preview.text}</Text><Text style={s.busyText}>正在听…</Text></View> : null}
-      {voice.phase === 'listening' && !preview ? (
+      {preview && voiceUi.showTranscript ? <View testID="chat-voice-transcript" style={s.user}><Text selectable style={s.userText}>{preview.text}</Text><Text style={s.busyText}>{voiceUi.label}</Text></View> : null}
+      {voice.phase !== 'stopped' && voice.phase !== 'unavailable' && !(preview && voiceUi.showTranscript) ? (
         <View style={s.busyRow}>
           <AppGlyph name="speaker" size={18} color={lime} />
-          <Text testID="chat-voice-status" accessibilityLiveRegion="polite" style={s.busyText}>正在听你说话…</Text>
+          <Text testID="chat-voice-status" accessibilityLiveRegion="polite" style={s.busyText}>{voiceUi.label}</Text>
         </View>
       ) : null}
     </ScrollView>

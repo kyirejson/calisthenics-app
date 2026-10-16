@@ -18,12 +18,15 @@ internal object VoiceState {
     UncoverVoiceModule.instance?.status()
   }
   fun clearError(context: Context) { preferences(context).edit().remove("error").remove("message").apply() }
-  fun snapshot(context: Context): JSONObject = JSONObject()
-    .put("name", "BLACK").put("enabled", enabled(context)).put("running", BlackVoiceService.instance?.listening == true)
-    .put("phase", BlackVoiceService.instance?.phase ?: "stopped")
+  fun snapshot(context: Context): JSONObject {
+    val session = BlackVoiceService.instance?.snapshot
+    return JSONObject()
+    .put("name", "BLACK").put("enabled", enabled(context)).put("running", session?.captureAvailable == true)
+    .put("phase", session?.phase ?: "stopped")
     .put("legacyVoiceData", VoiceLegacyData.exists(context))
     .put("assistant", VoiceInteractionService.isActiveService(context, ComponentName(context, BlackAssistantService::class.java)))
     .put("microphone", context.checkSelfPermission(Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED)
     .put("error", preferences(context).getString("error", null) ?: JSONObject.NULL)
     .put("message", preferences(context).getString("message", "喊 BLACK 唤醒，可直接说话；回答由现有 Agent 决定。") ?: "")
+  }
 }

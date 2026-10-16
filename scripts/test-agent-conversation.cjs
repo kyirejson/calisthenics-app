@@ -21,6 +21,12 @@ test('an ordinary interruption cancels generation immediately and blocks late te
   const b = await begin(c, 'new', 'voice'); c.delta(a, '不应显示的旧流'); assert.equal(c.complete(a, '不应播报'), false);
   assert.equal(c.getSnapshot().turns[1].content, '旧的回答'); assert.equal(c.getSnapshot().turns[1].status, 'interrupted'); assert.equal(c.valid(b), true);
 });
+test('a text panel cancelling its own retired request cannot interrupt the current voice turn', async () => {
+  const { conversation: c } = harness(); const old = await begin(c, 'typed', 'text'); c.complete(old, '文字回复。');
+  const voice = await begin(c, 'voice', 'voice'); c.delta(voice, '正在生成的语音回答'); c.interrupt('typed');
+  assert.equal(voice.controller.signal.aborted, false); assert.equal(c.valid(voice), true);
+  assert.equal(c.getSnapshot().generating, true); assert.equal(c.getSnapshot().turns[3].status, 'generating');
+});
 test('completed tools survive a cancellation race and are provided to the next model turn, not replayed', async () => {
   const { conversation: c } = harness(); const a = await begin(c, 'old', 'voice'); c.interrupt('old');
   c.receipt(a, { name: 'write_meal_records', args: { operationKey: 'meals_1' }, result: { ok: true, entryIds: ['saved'] } });

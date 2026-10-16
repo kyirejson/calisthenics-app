@@ -1,43 +1,115 @@
 package uncover.voice
 
-/** Accessed on the service's single event queue. Input and output are not mutually exclusive. */
-internal class VoiceSessionController {
-  enum class Input { WAKE, LISTENING, CANDIDATE, BLOCKED }
-  enum class Output { IDLE, GENERATING, PLAYING }
-  @Volatile var input = Input.WAKE; private set
-  @Volatile var output = Output.IDLE; private set
-  @Volatile var ready = false; private set
-  @Volatile var stopped = false; private set
-  @Volatile var turnId: String? = null; private set
-  @Volatile var generation = 0; private set
-  val phase get() = when {
-    stopped -> "stopped"
-    input == Input.BLOCKED -> "blocked"
-    !ready -> "starting"
-    output == Output.PLAYING -> "speaking"
-    output == Output.GENERATING -> "processing"
-    input == Input.WAKE -> "wake"
-    else -> "listening"
+/** The service's main event queue is the only writer. Workers read one immutable snapshot. */
+internal class VoiceSessionController(private val clock: () -> Long = { System.nanoTime() / 1_000_000 }) {
+  enum class Input { WAKE, LISTENING, CANDIDATE, HEARING, ASSESSING, BLOCKED }
+  enum class Output { IDLE, GENERATING, SYNTHESIZING, PLAYING, BUFFERING }
+  enum class Tick { NONE, RESUME, IDLE }
+  data class Snapshot(
+    val ready: Boolean = false, val stopped: Boolean = false,
+    val input: Input = Input.WAKE, val output: Output = Output.IDLE,
+    val turnId: String? = null, val generation: Int = 0,
+    val segmentId: String? = null, val draft: String = "", val held: Boolean = false,
+    val activityAt: Long = 0,
+  ) {
+    val captureAvailable get() = ready && !stopped && input != Input.BLOCKED
+    val phase get() = when {
+      stopped -> "stopped"
+      input == Input.BLOCKED -> "blocked"
+      !ready -> "starting"
+      held || output == Output.IDLE -> when (input) {
+        Input.WAKE -> "wake"
+        Input.ASSESSING -> "assessing"
+        else -> "listening"
+      }
+      output == Output.GENERATING -> "processing"
+      output == Output.SYNTHESIZING -> "synthesizing"
+      output == Output.BUFFERING -> "buffering"
+      else -> "speaking"
+    }
   }
-  fun ready() { if (!stopped) ready = true }
-  fun listen() { if (!stopped) input = Input.LISTENING }
-  fun candidate() { if (ready && !stopped) input = Input.CANDIDATE }
-  fun dismiss() { if (input == Input.CANDIDATE) input = Input.LISTENING }
-  fun idle() { if (output == Output.IDLE) input = Input.WAKE }
-  fun block(value: Boolean) { input = if (value) Input.BLOCKED else Input.WAKE }
-  fun begin(id: String): Int { check(ready && !stopped); generation++; turnId = id; input = Input.LISTENING; output = Output.GENERATING; return generation }
-  fun active(id: String) = ready && !stopped && input != Input.BLOCKED && turnId == id && output == Output.GENERATING
-  fun play(id: String): Boolean { if (!active(id)) return false; output = Output.PLAYING; return true }
+  @Volatile var snapshot = Snapshot(activityAt = clock()); private set
+  val phase get() = snapshot.phase
+  val turnId get() = snapshot.turnId
+  val generation get() = snapshot.generation
+  val stopped get() = snapshot.stopped
+  val captureAvailable get() = snapshot.captureAvailable
+  private fun owns(id: String, token: Int) = snapshot.captureAvailable && snapshot.turnId == id && snapshot.generation == token
+  private fun inputIsCurrent(segment: String) = captureAvailable && snapshot.segmentId == segment
+  fun ready() { if (!stopped) snapshot = snapshot.copy(ready = true, activityAt = clock()) }
+  fun listen(segment: String? = null) {
+    if (captureAvailable) snapshot = snapshot.copy(input = Input.LISTENING, segmentId = segment, draft = "", activityAt = clock())
+  }
+  fun candidate(segment: String) {
+    if (captureAvailable && snapshot.input != Input.WAKE) snapshot = snapshot.copy(input = Input.CANDIDATE, segmentId = segment, activityAt = clock())
+  }
+  fun partial(segment: String, text: String): Boolean {
+    if (!inputIsCurrent(segment)) return false
+    snapshot = snapshot.copy(draft = text, activityAt = clock()); return true
+  }
+  fun hearing(segment: String): Boolean {
+    if (!inputIsCurrent(segment)) return false
+    snapshot = snapshot.copy(input = Input.HEARING, held = turnId != null, activityAt = clock()); return true
+  }
+  fun assessing(segment: String): Boolean {
+    if (!inputIsCurrent(segment)) return false
+    snapshot = snapshot.copy(input = Input.ASSESSING, activityAt = clock()); return true
+  }
+  fun settle(segment: String, action: String): Boolean {
+    if (!inputIsCurrent(segment)) return false
+    // A semantic wait preserves the draft and the reversible hold, not a second chat turn.
+    snapshot = snapshot.copy(input = Input.LISTENING, held = action in listOf("wait", "noise") && snapshot.held,
+      draft = if (action == "ignore") "" else snapshot.draft, activityAt = clock()); return true
+  }
+  fun block(value: Boolean): String? {
+    if (stopped) return null
+    val cancelled = if (value) cancel() else null
+    snapshot = snapshot.copy(input = if (value) Input.BLOCKED else Input.LISTENING,
+      held = false, segmentId = null, draft = "", activityAt = clock())
+    return cancelled
+  }
+  fun begin(id: String): Int {
+    check(captureAvailable && turnId == null) { "A voice turn must be cancelled before replacement." }
+    snapshot = snapshot.copy(generation = generation + 1, turnId = id, input = Input.LISTENING,
+      output = Output.GENERATING, segmentId = null, draft = "", held = false, activityAt = clock())
+    return generation
+  }
+  fun active(id: String): Boolean {
+    val state = snapshot
+    return state.captureAvailable && state.turnId == id && state.output == Output.GENERATING
+  }
+  fun prepare(id: String): Boolean {
+    if (!active(id)) return false
+    snapshot = snapshot.copy(output = Output.SYNTHESIZING); return true
+  }
+  fun render(id: String, token: Int, playing: Boolean): Boolean {
+    if (!owns(id, token) || snapshot.output == Output.GENERATING) return false
+    snapshot = snapshot.copy(output = if (playing) Output.PLAYING else Output.BUFFERING); return true
+  }
   fun complete(id: String, token: Int): Boolean {
-    if (stopped || turnId != id || generation != token) return false
-    turnId = null; output = Output.IDLE; input = Input.LISTENING; return true
+    if (!owns(id, token)) return false
+    snapshot = snapshot.copy(turnId = null, output = Output.IDLE, held = false, activityAt = clock()); return true
   }
-  fun cancel(id: String? = null): String? {
+  fun cancel(id: String? = null, preserveInput: Boolean = false): String? {
     val current = turnId ?: return null
     if (id != null && id != current) return null
-    generation++; turnId = null; output = Output.IDLE
-    if (input != Input.BLOCKED) input = Input.LISTENING
+    snapshot = snapshot.copy(generation = generation + 1, turnId = null, output = Output.IDLE, held = false,
+      input = if (preserveInput || snapshot.input == Input.BLOCKED) snapshot.input else Input.LISTENING,
+      segmentId = if (preserveInput) snapshot.segmentId else null,
+      draft = if (preserveInput) snapshot.draft else "", activityAt = clock())
     return current
   }
-  fun stop() { cancel(); stopped = true; ready = false }
+  fun tick(): Tick {
+    if (!captureAvailable || clock() - snapshot.activityAt < 30000) return Tick.NONE
+    if (snapshot.held) {
+      snapshot = snapshot.copy(held = false, input = Input.LISTENING); return Tick.RESUME
+    }
+    if (turnId == null && snapshot.input != Input.WAKE) {
+      snapshot = snapshot.copy(input = Input.WAKE, segmentId = null, draft = ""); return Tick.IDLE
+    }
+    return Tick.NONE
+  }
+  fun stop() {
+    cancel(); snapshot = snapshot.copy(stopped = true, ready = false, held = false, segmentId = null, draft = "")
+  }
 }

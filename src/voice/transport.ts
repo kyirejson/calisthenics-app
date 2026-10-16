@@ -1,8 +1,8 @@
 import { Platform } from 'react-native';
 import { requireOptionalNativeModule } from 'expo';
-export type VoiceState = { enabled: boolean; running: boolean; phase: string; assistant: boolean; microphone: boolean; message: string; name: string; error?: string; legacyVoiceData?: boolean };
-export type VoiceEvent = { kind: 'status' | 'transcript' | 'interrupt' | 'speech' | 'playback_error'; sequence: number; phase: string;
-  serviceEpoch?: string; sessionId?: string; requestId?: string; segmentId?: string; text?: string; spokenEnd?: number; speechStart?: number; speechEnd?: number; error?: string };
+import type { VoiceEvent, VoicePhase } from './protocol';
+export type { VoiceEvent } from './protocol';
+export type VoiceState = { enabled: boolean; running: boolean; phase: VoicePhase; assistant: boolean; microphone: boolean; message: string; name: string; error?: string; legacyVoiceData?: boolean };
 type NativeVoice = {
   state(): Promise<string>; enable(value: boolean): Promise<void>; assistant(): Promise<void>;
   reply(requestId: string, text: string): Promise<void>; active(requestId: string): Promise<boolean>;

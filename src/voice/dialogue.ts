@@ -9,6 +9,7 @@ type Dependencies = {
     onDelta(delta: string, accumulated: string): void; onRoundStart(): void;
     onToolCall(call: { name: string; args: Record<string, unknown> }): void; onToolResult(call: ToolReceipt): void }): Promise<string>;
   subscribeReset(callback: () => void): () => void;
+  subscribeCancellation(id: string, callback: () => void): () => void;
 };
 /** Voice shares the existing chat context. Native session IDs own audio, not a second model history. */
 export function createVoiceDialogue(dependencies: Dependencies) {
@@ -18,19 +19,17 @@ export function createVoiceDialogue(dependencies: Dependencies) {
     if (!input || typeof input.requestId !== 'string' || typeof input.sessionId !== 'string' || typeof input.text !== 'string' || !input.text.trim() || running.has(input.requestId)) return;
     running.add(input.requestId);
     const controller = new AbortController();
+    let handle: TurnHandle | null = null;
     let delivered = false;
-    const cancelled = () => { conversation.interrupt(input.requestId); void dependencies.cancel(input.requestId).catch(() => {}); };
+    const cancelled = () => { if (handle) conversation.interrupt(input.requestId); void dependencies.cancel(input.requestId).catch(() => {}); };
     controller.signal.addEventListener('abort', cancelled, { once: true });
     const unlisten = dependencies.subscribeReset(() => controller.abort());
-    const timer = setInterval(() => { void dependencies.active(input.requestId).then(active => { if (!delivered && !active) controller.abort(); }).catch(() => { if (!delivered) controller.abort(); }); }, 500);
+    const unsubscribe = dependencies.subscribeCancellation(input.requestId, () => { if (!delivered) controller.abort(); });
     const deliver = async (text: string) => {
-      // Native transfers ownership from processing to playback/listening here.
-      // A previously issued active() poll may resolve false after this transfer;
-      // that is completion, not cancellation of the newly playing answer.
-      delivered = true; clearInterval(timer);
+      // Generation finishes here; the native coordinator continues to own synthesis/playback.
+      delivered = true;
       await dependencies.reply(input.requestId, text);
     };
-    let handle: TurnHandle | null = null;
     try {
       await dependencies.prepare?.();
       await conversation.load();
@@ -58,7 +57,7 @@ export function createVoiceDialogue(dependencies: Dependencies) {
         await deliver(message);
       } else controller.abort();
     } finally {
-      clearInterval(timer); unlisten(); controller.signal.removeEventListener('abort', cancelled); running.delete(input.requestId);
+      unsubscribe(); unlisten(); controller.signal.removeEventListener('abort', cancelled); running.delete(input.requestId);
     }
   };
 }

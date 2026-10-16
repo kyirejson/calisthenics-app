@@ -1,4 +1,4 @@
-import type { VoiceEvent } from './transport';
+import type { VoiceEvent } from './protocol';
 
 /** A retired native service cannot overwrite a newer service's UI snapshot. */
 export function createVoiceEventOrder() {

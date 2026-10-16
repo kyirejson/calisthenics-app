@@ -13,15 +13,13 @@ internal class VoicePcmPlayer(private val reference: VoiceRenderReference, priva
   private data class Pending(var id: Long, var pcm: ShortArray, var base: Int)
   private val track = AtomicReference<AudioTrack?>(null)
   private val paused = AtomicBoolean(false)
-  @Volatile private var volume = 1f
   private var writtenFrames = 0
   private var writeAhead = 1600
   private var startupThreshold = 0
   fun pause() { paused.set(true) }
   fun resume() { paused.set(false) }
-  fun duck(value: Boolean) { volume = if (value) .2f else 1f; track.get()?.setVolume(volume) }
   fun stop() {
-    paused.set(false); volume = 1f
+    paused.set(false)
     track.getAndSet(null)?.let { output -> synchronized(output) { runCatching { output.pause(); output.flush(); output.stop(); output.release() } } }
   }
   fun play(pcm: ShortArray, active: () -> Boolean, started: () -> Unit): Int {
@@ -39,7 +37,7 @@ internal class VoicePcmPlayer(private val reference: VoiceRenderReference, priva
       startupThreshold = if (Build.VERSION.SDK_INT >= 31) output.setStartThresholdInFrames(512) else output.bufferSizeInFrames
       writeAhead = maxOf(1600, startupThreshold)
       if (!active()) { output.release(); return 0 }
-      writtenFrames = 0; track.set(output); output.setVolume(volume); output.play()
+      writtenFrames = 0; track.set(output); output.play()
     }
     val target = output; val first = writtenFrames; var offset = 0; var played = 0; var announced = false
     val pending = mutableListOf<Pending>(); val stamp = AudioTimestamp()

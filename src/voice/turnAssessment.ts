@@ -6,6 +6,7 @@ type Dependencies = {
   active(id: string): Promise<boolean>;
   decide(id: string, action: VoiceTurnDecision | 'error', error?: string): Promise<void>;
   generate(messages: ModelMessage[], signal: AbortSignal): Promise<unknown>;
+  subscribeCancellation(id: string, callback: () => void): () => void;
 };
 const instruction = `你是 BLACK 的语音轮次判断器，只判断交互节奏，不回答问题，也不执行任何工具。
 输入是语音转写，不含原始音频，不含声纹认证。你不能自行声称确认了说话人身份或音色。
@@ -22,7 +23,7 @@ export function createVoiceTurnAssessor(dependencies: Dependencies) {
     if (!input?.requestId || typeof input.text !== 'string' || !input.text.trim() || running.has(input.requestId)) return;
     running.add(input.requestId);
     const controller = new AbortController();
-    const timer = setInterval(() => { void dependencies.active(input.requestId).then(active => { if (!active) controller.abort(); }).catch(() => controller.abort()); }, 300);
+    const unsubscribe = dependencies.subscribeCancellation(input.requestId, () => controller.abort());
     const timeout = setTimeout(() => controller.abort(), 14000);
     try {
       if (!await dependencies.active(input.requestId)) return;
@@ -33,10 +34,10 @@ export function createVoiceTurnAssessor(dependencies: Dependencies) {
       ], controller.signal) as { action?: unknown; reason?: unknown };
       if (controller.signal.aborted || !await dependencies.active(input.requestId)) return;
       if (!result || !['respond', 'wait', 'ignore'].includes(String(result.action)) || typeof result.reason !== 'string' || !result.reason.trim()) throw Error('语义判断未返回有效结果，输入已保留，请继续补充。');
-      clearInterval(timer); clearTimeout(timeout);
+      clearTimeout(timeout);
       await dependencies.decide(input.requestId, result.action as VoiceTurnDecision);
     } catch (error) {
       if (await dependencies.active(input.requestId).catch(() => false)) await dependencies.decide(input.requestId, 'error', controller.signal.aborted ? '语义判断超时，输入已保留；请继续补充一句话。' : error instanceof Error ? error.message : '语义判断失败，输入已保留。');
-    } finally { clearInterval(timer); clearTimeout(timeout); running.delete(input.requestId); }
+    } finally { unsubscribe(); clearTimeout(timeout); running.delete(input.requestId); }
   };
 }

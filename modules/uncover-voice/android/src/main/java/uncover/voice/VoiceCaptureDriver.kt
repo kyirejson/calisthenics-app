@@ -8,15 +8,20 @@ import java.util.concurrent.TimeUnit
 import kotlin.concurrent.thread
 
 internal data class CapturedVoiceFrame(val samples: ShortArray, val startNs: Long)
+internal interface VoiceFrameSource {
+  fun start(ready: () -> Unit)
+  fun next(): CapturedVoiceFrame?
+  fun stop()
+}
 
 /** AudioRecord never waits for KWS, ASR, synthesis or network callbacks. */
-internal class VoiceCaptureDriver(private val state: (Boolean) -> Unit, private val failure: (Throwable) -> Unit) {
+internal class VoiceCaptureDriver(private val state: (Boolean) -> Unit, private val failure: (Throwable) -> Unit) : VoiceFrameSource {
   private val frames = ArrayBlockingQueue<CapturedVoiceFrame>(32)
   @Volatile private var stopped = false
   @Volatile private var recorder: AudioRecord? = null
   @Volatile private var silenced = false
   private var worker: Thread? = null
-  fun start(ready: () -> Unit) {
+  override fun start(ready: () -> Unit) {
     if (stopped) return
     worker = thread(name = "BLACK-capture") {
       android.os.Process.setThreadPriority(android.os.Process.THREAD_PRIORITY_AUDIO)
@@ -60,6 +65,6 @@ internal class VoiceCaptureDriver(private val state: (Boolean) -> Unit, private 
       }
     }
   }
-  fun next(): CapturedVoiceFrame? = frames.poll(100, TimeUnit.MILLISECONDS)
-  fun stop() { stopped = true; runCatching { recorder?.stop() }; worker?.interrupt(); frames.clear() }
+  override fun next(): CapturedVoiceFrame? = frames.poll(100, TimeUnit.MILLISECONDS)
+  override fun stop() { stopped = true; runCatching { recorder?.stop() }; worker?.interrupt(); frames.clear() }
 }

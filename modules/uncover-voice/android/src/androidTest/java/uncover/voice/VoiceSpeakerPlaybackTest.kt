@@ -7,6 +7,7 @@ import android.test.InstrumentationTestCase
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.LinkedBlockingQueue
 
 /** Actual local model and Android audio backend; no system TTS fixture or enrolled identity. */
 @Suppress("DEPRECATION")
@@ -57,6 +58,149 @@ class VoiceSpeakerPlaybackTest : InstrumentationTestCase() {
       assertTrue(begun.await(3, TimeUnit.SECONDS)); player.pause(); assertFalse(done.await(200, TimeUnit.MILLISECONDS))
       player.resume(); assertTrue(done.await(4, TimeUnit.SECONDS)); assertEquals(16000, played)
     } finally { active.set(false); player.stop(); worker.join(1000) }
+  }
+  fun testCoordinatorWaitsForActualAudioAndResumesTheSameHeldAnswer() {
+    val generating = CountDownLatch(1); val release = CountDownLatch(1)
+    val began = CountDownLatch(1); val done = CountDownLatch(1)
+    var generated = 0; var spoken = 0; var error: String? = null
+    val controller = VoiceSessionController(); lateinit var speaker: VoiceSpeaker
+    val synth = object : VoiceSynthesizer {
+      override fun prepare() {}
+      override fun generate(text: String): VoicePcm {
+        generated++; generating.countDown(); check(release.await(5, TimeUnit.SECONDS))
+        return VoicePcm(ShortArray(24000) { (2000 * kotlin.math.sin(it * .1)).toInt().toShort() }, 16000)
+      }
+      override fun close() {}
+    }
+    instrumentation.runOnMainSync {
+      controller.ready(); controller.listen(); val token = controller.begin("answer"); controller.prepare("answer")
+      speaker = VoiceSpeaker(activity, VoiceRenderReference(), synth) { _, _, end -> spoken = end }
+      speaker.speak("完整回答。", playback = { playing ->
+        controller.render("answer", token, playing); if (playing) began.countDown()
+      }) { failure -> error = failure; controller.complete("answer", token); done.countDown() }
+    }
+    try {
+      assertTrue(generating.await(3, TimeUnit.SECONDS)); assertEquals("synthesizing", controller.phase)
+      assertFalse(began.await(150, TimeUnit.MILLISECONDS)); release.countDown(); assertTrue(began.await(5, TimeUnit.SECONDS))
+      instrumentation.runOnMainSync {
+        controller.candidate("input"); controller.partial("input", "对旁人说话"); controller.hearing("input")
+        speaker.hold(controller.snapshot.held)
+      }
+      assertEquals("listening", controller.phase); assertFalse(done.await(250, TimeUnit.MILLISECONDS))
+      instrumentation.runOnMainSync { controller.settle("input", "ignore"); speaker.hold(controller.snapshot.held) }
+      assertTrue(done.await(5, TimeUnit.SECONDS)); assertNull(error); assertEquals(1, generated)
+      assertEquals("完整回答。".length, spoken); assertEquals("listening", controller.phase)
+    } finally { release.countDown(); instrumentation.runOnMainSync { speaker.close() } }
+  }
+  fun testInputHoldBeforeFirstAudioSurvivesSynthesisHandoff() {
+    val release = CountDownLatch(1); val began = CountDownLatch(1); val done = CountDownLatch(1)
+    val controller = VoiceSessionController(); lateinit var speaker: VoiceSpeaker
+    var error: String? = null
+    val synth = object : VoiceSynthesizer {
+      override fun prepare() {}
+      override fun generate(text: String): VoicePcm {
+        check(release.await(5, TimeUnit.SECONDS)); return VoicePcm(ShortArray(8000) { 1200 }, 16000)
+      }
+      override fun close() {}
+    }
+    instrumentation.runOnMainSync {
+      controller.ready(); val token = controller.begin("answer")
+      controller.candidate("input"); controller.hearing("input"); controller.prepare("answer")
+      speaker = VoiceSpeaker(activity, VoiceRenderReference(), synth) { _, _, _ -> }
+      speaker.speak("回答。", playback = { playing ->
+        controller.render("answer", token, playing); if (playing) began.countDown()
+      }) { failure -> error = failure; controller.complete("answer", token); done.countDown() }
+      speaker.hold(controller.snapshot.held)
+    }
+    try {
+      release.countDown(); assertFalse(began.await(300, TimeUnit.MILLISECONDS)); assertEquals("listening", controller.phase)
+      instrumentation.runOnMainSync { controller.settle("input", "ignore"); speaker.hold(controller.snapshot.held) }
+      assertTrue(began.await(3, TimeUnit.SECONDS)); assertTrue(done.await(3, TimeUnit.SECONDS)); assertNull(error)
+    } finally { release.countDown(); instrumentation.runOnMainSync { speaker.close() } }
+  }
+  fun testPlaybackGapIsBufferingAndCancelledCallbacksCannotSpeakForANewTurn() {
+    val firstEnded = CountDownLatch(1); val buffering = CountDownLatch(1); val release = CountDownLatch(1); val done = CountDownLatch(1)
+    val controller = VoiceSessionController(); lateinit var speaker: VoiceSpeaker
+    var oldCompletions = 0; var error: String? = null; var staleState = 0
+    val synth = object : VoiceSynthesizer {
+      override fun prepare() {}
+      override fun generate(text: String): VoicePcm {
+        if (text == "后一句。") check(release.await(5, TimeUnit.SECONDS))
+        return VoicePcm(ShortArray(8000) { 1200 }, 16000)
+      }
+      override fun close() {}
+    }
+    instrumentation.runOnMainSync {
+      controller.ready(); val token = controller.begin("old"); controller.prepare("old")
+      speaker = VoiceSpeaker(activity, VoiceRenderReference(), synth) { _, _, end -> if (end == "前一句。".length) firstEnded.countDown() }
+      speaker.speak("前一句。后一句。", playback = { playing ->
+        if (!controller.render("old", token, playing)) staleState++
+        if (!playing) buffering.countDown()
+      }) { oldCompletions++ }
+    }
+    try {
+      assertTrue(firstEnded.await(3, TimeUnit.SECONDS)); assertTrue(buffering.await(3, TimeUnit.SECONDS)); assertEquals("buffering", controller.phase)
+      instrumentation.runOnMainSync {
+        controller.cancel(); speaker.stop(); val token = controller.begin("new"); controller.prepare("new")
+        speaker.speak("新回答。", playback = { controller.render("new", token, it) }) { failure -> error = failure; controller.complete("new", token); done.countDown() }
+      }
+      release.countDown(); assertTrue(done.await(5, TimeUnit.SECONDS)); assertNull(error)
+      assertEquals(0, oldCompletions); assertEquals(0, staleState); assertEquals("listening", controller.phase)
+    } finally { release.countDown(); instrumentation.runOnMainSync { speaker.close() } }
+  }
+  fun testRealRecognitionHoldsBeforeSemanticSubmissionAndPreservesSlowContinuation() {
+    // The actual AEC/VAD/ASR pipeline reads public synthesized speech, not a user microphone.
+    val synth = LocalVoiceSynthesizer(instrumentation.targetContext)
+    val clips = try {
+      synth.prepare(); VoiceEcho(512).use { resampler ->
+        listOf("等一下，我想先说一件事情。", "帮我播放我喜欢的歌曲。")
+          .map { synth.generate(it).let { pcm -> resampler.resample(pcm.samples, pcm.sampleRate) } }
+      }
+    } finally { synth.close() }
+    val frames = LinkedBlockingQueue<CapturedVoiceFrame>(); var frameIndex = 0L
+    val start = System.nanoTime()
+    fun feed(pcm: ShortArray) {
+      for (offset in pcm.indices step 512) {
+        val frame = ShortArray(512)
+        pcm.copyInto(frame, endIndex = minOf(offset + 512, pcm.size), startIndex = offset)
+        frames.add(CapturedVoiceFrame(frame, start + frameIndex++ * 32_000_000))
+      }
+    }
+    val ready = CountDownLatch(1); val firstProbe = CountDownLatch(1); val finished = CountDownLatch(1)
+    val heard = mutableListOf<String>(); val probes = mutableListOf<String>(); var failure: Throwable? = null
+    val order = mutableListOf<String>(); lateinit var engine: VoiceAudioEngine
+    val events = object : VoiceAudioEvents {
+      override fun ready() { ready.countDown() }
+      override fun armed(segment: String) {}
+      override fun partial(segment: String, text: String) { synchronized(heard) { heard.add(text) } }
+      override fun candidate(segment: String) { synchronized(order) { order.add("candidate") } }
+      override fun hearing(segment: String) { synchronized(order) { order.add("hearing") } }
+      override fun probe(segment: String, id: String, text: String, wake: Boolean, silenceMs: Long) {
+        synchronized(order) { order.add("probe") }; probes.add(text)
+        engine.decide(id, if (probes.size == 1) "wait" else "respond")
+      }
+      override fun revoked(id: String) {}
+      override fun utterance(text: String, wake: Boolean) { heard.add(text); finished.countDown() }
+      override fun settled(segment: String, action: String) { if (action == "wait") firstProbe.countDown() }
+      override fun assessmentError(message: String) { failure = IllegalStateException(message); finished.countDown(); firstProbe.countDown() }
+      override fun microphoneState(silenced: Boolean) {}
+      override fun failure(error: Throwable) { failure = error; ready.countDown(); finished.countDown(); firstProbe.countDown() }
+    }
+    engine = VoiceAudioEngine(instrumentation.targetContext, VoiceRenderReference(), events) { _, _ -> object : VoiceFrameSource {
+      override fun start(ready: () -> Unit) { ready() }
+      override fun next(): CapturedVoiceFrame? = frames.poll(100, TimeUnit.MILLISECONDS)
+      override fun stop() { frames.clear() }
+    } }
+    try {
+      engine.arm(); engine.start(); assertTrue(ready.await(30, TimeUnit.SECONDS)); assertNull(failure)
+      feed(ShortArray(16000)); feed(clips[0]); feed(ShortArray(32000))
+      assertTrue("First real recognition never reached semantic assessment: $heard", firstProbe.await(20, TimeUnit.SECONDS)); assertNull(failure)
+      assertEquals(1, probes.size); assertFalse(finished.await(150, TimeUnit.MILLISECONDS))
+      feed(clips[1]); feed(ShortArray(32000))
+      assertTrue("Continuation never committed: $heard", finished.await(20, TimeUnit.SECONDS)); assertNull(failure)
+      assertEquals(2, probes.size); assertTrue(probes[1].startsWith(probes[0])); assertTrue(probes[1].length > probes[0].length)
+      assertTrue("Speech was not held before semantic submission: $order", order.indexOf("hearing") in 0 until order.indexOf("probe"))
+    } finally { engine.stop() }
   }
   fun testBundledChineseModelActuallySynthesizesWithoutPhoneTts() {
     val synth = LocalVoiceSynthesizer(instrumentation.targetContext)

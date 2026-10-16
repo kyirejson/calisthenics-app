@@ -17,36 +17,54 @@ class BlackVoiceService : Service() {
     fun stop(context: Context) { instance?.stopCapture(); context.stopService(Intent(context, BlackVoiceService::class.java)) }
   }
   private val handler = Handler(Looper.getMainLooper())
-  private val controller = VoiceSessionController()
+  private val controller = VoiceSessionController(SystemClock::elapsedRealtime)
   private val serviceEpoch = UUID.randomUUID().toString()
   private var sequence = 0L
   private var sessionId = UUID.randomUUID().toString()
   private var engine: VoiceAudioEngine? = null
   private var speaker: VoiceSpeaker? = null
   private var lock: PowerManager.WakeLock? = null
-  private var segmentId = UUID.randomUUID().toString()
-  private var transcript = ""; private var spokenEnd = 0; private var speechStart = 0; private var speechEnd = 0
+  private var spokenEnd = 0; private var speechStart = 0; private var speechEnd = 0
   private var presentationError: String? = null
   private val reference = VoiceRenderReference()
   @Volatile private var presentation = "{\"kind\":\"status\",\"sequence\":0,\"phase\":\"starting\"}"
   private var pendingWake = false; private var audioEpoch = 0
   val phase get() = controller.phase
-  @Volatile var listening = false; private set
-  override fun onCreate() { super.onCreate(); instance = this }
+  val captureAvailable get() = controller.captureAvailable
+  internal val snapshot get() = controller.snapshot
+  private val pulse = object : Runnable {
+    override fun run() {
+      if (instance !== this@BlackVoiceService) return
+      when (controller.tick()) {
+        VoiceSessionController.Tick.IDLE -> { engine?.idle(); sessionId = UUID.randomUUID().toString(); publish() }
+        VoiceSessionController.Tick.RESUME -> publish()
+        else -> Unit
+      }
+      handler.postDelayed(this, 250)
+    }
+  }
+  override fun onCreate() { super.onCreate(); instance = this; handler.post(pulse) }
   override fun onBind(intent: Intent?): IBinder? = null
   internal fun dialogue() = presentation
-  private fun event(kind: String = "status", id: String? = controller.turnId, error: String? = null) {
+  private fun event(kind: String = "status", id: String? = controller.turnId, error: String? = null, text: String? = null, decisionId: String? = null) {
+    val state = controller.snapshot
     val data = mutableMapOf<String, Any>("kind" to kind, "sequence" to ++sequence, "serviceEpoch" to serviceEpoch,
-      "sessionId" to sessionId, "phase" to phase, "segmentId" to segmentId, "text" to transcript)
+      "sessionId" to sessionId, "phase" to state.phase, "segmentId" to (state.segmentId ?: ""), "text" to (text ?: state.draft),
+      "input" to state.input.name.lowercase(), "output" to state.output.name.lowercase(), "held" to state.held)
     if (id != null) data["requestId"] = id
+    if (decisionId != null) data["decisionId"] = decisionId
     (error ?: presentationError)?.let { data["error"] = it }
-    if (controller.output == VoiceSessionController.Output.PLAYING) {
+    if (controller.turnId != null) {
       data["spokenEnd"] = spokenEnd; data["speechStart"] = speechStart; data["speechEnd"] = speechEnd
     }
     presentation = JSONObject(data).toString(); UncoverVoiceModule.instance?.dialogue(data)
     UncoverVoiceModule.instance?.status()
   }
+  private fun syncOutput() {
+    speaker?.hold(controller.snapshot.held)
+  }
   private fun publish() {
+    syncOutput()
     event()
     (getSystemService(NOTIFICATION_SERVICE) as NotificationManager).notify(718, notification())
   }
@@ -55,7 +73,8 @@ class BlackVoiceService : Service() {
     val open = PendingIntent.getActivity(this, 718, packageManager.getLaunchIntentForPackage(packageName)!!, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
     return Notification.Builder(this, "black_voice").setSmallIcon(android.R.drawable.ic_btn_speak_now).setContentTitle("BLACK 语音对话")
       .setContentText(when (phase) {
-        "listening" -> "正在听你说话"; "processing" -> "正在处理你的请求"; "speaking" -> "正在回答"
+        "listening" -> "正在听你说话"; "assessing" -> "正在确认你的意思"; "processing" -> "正在处理你的请求"; "speaking" -> "正在回答"
+        "synthesizing" -> "正在准备语音"; "buffering" -> "正在准备后续语音"
         "blocked" -> "麦克风被系统静音或暂时被占用"; "starting" -> "正在准备内置语音"; else -> "本地监听 BLACK"
       }).setContentIntent(open).setOngoing(true).addAction(Notification.Action.Builder(null, "停止监听", stop).build()).build()
   }
@@ -77,29 +96,29 @@ class BlackVoiceService : Service() {
           if (error != null) { fail("local_synthesis_init", error); stopSelf(); return@prepare }
           engine = VoiceAudioEngine(this, reference, object : VoiceAudioEvents {
             override fun ready() = post {
-              listening = engine?.silenced != true; controller.ready(); controller.block(!listening); publish()
-              if (pendingWake && listening) { pendingWake = false; wake() }
+              controller.ready(); if (engine?.silenced == true) controller.block(true); publish()
+              if (pendingWake && captureAvailable) { pendingWake = false; wake() }
             }
-            override fun armed() = post { controller.listen(); publish() }
-            override fun partial(segment: String, text: String) = post { segmentId = segment; transcript = text; event("transcript", null) }
-            override fun candidate() = post {
-              controller.candidate(); speaker?.duck(true); event()
-              // A sound candidate never destroys the reply or leaves output suspended indefinitely.
-              handler.postDelayed({ if (epoch == audioEpoch) speaker?.duck(false) }, 1200)
+            override fun armed(segment: String) = post { controller.listen(segment); publish() }
+            override fun partial(segment: String, text: String) = post {
+              if (controller.partial(segment, text)) event("transcript", null)
             }
-            override fun probe(id: String, text: String, wake: Boolean, silenceMs: Long) = post {
+            override fun candidate(segment: String) = post { controller.candidate(segment); publish() }
+            override fun hearing(segment: String) = post { if (controller.hearing(segment)) publish() }
+            override fun probe(segment: String, id: String, text: String, wake: Boolean, silenceMs: Long) = post {
               if (!decisionActive(id)) return@post
+              controller.assessing(segment); publish()
               try { launch(id, text, wake, "decision", silenceMs) }
               catch (error: Exception) { engine?.decide(id, "error", error.message) }
             }
-            override fun accepted() = post { cancelCurrent(preserveInput = true) }
+            override fun revoked(id: String) = post { event("decision_cancelled", decisionId = id) }
             override fun utterance(text: String, wake: Boolean) = post { request(text, wake) }
-            override fun dismissed() = post { controller.dismiss(); speaker?.duck(false); event() }
+            override fun settled(segment: String, action: String) = post { if (controller.settle(segment, action)) publish() }
             override fun assessmentError(message: String) = post { fail("turn_decision_failed", message) }
-            override fun idle() = post { controller.idle(); sessionId = UUID.randomUUID().toString(); transcript = ""; speaker?.duck(false); publish() }
             override fun microphoneState(silenced: Boolean) = post {
-              cancelCurrent(); listening = !silenced; controller.block(silenced)
-              if (silenced) fail("microphone_silenced", "系统将麦克风静音或其他应用占用了输入。") else VoiceState.clearError(this@BlackVoiceService)
+              controller.block(silenced)?.let(::stopCancelledOutput); engine?.arm()
+              if (silenced) fail("microphone_silenced", "系统将麦克风静音或其他应用占用了输入。")
+              else { presentationError = null; VoiceState.clearError(this@BlackVoiceService) }
               publish()
             }
             override fun failure(error: Throwable) = post { fail("capture_or_recognition_failed", error.message ?: "本地输入失败。"); stopSelf() }
@@ -116,42 +135,48 @@ class BlackVoiceService : Service() {
   }
   internal fun wake() {
     if (!VoiceState.enabled(this)) return
-    if (!listening) { pendingWake = true; return }
+    if (!captureAvailable) { pendingWake = true; return }
+    cancelCurrent()
     engine?.arm(); controller.listen(); publish()
   }
-  internal fun decisionActive(id: String) = listening && engine?.decisionActive(id) == true && VoiceState.enabled(this)
+  internal fun decisionActive(id: String) = captureAvailable && engine?.decisionActive(id) == true && VoiceState.enabled(this)
   internal fun decide(id: String, action: String, error: String?) { engine?.decide(id, action, error) }
   private fun cancelCurrent(id: String? = null, preserveInput: Boolean = false) {
-    val cancelled = controller.cancel(id) ?: return
-    speaker?.stop(); event("interrupt", cancelled)
-    if (!preserveInput) engine?.listenAgain()
+    val cancelled = controller.cancel(id, preserveInput) ?: return
+    stopCancelledOutput(cancelled)
+    if (!preserveInput) engine?.arm()
     publish()
   }
+  private fun stopCancelledOutput(id: String) { speaker?.stop(); event("interrupt", id) }
   internal fun cancel(id: String?) { cancelCurrent(id) }
   private fun request(text: String, woke: Boolean) {
-    if (!listening || controller.stopped) return
+    if (!captureAvailable) return
+    cancelCurrent(preserveInput = true)
     presentationError = null; VoiceState.clearError(this)
     val id = "voice-" + UUID.randomUUID(); controller.begin(id)
-    spokenEnd = 0; transcript = text; event("transcript", id); publish(); engine?.beginReply()
+    spokenEnd = 0; speechStart = 0; speechEnd = 0; event("transcript", id, text = text); publish()
     try { launch(id, text, woke) }
-    catch (error: Exception) { controller.cancel(id); fail("agent_start_failed", error.message ?: "后台 Agent 未启动。"); engine?.afterReply(); publish() }
+    catch (error: Exception) { controller.cancel(id); fail("agent_start_failed", error.message ?: "后台 Agent 未启动。"); publish() }
   }
-  internal fun active(id: String) = listening && controller.active(id) && VoiceState.enabled(this)
+  internal fun active(id: String) = controller.active(id) && VoiceState.enabled(this)
   internal fun reply(id: String, text: String) {
     if (!active(id)) return
     val token = controller.generation
-    if (text.isBlank()) { controller.complete(id, token); engine?.afterReply(); transcript = ""; publish(); return }
-    if (!controller.play(id)) return
-    transcript = ""; publish()
-    runCatching { speaker!!.speak(text) { error ->
+    if (text.isBlank()) { controller.complete(id, token); publish(); return }
+    if (!controller.prepare(id)) return
+    publish()
+    runCatching { speaker!!.speak(text, playback = { playing ->
+      if (controller.render(id, token, playing)) publish()
+    }) { error ->
       if (controller.turnId != id || controller.generation != token) return@speak
       if (error != null) { event("playback_error", id, error); fail("local_output_failed", error) }
-      controller.complete(id, token); engine?.afterReply(); publish()
-    } }.onFailure { controller.complete(id, token); event("playback_error", id, it.message); fail("local_output_failed", it.message ?: "本地输出失败。"); engine?.afterReply(); publish() }
+      controller.complete(id, token); publish()
+    }; syncOutput() }.onFailure { controller.complete(id, token); event("playback_error", id, it.message); fail("local_output_failed", it.message ?: "本地输出失败。"); publish() }
   }
   private fun fail(code: String, message: String) { presentationError = message; VoiceState.error(this, code, message); event(error = message) }
-  private fun stopCapture() { audioEpoch++; listening = false; pendingWake = false; engine?.stop() }
+  private fun stopCapture() { audioEpoch++; pendingWake = false; engine?.stop() }
   override fun onDestroy() {
+    handler.removeCallbacks(pulse)
     cancelCurrent(); stopCapture(); controller.stop(); event()
     engine = null; speaker?.close(); speaker = null; reference.clear()
     lock?.let { if (it.isHeld) it.release() }; lock = null

@@ -3,13 +3,14 @@ import { isClearContextCommand } from './commands';
 import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { Keyboard, ScrollView } from 'react-native';
 import { loadConnection } from '../../integrations/credentials';
-import { subscribeConnection } from '../../integrations/connectionRuntime.mjs';
+import { subscribeConnectionChanges } from '../../integrations/connectionRuntime.mjs';
 import { useAppRepository } from '../../store/AppStore';
 import { runAgentTurn } from '../../integrations/runAgentTurn';
 import { releaseChatFile } from '../../integrations/chatFiles';
 import type { ChatAttachment } from '../../integrations/chatFileTypes';
 import { agentConversation, clearAgentContext, stopAgentReply } from '../../agent/runtime';
 import type { AgentTurn, TurnHandle } from '../../agent/conversation';
+import { voicePresentation } from '../../voice/presentation';
 export type Turn = AgentTurn;
 
 export function useChatSession({ visible, onClose }: { visible: boolean; onClose: () => void }) {
@@ -26,7 +27,10 @@ export function useChatSession({ visible, onClose }: { visible: boolean; onClose
   const { files, setFiles, filesRef, picking, pick, remove, retry } = useChatAttachments({ alive, locked, setError });
   useEffect(() => {
     alive.current = true;
-    const unsubscribe = subscribeConnection(() => { request.current?.abort(); agentConversation.interrupt(); });
+    const unsubscribe = subscribeConnectionChanges(() => {
+      // This panel owns its typed request only; native voice owns its own cancellation.
+      if (request.current) { request.current.abort(); agentConversation.interrupt(messageRequest.current?.id); }
+    });
     void Promise.all([loadConnection(), agentConversation.load()]).then(() => {
       if (alive.current) setReady(true);
     }).catch(e => { if (alive.current) setError(e instanceof Error ? e.message : '无法读取连接或对话配置。'); });
@@ -87,7 +91,7 @@ export function useChatSession({ visible, onClose }: { visible: boolean; onClose
       if (request.current === controller) { locked.current = false; request.current = null; }
     }
   };
-  const busy = conversation.generating || conversation.voice.phase === 'speaking';
+  const busy = conversation.generating || voicePresentation(conversation.voice).outputBusy;
   return { visible, onClose, turns: conversation.turns, voice: conversation.voice, preview: conversation.preview,
     draft, setDraft, busy, inputBusy: locked.current, error: error || conversation.error || conversation.voice.error || '', contextNotice,
     settingsOpen, setSettingsOpen, memoryOpen, setMemoryOpen, filesOpen, setFilesOpen,
