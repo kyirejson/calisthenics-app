@@ -95,6 +95,177 @@ class VoiceSpeakerPlaybackTest : InstrumentationTestCase() {
     try { assertTrue(done.await(5, TimeUnit.SECONDS)); assertTrue(error!!.contains("fixture synthesis failure")); assertFalse(error!!.contains("-4")) }
     finally { instrumentation.runOnMainSync { speaker.close() } }
   }
+  fun testLaterSynthesisFailureDoesNotCutOffAlreadyPlayingSentence() {
+    val began = CountDownLatch(1); val done = CountDownLatch(1)
+    var spoken = 0; var completions = 0; var error: String? = null
+    val first = "第一句需要完整播放。"
+    val synth = object : VoiceSynthesizer {
+      override fun prepare() {}
+      override fun generate(text: String): VoicePcm {
+        if (text == first) return VoicePcm(ShortArray(24000) { (2000 * kotlin.math.sin(it * .1)).toInt().toShort() }, 16000)
+        check(began.await(5, TimeUnit.SECONDS)) { "first sentence did not start" }
+        throw IllegalStateException("later segment failed")
+      }
+      override fun close() {}
+    }
+    lateinit var speaker: VoiceSpeaker
+    instrumentation.runOnMainSync {
+      speaker = VoiceSpeaker(activity, VoiceRenderReference(), synth) { _, _, end ->
+        spoken = end; if (end == 0) began.countDown()
+      }
+      speaker.speak(first + "第二句合成失败。") { failure -> error = failure; completions++; done.countDown() }
+    }
+    try {
+      assertTrue(done.await(8, TimeUnit.SECONDS)); assertTrue(error!!.contains("later segment failed"))
+      assertEquals(1, completions); assertEquals("Failure in a later segment cut off the first sentence", first.length, spoken)
+    } finally { instrumentation.runOnMainSync { speaker.close() } }
+  }
+  fun testBundledModelReadsParagraphsAndMarkdownToTheEnd() {
+    val text = "**我在。**\n\n## 今日训练\n可以开始训练。\n\n今天跑了三公里。\n**"
+    val done = CountDownLatch(1); var error: String? = null; var completions = 0; var spoken = 0
+    lateinit var speaker: VoiceSpeaker
+    instrumentation.runOnMainSync {
+      speaker = VoiceSpeaker(activity, VoiceRenderReference()) { _, _, end -> spoken = end }
+      speaker.speak(text) { failure -> error = failure; completions++; done.countDown() }
+    }
+    try {
+      assertTrue(done.await(90, TimeUnit.SECONDS)); assertNull(error)
+      assertEquals(1, completions); assertEquals(text.length, spoken)
+    } finally { instrumentation.runOnMainSync { speaker.close() } }
+  }
+  fun testFormattingOnlyReplyDoesNotCallSynthesis() {
+    val done = CountDownLatch(1); var calls = 0; var error: String? = null
+    val synth = object : VoiceSynthesizer {
+      override fun prepare() {}
+      override fun generate(text: String): VoicePcm { calls++; error("Formatting must not reach synthesis") }
+      override fun close() {}
+    }
+    lateinit var speaker: VoiceSpeaker
+    instrumentation.runOnMainSync {
+      speaker = VoiceSpeaker(activity, VoiceRenderReference(), synth) { _, _, _ -> }
+      speaker.speak("\n**\n🎵\n") { failure -> error = failure; done.countDown() }
+    }
+    try { assertTrue(done.await(3, TimeUnit.SECONDS)); assertNull(error); assertEquals(0, calls) }
+    finally { instrumentation.runOnMainSync { speaker.close() } }
+  }
+  fun testTransientEmptyAudioRetriesOnlyTheUnplayedSegment() {
+    val done = CountDownLatch(1); var calls = 0; var error: String? = null; var spoken = 0
+    val synth = object : VoiceSynthesizer {
+      override fun prepare() {}
+      override fun generate(text: String): VoicePcm {
+        calls++
+        if (calls == 1) throw VoiceSynthesisException("synthesis_empty", "empty fixture")
+        return VoicePcm(ShortArray(4000) { 1000 }, 16000)
+      }
+      override fun close() {}
+    }
+    lateinit var speaker: VoiceSpeaker
+    instrumentation.runOnMainSync {
+      speaker = VoiceSpeaker(activity, VoiceRenderReference(), synth) { _, _, end -> spoken = end }
+      speaker.speak("测试。") { failure -> error = failure; done.countDown() }
+    }
+    try { assertTrue(done.await(5, TimeUnit.SECONDS)); assertNull(error); assertEquals(2, calls); assertEquals(3, spoken) }
+    finally { instrumentation.runOnMainSync { speaker.close() } }
+  }
+  fun testRepeatedEmptyAudioReportsTheSegmentAndStopsRetrying() {
+    val done = CountDownLatch(1); var calls = 0; var error: String? = null; var spoken = 0
+    val synth = object : VoiceSynthesizer {
+      override fun prepare() {}
+      override fun generate(text: String): VoicePcm { calls++; throw VoiceSynthesisException("synthesis_empty", "empty fixture") }
+      override fun close() {}
+    }
+    lateinit var speaker: VoiceSpeaker
+    instrumentation.runOnMainSync {
+      speaker = VoiceSpeaker(activity, VoiceRenderReference(), synth) { _, _, end -> spoken = end }
+      speaker.speak("测试。") { failure -> error = failure; done.countDown() }
+    }
+    try {
+      assertTrue(done.await(5, TimeUnit.SECONDS)); assertEquals(2, calls); assertEquals(0, spoken)
+      assertTrue(error!!.contains("1/1")); assertTrue(error!!.contains("synthesis_empty")); assertTrue(error!!.contains("已重试 1 次"))
+    } finally { instrumentation.runOnMainSync { speaker.close() } }
+  }
+  fun testInitializationFailureIsNotReportedAsEmptyAudioOrSegmentZero() {
+    val done = CountDownLatch(1); var error: String? = null
+    val synth = object : VoiceSynthesizer {
+      override fun prepare() { throw IllegalStateException("initialization fixture failure") }
+      override fun generate(text: String): VoicePcm = error("Failed initialization must not generate")
+      override fun close() {}
+    }
+    lateinit var speaker: VoiceSpeaker
+    instrumentation.runOnMainSync {
+      speaker = VoiceSpeaker(activity, VoiceRenderReference(), synth) { _, _, _ -> }
+      speaker.speak("测试。") { failure -> error = failure; done.countDown() }
+    }
+    try {
+      assertTrue(done.await(5, TimeUnit.SECONDS)); assertTrue(error!!.contains("synthesis_prepare_failed"))
+      assertFalse(error!!.contains("0/1")); assertFalse(error!!.contains("synthesis_empty"))
+    } finally { instrumentation.runOnMainSync { speaker.close() } }
+  }
+  fun testHealthyPlaybackDoesNotExpireWhileLaterAudioIsBeingPrepared() {
+    val done = CountDownLatch(1); var error: String? = null; var spoken = 0
+    val synth = object : VoiceSynthesizer {
+      override fun prepare() {}
+      override fun generate(text: String): VoicePcm {
+        if (text == "后一句。") Thread.sleep(600)
+        return VoicePcm(ShortArray(16000) { 1000 }, 16000)
+      }
+      override fun close() {}
+    }
+    lateinit var speaker: VoiceSpeaker
+    instrumentation.runOnMainSync {
+      speaker = VoiceSpeaker(activity, VoiceRenderReference(), synth, outputTimeoutMs = 300) { _, _, end -> spoken = end }
+      speaker.speak("前一句。后一句。") { failure -> error = failure; done.countDown() }
+    }
+    try { assertTrue(done.await(6, TimeUnit.SECONDS)); assertNull(error); assertEquals(8, spoken) }
+    finally { instrumentation.runOnMainSync { speaker.close() } }
+  }
+  fun testCancelledNativeResultCannotSpeakOrCompleteTheReplacement() {
+    val entered = CountDownLatch(1); val release = CountDownLatch(1); val done = CountDownLatch(1)
+    var oldCompletions = 0; var error: String? = null; var spoken = 0
+    val synth = object : VoiceSynthesizer {
+      override fun prepare() {}
+      override fun generate(text: String): VoicePcm {
+        if (text == "旧回答。") { entered.countDown(); check(release.await(5, TimeUnit.SECONDS)) }
+        return VoicePcm(ShortArray(4000) { 1000 }, 16000)
+      }
+      override fun close() {}
+    }
+    lateinit var speaker: VoiceSpeaker
+    instrumentation.runOnMainSync {
+      speaker = VoiceSpeaker(activity, VoiceRenderReference(), synth) { _, _, end -> spoken = end }
+      speaker.speak("旧回答。") { oldCompletions++ }
+    }
+    try {
+      assertTrue(entered.await(5, TimeUnit.SECONDS))
+      instrumentation.runOnMainSync { speaker.speak("新回答。") { failure -> error = failure; done.countDown() } }
+      release.countDown()
+      assertTrue(done.await(5, TimeUnit.SECONDS)); assertNull(error); assertEquals(0, oldCompletions); assertEquals(4, spoken)
+    } finally { release.countDown(); instrumentation.runOnMainSync { speaker.close() } }
+  }
+  fun testQueuedAndRunningTimeoutsHaveDifferentErrors() {
+    val entered = CountDownLatch(1); val release = CountDownLatch(1)
+    val firstDone = CountDownLatch(1); val nextDone = CountDownLatch(1)
+    var firstError: String? = null; var nextError: String? = null; var spoken = 0
+    val synth = object : VoiceSynthesizer {
+      override fun prepare() {}
+      override fun generate(text: String): VoicePcm {
+        entered.countDown(); check(release.await(8, TimeUnit.SECONDS))
+        return VoicePcm(ShortArray(4000) { 1000 }, 16000)
+      }
+      override fun close() {}
+    }
+    lateinit var speaker: VoiceSpeaker
+    instrumentation.runOnMainSync {
+      speaker = VoiceSpeaker(activity, VoiceRenderReference(), synth, outputTimeoutMs = 700) { _, _, end -> spoken = end }
+      speaker.speak("正在合成。") { error -> firstError = error; firstDone.countDown() }
+    }
+    try {
+      assertTrue(entered.await(5, TimeUnit.SECONDS)); assertTrue(firstDone.await(4, TimeUnit.SECONDS))
+      assertTrue(firstError!!.contains("synthesis_timeout"))
+      instrumentation.runOnMainSync { speaker.speak("排队等待。") { error -> nextError = error; nextDone.countDown() } }
+      assertTrue(nextDone.await(4, TimeUnit.SECONDS)); assertTrue(nextError!!.contains("synthesis_queue_timeout")); assertEquals(0, spoken)
+    } finally { release.countDown(); instrumentation.runOnMainSync { speaker.close() } }
+  }
   fun testProductionEchoJniPreservesIndependentInputAndResamples() {
     VoiceEcho(512).use { echo ->
       var power = 0.0
@@ -144,18 +315,23 @@ class VoiceSpeakerPlaybackTest : InstrumentationTestCase() {
       }
     }
     val echoRatio = echoOutput / echoInput
-    var nearGain = 0.0
-    // Alignment includes AEC's fixed internal framing latency. Measure the
-    // retained independent speech, not just residual echo energy in the output.
-    for (delay in 0..1024 step 16) {
-      var cross = 0.0; var power = 0.0
-      for (i in 300 * size until near.size) {
-        cross += output[i] * 32768.0 * near[i - delay]
-        power += near[i - delay].toDouble() * near[i - delay]
+    fun nearGain(step: Int): Double {
+      var gain = 0.0
+      // Alignment includes AEC's fixed internal framing latency. Measure the
+      // retained independent speech, not just residual echo energy in the output.
+      for (delay in 0..1024 step step) {
+        var cross = 0.0; var power = 0.0
+        for (i in 300 * size until near.size) {
+          cross += output[i] * 32768.0 * near[i - delay]
+          power += near[i - delay].toDouble() * near[i - delay]
+        }
+        if (power > 0) gain = maxOf(gain, cross / power)
       }
-      if (power > 0) nearGain = maxOf(nearGain, cross / power)
+      return gain
     }
-    android.util.Log.i("BLACK-EchoTest", "speech echo energy ratio=$echoRatio; double-talk near gain=$nearGain")
+    // Finer alignment is diagnostic only: do not loosen the original acceptance assertion.
+    val nearGain = nearGain(16); val sampleAlignedGain = nearGain(1)
+    android.util.Log.i("BLACK-EchoTest", "speech echo energy ratio=$echoRatio; double-talk near gain=$nearGain; sample-aligned gain=$sampleAlignedGain")
     assertTrue("Delayed echo was not reduced: $echoRatio", echoRatio < .2)
     assertTrue("Independent near-end speech was suppressed: $nearGain", nearGain > .2)
   }

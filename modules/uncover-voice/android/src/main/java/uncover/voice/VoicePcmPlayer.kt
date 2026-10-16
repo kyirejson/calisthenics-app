@@ -21,7 +21,7 @@ internal class VoicePcmPlayer(private val reference: VoiceRenderReference, priva
   fun resume() { paused.set(false) }
   fun duck(value: Boolean) { volume = if (value) .2f else 1f; track.get()?.setVolume(volume) }
   fun stop() {
-    paused.set(false)
+    paused.set(false); volume = 1f
     track.getAndSet(null)?.let { output -> synchronized(output) { runCatching { output.pause(); output.flush(); output.stop(); output.release() } } }
   }
   fun play(pcm: ShortArray, active: () -> Boolean, started: () -> Unit): Int {

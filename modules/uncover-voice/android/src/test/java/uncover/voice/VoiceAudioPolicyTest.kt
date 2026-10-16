@@ -62,6 +62,7 @@ class VoiceAudioPolicyTest {
   @Test fun speechChunksPreferSentencesButKeepEveryCharacter() {
     val text = "我已记录早餐。现在可以开始训练！还有后续内容😀"
     val chunks = VoiceSpeechChunks.split(text, 160)
-    assertEquals("我已记录早餐。", chunks.first()); assertEquals(text, chunks.joinToString(""))
+    assertEquals("我已记录早餐。", chunks.first().text)
+    assertEquals(text, chunks.joinToString("") { text.substring(it.start, it.end) })
   }
 }
