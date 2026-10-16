@@ -22,12 +22,18 @@ for (const marker of ['UncoverDevice', 'read_phone_status', 'find_apps', 'open_a
   assert.ok(bundle.some(value => value.includes(Buffer.from(marker)) || value.includes(Buffer.from(marker, 'utf16le'))), 'Missing embedded phone Agent feature: ' + marker);
 assert.ok(entries['assets/phone-control-notice.txt'], 'Missing local OCR disclosure');
 assert.ok(names.some(name => /assets\/.+(chinese|ocr|text_recognition)/i.test(name)), 'Missing bundled offline OCR resources');
-const sdk = process.env.ANDROID_HOME || 'D:/UncoverBuildTools/android-sdk';
+const sdk = [process.env.ANDROID_HOME, process.env.ANDROID_SDK_ROOT, 'D:/UncoverBuildTools/android-sdk']
+  .find(value => value && fs.existsSync(path.join(value, 'build-tools')));
+assert.ok(sdk, 'Set ANDROID_HOME to an installed Android SDK for artifact inspection');
 const tools = fs.readdirSync(path.join(sdk, 'build-tools')).filter(name => fs.existsSync(path.join(sdk, 'build-tools', name, 'aapt.exe'))).sort().at(-1);
 const aapt = path.join(sdk, 'build-tools', tools, 'aapt.exe');
 const xml = execFileSync(aapt, ['dump', 'xmltree', file, 'AndroidManifest.xml'], { encoding: 'utf8', windowsHide: true });
 for (const marker of ['uncover.device.PhoneExecutionService', 'uncover.music.MusicAccessibilityService', 'uncover.phone_control', 'android.intent.category.LAUNCHER']) assert.ok(xml.includes(marker), 'Missing phone manifest wiring: ' + marker);
 assert.ok(!xml.includes('android.permission.QUERY_ALL_PACKAGES'), 'Unnecessary all-package permission shipped');
-const access = execFileSync(aapt, ['dump', 'xmltree', file, 'res/xml/uncover_music_accessibility.xml'], { encoding: 'utf8', windowsHide: true });
+// Release optimization renames ZIP resources. Resolve the actual path from the resource table.
+const table = execFileSync(aapt, ['dump', '--values', 'resources', file], { encoding: 'utf8', windowsHide: true, maxBuffer: 32 * 1024 * 1024 });
+const accessPath = table.match(/^\s*resource [^\r\n]*:xml\/uncover_music_accessibility:[^\r\n]*\r?\n\s*\(string(?:8|16)?\)\s*"([^"]+)"/m)?.[1];
+assert.ok(accessPath && names.includes(accessPath), 'Accessibility configuration has no packaged resource-table target');
+const access = execFileSync(aapt, ['dump', 'xmltree', file, accessPath], { encoding: 'utf8', windowsHide: true });
 assert.match(access, /canTakeScreenshot.*0xffffffff/); assert.doesNotMatch(access, /packageNames/);
 console.log('Phone APK includes dynamic all-launchable-app discovery, real shared UI execution, independent opt-in, operation journal/cancellation, local-only OCR and all seven model tools; ARM64 only, no isolated test fixtures. Real WeChat delivery/maps routes still require actual-account/device acceptance.');
