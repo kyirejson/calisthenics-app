@@ -6,6 +6,7 @@ import { ActivityIndicator, Pressable, ScrollView, Text, View, useWindowDimensio
 import { AppGlyph } from '../../components/AppGlyph';
 import { ChatMark } from './ChatMark';
 import { voicePresentation } from '../../voice/presentation';
+import { AGENT_NAME } from '../../agent/identity.mjs';
 import { LinearGradient } from 'expo-linear-gradient';
 
 import { MarkdownView } from '../../components/MarkdownView';
@@ -128,7 +129,7 @@ export function ChatMessages({
         <View style={[s.welcome, compact && s.welcomeCompact]}>
           {!compact ? <><LinearGradient pointerEvents="none" colors={['#202C1B', '#121A17', '#0D1114']} style={s.welcomeGlow} />
           <View style={s.welcomeSymbol}><ChatMark size={88} /></View>
-          <Text style={s.eyebrow}>UNCOVER AI</Text></> : null}
+          <Text style={s.eyebrow}>{AGENT_NAME} · UNCOVER</Text></> : null}
           <Text style={[s.welcomeTitle, compact && s.welcomeTitleCompact]}>{compact ? '把训练问题，聊明白。' : '把训练问题，\n聊明白。'}</Text>
           {!compact ? <Text style={s.welcomeDescription}>训练、饮食、动作进阶，也可以上传资料一起讨论。</Text> : null}
           <View style={[s.suggestions, compact && s.suggestionsCompact]}>
@@ -156,7 +157,7 @@ export function ChatMessages({
           <View key={turn.id} style={s.assistant} testID={turn.status === 'generating' ? 'chat-streaming-answer' : undefined}>
             <View style={s.assistantHeader}>
               <ChatMark size={28} />
-              <Text style={s.assistantName}>DeepSeek</Text>
+              <Text style={s.assistantName}>{AGENT_NAME}</Text>
               {turn.status === 'interrupted' ? <Text style={s.busyText}>已打断</Text> :
                 voiceUi.outputBusy && voice.requestId === turn.requestId ? <Text style={[s.busyText, { color: lime }]}>{voice.held ? '已暂停' : voiceUi.label}</Text> : null}
             </View>

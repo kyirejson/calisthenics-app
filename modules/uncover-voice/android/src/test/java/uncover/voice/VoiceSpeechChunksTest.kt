@@ -34,12 +34,33 @@ class VoiceSpeechChunksTest {
     for (text in listOf(" \r\n\t", "**\n__\n```\n", "😊\n🎵", "。？！")) assertTrue(VoiceSpeechChunks.split(text, 40).isEmpty())
   }
   @Test fun keepsChineseEnglishNumbersAndNonBmpLetters() {
-    val text = "BLACK：第 2 组，20 次；RIR 2。\n𠮷野家，Ⅳ级，②次。"
+    val text = "MAX：第 2 组，20 次；RIR 2。\n𠮷野家，Ⅳ级，②次。"
     val blocks = VoiceSpeechChunks.split(text, 40)
     assertEquals(text, blocks.joinToString("") { text.substring(it.start, it.end) })
-    assertEquals(listOf("BLACK：第 2 组，20 次；", "RIR 2。", "𠮷野家，Ⅳ级，②次。"), blocks.map { it.text })
+    assertEquals(listOf("MAX：第 2 组，20 次；", "RIR 2。", "𠮷野家，Ⅳ级，②次。"), blocks.map { it.text })
   }
   @Test fun malformedMarkupCannotRemoveTheAnswer() {
     assertEquals("未闭合的文字", VoiceSpeechChunks.split("**未闭合的文字", 40).single().text)
+  }
+  @Test fun longSentencesPreferClauseBoundariesInsteadOfHardCuttingFortyCharacters() {
+    val clause = "先保持动作稳定再逐步增加训练次数，"
+    val text = clause.repeat(5) + "最后充分休息。"
+    val blocks = VoiceSpeechChunks.split(text, 40)
+    assertEquals(text, blocks.joinToString("") { it.text })
+    assertTrue(blocks.dropLast(1).all { it.text.endsWith("，") })
+    assertTrue(blocks.all { it.text.length <= 40 })
+  }
+  @Test fun wordBoundariesKeepEnglishNumbersAndUnitsTogetherWhenAvailable() {
+    val text = "Please keep your pace steady at 5 minutes per kilometre and relax your shoulders."
+    val blocks = VoiceSpeechChunks.split(text, 40)
+    assertEquals(text, blocks.joinToString("") { text.substring(it.start, it.end) })
+    assertTrue(blocks.dropLast(1).all { text[it.end - 1].isWhitespace() })
+    assertTrue(blocks.all { it.text.length <= 40 })
+  }
+  @Test fun sentenceClosingQuotesStayWithTheSpokenSentence() {
+    val text = "他说：“我在。”接下来继续说。"
+    val blocks = VoiceSpeechChunks.split(text, 64)
+    assertEquals(listOf("他说：“我在。”", "接下来继续说。"), blocks.map { it.text })
+    assertEquals(text, blocks.joinToString("") { text.substring(it.start, it.end) })
   }
 }

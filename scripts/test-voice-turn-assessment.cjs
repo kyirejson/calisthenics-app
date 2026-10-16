@@ -36,7 +36,7 @@ test('a malformed or failed decision preserves input and never falls through int
 });
 test('duplicate concurrent headless delivery evaluates only once', async () => {
   let release; const h = harness(() => new Promise(resolve => { release = resolve; }));
-  const input = { kind: 'decision', requestId: 'same', sessionId: 's', text: 'BLACK', wake: true };
+  const input = { kind: 'decision', requestId: 'same', sessionId: 's', text: 'MAX', wake: true };
   const a = h.assess(input), b = h.assess(input); await new Promise(resolve => setImmediate(resolve)); release({ action: 'respond', reason: '主人呼唤' }); await Promise.all([a, b]);
   assert.equal(h.calls.length, 1); assert.equal(h.decisions.length, 1);
 });
@@ -47,4 +47,15 @@ test('playback failure is delivery metadata, never a user interruption or assist
   const messages = h.conversation.messages(), state = JSON.parse(messages.find(m => m.role === 'system').content);
   assert.equal(state.turns[0].status, 'complete'); assert.equal(state.turns[0].playbackError, '引擎连接断开');
   assert.equal(messages.find(m => m.role === 'assistant').content, '已经完成的回答。');
+});
+
+test('an end-conversation intent reaches the formal Agent instead of being discarded as no-response speech', async () => {
+  const h = harness(async messages => {
+    assert.match(messages[0].content, /结束本次语音交流.*respond/);
+    assert.match(messages[0].content, /你自己不执行退出/);
+    assert.equal(JSON.parse(messages.at(-1).content).text, '你先退下，待会儿再叫你');
+    return { action: 'respond', reason: '这是完整的结束交互请求，交给 Agent 决定工具操作' };
+  });
+  await h.assess({ kind: 'decision', requestId: 'leave', sessionId: 's', text: '你先退下，待会儿再叫你' });
+  assert.equal(h.decisions[0][1], 'respond'); assert.equal(h.conversation.getSnapshot().turns.length, 0);
 });

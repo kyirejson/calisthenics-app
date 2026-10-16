@@ -11,13 +11,15 @@ test('background mode reuses model tools without keyword routes or added privile
 });
 test('background observation and actions cannot fall back to the main display', () => {
   const service = native('MusicAccessibilityService');
-  const branch = service.slice(service.indexOf('if (MusicBackground.enabled(this))'), service.indexOf('val node = foregroundRoot()'));
-  assert.match(branch, /windowsOnAllDisplays.get\(displayId\)/);
+  const shared = read('modules/uncover-device/android/src/main/java/uncover/device/PhoneUi.kt');
+  const branch = shared.slice(shared.indexOf('val windows = service.windowsOnAllDisplays'), shared.indexOf('} ?: throw PhoneFailure'));
+  assert.match(branch, /windowsOnAllDisplays.get\(target.displayId\)/);
   assert.match(branch, /window.displayId/);
-  assert.match(branch, /return node/);
+  assert.match(branch, /window.root/);
   assert.doesNotMatch(branch, /foregroundRoot\(\)|rootInActiveWindow\s*\?:|performGlobalAction\(/);
-  assert.match(service, /snapshot.displayId != displayId/);
-  assert.match(service, /if \(displayId > 0\) return MusicBackground.tap/);
+  assert.match(shared, /snapshot.displayId != target.displayId/);
+  assert.match(service, /tap = if \(displayId > 0\).*MusicBackground.tap/);
+  assert.match(shared, /target.tap\?\.let/); assert.match(shared, /target.displayId != 0.*display_input_unavailable/);
   assert.match(native('UncoverMusicModule'), /!MusicBackground.enabled\(context\).*isMusicForeground/);
 });
 test('privileged helper only has fixed music, input and cleanup operations, not arbitrary code execution', () => {

@@ -23,9 +23,9 @@ function screenshot(name) {
     adb('shell', 'settings', 'put', 'secure', 'show_ime_with_hard_keyboard', '1');
     adb('shell', 'am', 'force-stop', packageName);
     adb('shell', 'am', 'start', '-n', packageName + '/com.zizhong.jinjie.MainActivity');
-    let xml = await waitFor(/请建立个人档案|打开 DeepSeek 聊天/);
+    let xml = await waitFor(/请建立个人档案|打开 MAX 聊天/);
     if (xml.includes('请建立个人档案')) await tap('稍后再说');
-    await tap('打开 DeepSeek 聊天');
+    await tap('打开 MAX 聊天');
     xml = await waitFor(/聊天输入/);
     const before = bounds(xml, '发送聊天消息');
     screenshot('welcome');
@@ -51,7 +51,7 @@ function screenshot(name) {
     screenshot('attachment-sheet');
     await tap('完成附件选择');
     assert.match(dump().replaceAll('&#10;', '\n'), /line-one\s+line-two/, 'Opening attachments preserves the draft');
-    await tap('关闭 DeepSeek 聊天');
+    await tap('关闭 MAX 聊天');
     console.log('PASS Android native IME: newline, keyboard avoidance, touch targets, keyboard dismissal and attachment draft preservation');
   } finally {
     if (oldKeyboard === 'null') adb('shell', 'settings', 'delete', 'secure', 'show_ime_with_hard_keyboard');

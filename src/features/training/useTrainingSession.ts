@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from 'react';
 import { BackHandler, Platform } from 'react-native';
 
 import { type CockpitSet, type RestReceipt } from '../../components/TrainingCockpit';
-import { useHideDeepseekDock } from '../../integrations/DeepseekChatHost';
+import { useHideAgentDock } from '../../integrations/AgentChatHost';
 
 import {
   equipmentSessionPlan,
@@ -84,7 +84,7 @@ export function useTrainingSession({
       saveSession: state.saveSession,
       deleteSession: state.deleteSession,
     }));
-  useHideDeepseekDock();
+  useHideAgentDock();
   const [selectedSet, setSelectedSet] = useState<number | null>(null);
   const [timerDuration, setTimerDuration] = useState(0);
   const [receipt, setReceipt] = useState<RestReceipt | null>(null);

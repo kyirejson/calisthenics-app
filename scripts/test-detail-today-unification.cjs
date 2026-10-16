@@ -79,9 +79,9 @@ test('nutrition has no obsolete rationale section and Today uses the draggable h
   assert.ok(!fs.existsSync(path.join(__dirname, '..', 'src/nutrition/knowledge.ts')));
   assert.ok(!/计算与知识依据|NUTRITION_KNOWLEDGE|OBJECTIVE_EXPLANATIONS|knowledgeToggle/.test(read('src/screens/NutritionScreen.tsx')));
   const today = read('src/screens/TodayScreen.tsx');
-  assert.ok(!/TodayChatFrame|todayChatButton|useOpenDeepseekChat/.test(today));
-  assert.ok(today.includes("useHideDeepseekDock(selectedPage === 2 && run.snapshot.phase !== 'idle')"));
-  const host = read('src/integrations/DeepseekChatHost.tsx');
+  assert.ok(!/TodayChatFrame|todayChatButton|useOpenAgentChat/.test(today));
+  assert.ok(today.includes("useHideAgentDock(selectedPage === 2 && run.snapshot.phase !== 'idle')"));
+  const host = read('src/integrations/AgentChatHost.tsx');
   for (const marker of ['setPointerCapture', 'onPanResponderMove', 'onPanResponderRelease', 'lostpointercapture', 'keydown']) assert.ok(host.includes(marker));
   assert.ok(!host.includes('<Pressable'));
   assert.ok(readFeature('chat').includes("animationType={Platform.OS === 'web' ? 'none' : 'slide'}"));

@@ -67,7 +67,7 @@ const waitForPane = (page, id) => page.waitForFunction(id => {
           assert.equal(typography.font, 17, 'Small screens retain the compact readable scale');
         }
         const dock = page.getByTestId('today-start-dock'), start = dock.getByRole('button');
-        const startBox = await start.boundingBox(), chatBox = await page.getByRole('button', { name: '打开 DeepSeek 聊天', exact: true }).boundingBox();
+        const startBox = await start.boundingBox(), chatBox = await page.getByRole('button', { name: '打开 MAX 聊天', exact: true }).boundingBox();
         assert.ok(startBox.y >= 0 && startBox.y + startBox.height < height - 68);
         const overlap = startBox.x < chatBox.x + chatBox.width && startBox.x + startBox.width > chatBox.x && startBox.y < chatBox.y + chatBox.height && startBox.y + startBox.height > chatBox.y;
         assert.ok(!overlap, 'Start never overlaps the default chat bubble');
@@ -94,13 +94,13 @@ const waitForPane = (page, id) => page.waitForFunction(id => {
         assert.equal(await rows.count(), rowCount, 'Return restores the actual today actions');
         assert.equal(await page.getByTestId('today-selected-day-notes').count(), 0);
         if (width === 390) {
-          await page.getByRole('button', { name: '打开 DeepSeek 聊天', exact: true }).click();
-          await page.getByRole('button', { name: '关闭 DeepSeek 聊天', exact: true }).click();
+          await page.getByRole('button', { name: '打开 MAX 聊天', exact: true }).click();
+          await page.getByRole('button', { name: '关闭 MAX 聊天', exact: true }).click();
           await page.getByRole('tab', { name: '切换到我的', exact: true }).click();
-          assert.equal(await page.getByRole('button', { name: '打开 DeepSeek 聊天', exact: true }).count(), 1, 'Other pages restore the floating chat');
+          assert.equal(await page.getByRole('button', { name: '打开 MAX 聊天', exact: true }).count(), 1, 'Other pages restore the floating chat');
           await page.getByRole('tab', { name: '切换到今日', exact: true }).click();
           await page.getByTestId('today-training-content').waitFor();
-          assert.equal(await page.getByRole('button', { name: '打开 DeepSeek 聊天', exact: true }).count(), 1, 'Today never duplicates chat controls');
+          assert.equal(await page.getByRole('button', { name: '打开 MAX 聊天', exact: true }).count(), 1, 'Today never duplicates chat controls');
         }
         assert.equal(await page.evaluate(() => localStorage.getItem('user_profile')), before);
         assert.deepEqual(errors, []);

@@ -5,7 +5,9 @@ type Dependencies = {
   prepare?(): Promise<void>;
   conversation: AgentConversation;
   active(id: string): Promise<boolean>; reply(id: string, text: string): Promise<void>; cancel(id: string): Promise<void>;
+  standby(id: string): Promise<boolean>;
   turn(input: { messages: ModelMessage[]; requestId: string; controller: AbortController;
+    endVoiceConversation(): Promise<void>;
     onDelta(delta: string, accumulated: string): void; onRoundStart(): void;
     onToolCall(call: { name: string; args: Record<string, unknown> }): void; onToolResult(call: ToolReceipt): void }): Promise<string>;
   subscribeReset(callback: () => void): () => void;
@@ -21,6 +23,7 @@ export function createVoiceDialogue(dependencies: Dependencies) {
     const controller = new AbortController();
     let handle: TurnHandle | null = null;
     let delivered = false;
+    let returnToWake = false;
     const cancelled = () => { if (handle) conversation.interrupt(input.requestId); void dependencies.cancel(input.requestId).catch(() => {}); };
     controller.signal.addEventListener('abort', cancelled, { once: true });
     const unlisten = dependencies.subscribeReset(() => controller.abort());
@@ -44,11 +47,22 @@ export function createVoiceDialogue(dependencies: Dependencies) {
       const activeHandle = handle;
       const answer = await dependencies.turn({
         messages: [...(input.wake ? [{ role: 'system', content: JSON.stringify({ type: 'voice_input_state', wakeDetected: true }) }] : []), ...conversation.messages(handle)], requestId: input.requestId, controller,
+        endVoiceConversation: async () => {
+          if (controller.signal.aborted || !(await dependencies.active(input.requestId)) || controller.signal.aborted) throw Error('本次语音请求已失效，不能结束新的对话。');
+          returnToWake = true;
+        },
         onRoundStart: () => conversation.round(activeHandle), onDelta: (_delta, accumulated) => conversation.delta(activeHandle, accumulated),
         onToolCall: call => conversation.tool(activeHandle, call), onToolResult: call => conversation.receipt(activeHandle, call),
       });
-      if (!controller.signal.aborted && await dependencies.active(input.requestId) && conversation.complete(handle, answer)) {
-        await deliver(answer);
+      if (!controller.signal.aborted && await dependencies.active(input.requestId)) {
+        if (returnToWake) {
+          // Retire this native request only. A newer request/input wins the race;
+          // no synthesized goodbye, global disable, context reset or business cancellation.
+          delivered = true;
+          await dependencies.standby(input.requestId);
+          conversation.complete(handle, '');
+        } else if (conversation.complete(handle, answer)) await deliver(answer);
+        else controller.abort();
       } else controller.abort();
     } catch (error) {
       if (!controller.signal.aborted && await dependencies.active(input.requestId).catch(() => false)) {

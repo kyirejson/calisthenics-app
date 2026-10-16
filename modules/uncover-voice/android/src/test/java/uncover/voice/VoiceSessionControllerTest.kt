@@ -96,4 +96,50 @@ class VoiceSessionControllerTest {
     assertFalse(c.snapshot.held); assertEquals("speaking", c.phase); assertEquals(token, c.generation)
     assertEquals("answer", c.turnId)
   }
+  @Test fun modelStandbyRetiresOnlyItsOwnTurnAndKeepsWakeCaptureReady() {
+    val c = VoiceSessionController(); c.ready(); c.listen("exit-input"); val token = c.begin("exit")
+    assertTrue(c.standby("exit")); assertEquals("wake", c.phase)
+    assertTrue(c.captureAvailable); assertFalse(c.stopped); assertNull(c.turnId)
+    assertEquals("", c.snapshot.draft); assertNull(c.snapshot.segmentId)
+    assertFalse(c.prepare("exit")); assertFalse(c.render("exit", token, true)); assertFalse(c.complete("exit", token))
+    assertFalse(c.accepts("exit-input")); assertFalse(c.standby("exit"))
+    c.listen("fresh-wake"); assertTrue(c.accepts("fresh-wake")); c.begin("new")
+    assertTrue(c.active("new")); assertEquals("processing", c.phase)
+  }
+  @Test fun lateStandbyCannotEndANewTurnOrUnblockTheMicrophone() {
+    val c = VoiceSessionController(); c.ready(); c.begin("old"); c.cancel(); val current = c.begin("new")
+    assertFalse(c.standby("old")); assertTrue(c.active("new")); assertEquals(current, c.generation)
+    c.block(true); assertFalse(c.standby("new")); assertEquals("blocked", c.phase)
+    c.stop(); assertFalse(c.standby("new")); assertEquals("stopped", c.phase)
+  }
+  @Test fun speechArrivingDuringAnExitDecisionWinsAndItsDraftSurvives() {
+    for (confirmed in listOf(false, true)) {
+      val c = VoiceSessionController(); c.ready(); c.begin("exit"); c.candidate("new-input")
+      if (confirmed) { c.hearing("new-input"); c.partial("new-input", "等等我还有一件事") }
+      assertFalse(c.standby("exit")); assertEquals("listening", c.phase)
+      assertTrue(c.captureAvailable); assertTrue(c.accepts("new-input")); assertNull(c.turnId)
+      assertEquals(if (confirmed) "等等我还有一件事" else "", c.snapshot.draft)
+      assertTrue(c.partial("new-input", "等等我还有一件事要说")); c.begin("new")
+      assertTrue(c.active("new"))
+    }
+  }
+  @Test fun standbyRejectsLateTranscriptsAndOnlyANewWakeCanArmInput() {
+    var now = 0L; val c = VoiceSessionController { now }; c.ready(); c.listen("old")
+    assertTrue(c.accepts("old")); now = 30000; assertEquals(VoiceSessionController.Tick.IDLE, c.tick())
+    assertFalse(c.accepts("old")); c.candidate("old")
+    assertEquals("wake", c.phase); assertFalse(c.partial("old", "迟到的识别")); assertFalse(c.settle("old", "wait"))
+    c.listen("new"); assertTrue(c.accepts("new")); assertFalse(c.accepts("old"))
+  }
+  @Test fun ordinaryIdleStillUsesThirtySecondsAndNeverExpiresModelWorkOrPlayback() {
+    for (output in VoiceSessionController.Output.values().filter { it != VoiceSessionController.Output.IDLE }) {
+      var now = 0L; val c = VoiceSessionController { now }; c.ready(); val token = c.begin("answer")
+      if (output != VoiceSessionController.Output.GENERATING) c.prepare("answer")
+      if (output == VoiceSessionController.Output.PLAYING) c.render("answer", token, true)
+      if (output == VoiceSessionController.Output.BUFFERING) c.render("answer", token, false)
+      now = 60000; assertEquals(output, c.snapshot.output); assertEquals(VoiceSessionController.Tick.NONE, c.tick())
+      assertTrue(c.complete("answer", token)); now += 29999
+      assertEquals(VoiceSessionController.Tick.NONE, c.tick()); now++
+      assertEquals(VoiceSessionController.Tick.IDLE, c.tick()); assertEquals("wake", c.phase)
+    }
+  }
 }

@@ -3,6 +3,10 @@ apply plugin: 'expo-module-gradle-plugin'
 
 group = 'uncover.voice'
 version = '1.0.0'
+// Match the app target: do not compile three unused C++ ABIs for an ARM64 phone build.
+// Explicit emulator overrides still select their own test ABI.
+def voiceArchitectures = (project.findProperty('reactNativeArchitectures') ?: 'arm64-v8a').toString()
+  .split(',').collect { it.trim() }.findAll { !it.isEmpty() }
 android {
   namespace 'uncover.voice'
   ndkVersion rootProject.ext.ndkVersion
@@ -11,6 +15,7 @@ android {
   // The isolated playback test includes both this CMake module and React Native's runtime.
   packaging { jniLibs { pickFirsts += ['**/libc++_shared.so'] } }
   defaultConfig {
+    ndk { abiFilters.addAll(voiceArchitectures) }
     versionCode 1; versionName '1.0.0'; consumerProguardFiles 'consumer-rules.pro'
     testInstrumentationRunner 'android.test.InstrumentationTestRunner'
     testInstrumentationRunnerArguments['class'] = 'uncover.voice.VoiceSpeakerPlaybackTest'

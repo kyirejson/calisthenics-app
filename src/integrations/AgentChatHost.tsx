@@ -2,18 +2,19 @@ import { createContext, ReactNode, useContext, useEffect, useLayoutEffect, useMe
 import { PanResponder, Platform, StyleSheet, View, useWindowDimensions } from 'react-native';
 import { AppGlyph } from '../components/AppGlyph';
 import { useUpdateBlock } from '../components/AppUpdates';
-import { DeepseekChat } from './DeepseekChat';
+import { AgentChat } from './AgentChat';
+import { AGENT_NAME } from '../agent/identity.mjs';
 
 const DockContext = createContext<(hidden: boolean) => void>(() => {});
-/** Training has a header chat action; suppress only its floating duplicate. */
-export function useHideDeepseekDock(hidden = true) {
+/** Focused screens such as training can suppress the floating chat entry. */
+export function useHideAgentDock(hidden = true) {
   const setHidden = useContext(DockContext);
   useLayoutEffect(() => { if (!hidden) return; setHidden(true); return () => setHidden(false); }, [setHidden, hidden]);
 }
 const ChatContext = createContext<() => void>(() => {});
-export function useOpenDeepseekChat() { return useContext(ChatContext); }
+export function useOpenAgentChat() { return useContext(ChatContext); }
 const size = 54, margin = 16;
-export function DeepseekChatHost({ children }: { children: ReactNode }) {
+export function AgentChatHost({ children }: { children: ReactNode }) {
   const { width, height } = useWindowDimensions();
   const [dockHidden, setDockHidden] = useState(false);
   const [open, setOpen] = useState(false);
@@ -93,12 +94,12 @@ export function DeepseekChatHost({ children }: { children: ReactNode }) {
   }, [width, height, open, dockHidden]);
   return <DockContext.Provider value={setDockHidden}><ChatContext.Provider value={() => setOpen(true)}>
     <View style={s.root}>{children}
-      {!open && !dockHidden ? <View ref={dockRef} {...(Platform.OS === 'web' ? {} : pan.panHandlers)} accessible focusable accessibilityRole="button" accessibilityLabel="打开 DeepSeek 聊天" onAccessibilityTap={() => setOpen(true)} style={[s.float, { left: position.x, top: position.y }]}>
+      {!open && !dockHidden ? <View ref={dockRef} {...(Platform.OS === 'web' ? {} : pan.panHandlers)} accessible focusable accessibilityRole="button" accessibilityLabel={`打开 ${AGENT_NAME} 聊天`} onAccessibilityTap={() => setOpen(true)} style={[s.float, { left: position.x, top: position.y }]}>
         <View pointerEvents="none" style={s.button}>
           <AppGlyph name="chat" size={24} color="#C8F545" />
         </View>
       </View> : null}
-      <DeepseekChat visible={open} onClose={() => setOpen(false)} />
+      <AgentChat visible={open} onClose={() => setOpen(false)} />
     </View>
   </ChatContext.Provider></DockContext.Provider>;
 }

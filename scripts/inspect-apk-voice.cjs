@@ -14,11 +14,14 @@ assert.ok(!dex.some(bytes => bytes.includes(Buffer.from('系统未能初始化�
 for (const marker of ['Luncover/voice/VoiceOutputProgress;', 'synthesis_queue_timeout', 'synthesis_prepare_timeout', 'retry_empty_audio']) assert.ok(dex.some(bytes => bytes.includes(Buffer.from(marker))), 'Voice output truncation repair missing from formal APK: ' + marker);
 for (const marker of ['Luncover/voice/VoiceSessionController$Snapshot;', 'synthesizing', 'buffering', 'decision_cancelled']) assert.ok(dex.some(bytes => bytes.includes(Buffer.from(marker))), 'Unified voice session orchestration missing from formal APK: ' + marker);
 for (const marker of ['Luncover/voice/VoiceAcousticEvidence;', 'Luncover/voice/VoiceSoundSource;', 'Luncover/voice/VoiceSpeechGate$Event;', 'startsRecognition', 'isCurrent']) assert.ok(dex.some(bytes => bytes.includes(Buffer.from(marker))), 'Acoustic interruption authorization repair missing from formal APK: ' + marker);
+for (const marker of ['Luncover/voice/VoicePlaybackTimeline;', 'Luncover/voice/VoicePlaybackPacket$Audio;', 'prefedBoundaries', 'standby']) assert.ok(dex.some(bytes => bytes.includes(Buffer.from(marker))), 'Continuous playback/standby repair missing from formal APK: ' + marker);
 for (const symbol of ['Luncover/voice/VoiceSpeakerPlaybackTest;', 'Luncover/voice/VoicePlaybackActivity;', 'Luncover/voice/VoiceFixtureTtsService;']) assert.ok(!dex.some(bytes => bytes.includes(Buffer.from(symbol))), 'Test-only playback fixture entered formal APK: ' + symbol);
 for (const symbol of ['Luncover/voice/BlackVoiceService;', 'Luncover/voice/BlackAssistantService;', 'Luncover/voice/VoiceAgentTaskService;', 'Luncover/voice/VoiceTurnBuffer;', 'Luncover/voice/VoiceTurnControl;', 'Luncover/voice/VoiceSessionController;', 'Luncover/voice/LocalVoiceSynthesizer;', 'Luncover/web/UncoverWebModule;', 'Lcom/k2fsa/sherpa/onnx/KeywordSpotter;', 'executeAndObserve', 'finishWithoutUi']) assert.ok(dex.some(bytes => bytes.includes(Buffer.from(symbol))), 'Missing native voice/music/web feature: ' + symbol);
 assert.ok(!Object.keys(entries).some(name => name.startsWith('assets/voice-speaker-fixtures/')), 'Public test recordings entered formal APK');
 const prefix = 'assets/black-voice/';
 const manifest = JSON.parse(Buffer.from(entries[prefix + 'resources.json']).toString('utf8'));
+assert.equal(manifest.name, 'MAX');
+assert.equal(Buffer.from(entries[prefix + 'keywords.txt']).toString('utf8').trim().replace(/\r/g, ''), 'M AE1 K S @MAX\nHH EY1 M AE1 K S @HEY_MAX', 'Actual wake dictionary was not renamed to MAX');
 for (const item of manifest.files.filter(item => item.path.startsWith('src/main/assets/black-voice/'))) {
   const apkPath = 'assets/' + item.path.slice('src/main/assets/'.length), bytes = entries[apkPath];
   assert.ok(bytes, 'Missing voice resource: ' + apkPath); assert.equal(bytes.length, item.bytes);
@@ -39,5 +42,5 @@ for (const abi of phoneArchitectures) {
   assert.ok(entries['lib/' + abi + '/libblack-echo.so'], 'Missing echo cancellation ABI: ' + abi);
 }
 const bundle = Object.entries(entries).filter(([name]) => /index\.android\.bundle$/.test(name)).map(([, bytes]) => Buffer.from(bytes));
-for (const marker of ['UncoverVoiceAgent', 'open_music_and_observe', 'music_ui_action_and_observe', 'control_music_and_observe', 'continue_listening', 'voice_turn_candidate', 'voice_input_state', 'conversation_delivery_state', 'decision_cancelled', 'search_web', 'read_web_page', 'BLACK']) assert.ok(bundle.some(bytes => bytes.includes(Buffer.from(marker))), 'Missing embedded Agent feature: ' + marker);
-console.log('Formal phone APK includes ARM64 only, acoustic interruption authorization, hash-verified KWS/ASR/VAD/TTS assets, no identity gate, semantic turns, web and fused music tools; no local wake reply or test recordings.');
+for (const marker of ['UncoverVoiceAgent', 'open_music_and_observe', 'music_ui_action_and_observe', 'control_music_and_observe', 'continue_listening', 'end_voice_conversation', 'voice_turn_candidate', 'voice_input_state', 'conversation_delivery_state', 'decision_cancelled', 'search_web', 'read_web_page', 'MAX']) assert.ok(bundle.some(bytes => bytes.includes(Buffer.from(marker))), 'Missing embedded Agent feature: ' + marker);
+console.log('Formal phone APK includes ARM64 only, MAX wake/identity, continuous playback, model-selected standby, acoustic interruption authorization, hash-verified KWS/ASR/VAD/TTS assets and existing Agent tools; no identity gate, local wake reply or test recordings.');

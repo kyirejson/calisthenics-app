@@ -25,7 +25,7 @@ const withoutContext = value => Object.fromEntries(Object.entries(value).filter(
         return route.fulfill({ contentType: 'text/event-stream', body: `data: ${JSON.stringify({ choices: [{ delta: { content }, finish_reason: null }] })}\n\ndata: ${JSON.stringify({ choices: [{ delta: {}, finish_reason: 'stop' }] })}\n\ndata: [DONE]\n\n` });
       });
       await page.goto(baseUrl, { waitUntil: 'domcontentloaded' });
-      await page.getByRole('button', { name: '打开 DeepSeek 聊天', exact: true }).click();
+      await page.getByRole('button', { name: '打开 MAX 聊天', exact: true }).click();
       const input = page.getByLabel('聊天输入', { exact: true });
       const send = page.getByRole('button', { name: '发送聊天消息', exact: true });
       await input.fill('旧对话标记 OLD_CONTEXT'); await send.click();

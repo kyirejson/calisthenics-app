@@ -59,9 +59,9 @@ test('cockpit primary and rest controls stay outside scrolling content', () => {
   assert.ok(screen.includes('KeyboardAvoidingView'));
   assert.ok(screen.includes('实际'));
   assert.ok(!screen.includes('tableHeader'));
-  assert.ok(readFeature('training').includes('useHideDeepseekDock()'));
-  assert.doesNotMatch(screen, /onChat|name="chat"|打开 DeepSeek 聊天/);
-  assert.doesNotMatch(readFeature('training'), /useOpenDeepseekChat|openChat|onChat=/);
+  assert.ok(readFeature('training').includes('useHideAgentDock()'));
+  assert.doesNotMatch(screen, /onChat|name="chat"|打开 MAX 聊天/);
+  assert.doesNotMatch(readFeature('training'), /useOpenAgentChat|openChat|onChat=/);
 });
 test('finishing training saves without a subjective feedback modal or invented quality', () => {
   const dialogs = read('src/features/training/TrainingDialogs.tsx');

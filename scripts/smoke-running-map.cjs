@@ -58,7 +58,7 @@ async function emit(page, distance, seconds = 3, accuracy = 5) { await page.eval
         assert.ok(credit.y + credit.height <= map.y + map.height + 1, 'Map attribution must remain inside the visible map');
         const shrink = await page.getByRole('button', { name: '缩小跑步地图', exact: true }).boundingBox(), recenter = await page.getByRole('button', { name: '地图回到当前位置', exact: true }).boundingBox();
         assert.ok(shrink.x + shrink.width <= recenter.x || recenter.x + recenter.width <= shrink.x || shrink.y + shrink.height <= recenter.y || recenter.y + recenter.height <= shrink.y, 'Map buttons must not overlap on short screens');
-        const startBox = await page.getByRole('button', { name: '开始跑步', exact: true }).boundingBox(), chat = await page.getByRole('button', { name: '打开 DeepSeek 聊天', exact: true }).boundingBox();
+        const startBox = await page.getByRole('button', { name: '开始跑步', exact: true }).boundingBox(), chat = await page.getByRole('button', { name: '打开 MAX 聊天', exact: true }).boundingBox();
         // The host dock is draggable, not a fixed RunScreen child. Validate hit
         // areas and navigation clearance instead of an obsolete shared baseline.
         assert.ok(chat.y >= 0 && chat.y + chat.height <= height - 60, 'Chat remains above navigation');

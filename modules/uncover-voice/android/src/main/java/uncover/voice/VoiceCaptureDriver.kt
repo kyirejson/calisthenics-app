@@ -23,7 +23,7 @@ internal class VoiceCaptureDriver(private val state: (Boolean) -> Unit, private 
   private var worker: Thread? = null
   override fun start(ready: () -> Unit) {
     if (stopped) return
-    worker = thread(name = "BLACK-capture") {
+    worker = thread(name = "${VoiceBrand.NAME}-capture") {
       android.os.Process.setThreadPriority(android.os.Process.THREAD_PRIORITY_AUDIO)
       var callback: AudioManager.AudioRecordingCallback? = null
       try {

@@ -52,11 +52,11 @@ const call = (name, args) => ({ tool_calls: [{ index: 0, id: 'call-' + name, typ
       });
       const readJournal = () => page.evaluate(() => JSON.parse(localStorage.getItem('nutrition_journal_v1')));
       const chat = async (message, answer) => {
-        await page.getByRole('button', { name: '打开 DeepSeek 聊天', exact: true }).click();
+        await page.getByRole('button', { name: '打开 MAX 聊天', exact: true }).click();
         await page.getByLabel('聊天输入', { exact: true }).fill(message);
         await page.getByRole('button', { name: '发送聊天消息', exact: true }).click();
         await page.getByText(answer, { exact: true }).waitFor();
-        await page.getByRole('button', { name: '关闭 DeepSeek 聊天', exact: true }).click();
+        await page.getByRole('button', { name: '关闭 MAX 聊天', exact: true }).click();
       };
       await page.goto('http://127.0.0.1:8081/', { waitUntil: 'domcontentloaded' });
       await page.getByRole('tab', { name: '切换到饮食', exact: true }).click();
@@ -64,7 +64,7 @@ const call = (name, args) => ({ tool_calls: [{ index: 0, id: 'call-' + name, typ
       for (const slot of ['breakfast', 'lunch', 'dinner', 'snack']) await page.getByTestId('nutrition-meal-' + slot).waitFor();
       assert.equal(await page.getByText(/和 AI 记餐|对 AI 说说/).count(), 0);
       await page.screenshot({ path: path.join(output, `empty-${width}.png`), fullPage: true });
-      await page.getByRole('button', { name: '打开 DeepSeek 聊天', exact: true }).click();
+      await page.getByRole('button', { name: '打开 MAX 聊天', exact: true }).click();
       await page.getByLabel('聊天输入', { exact: true }).fill('今早吃了两个鸡蛋');
       await page.getByRole('button', { name: '发送聊天消息', exact: true }).click();
       await page.getByRole('alert').waitFor();
@@ -72,7 +72,7 @@ const call = (name, args) => ({ tool_calls: [{ index: 0, id: 'call-' + name, typ
       await page.getByRole('button', { name: '发送聊天消息', exact: true }).click();
       await page.getByText('早餐已记录。', { exact: true }).waitFor();
       assert.equal((await readJournal()).entries.length, 1, 'Retried tool call does not duplicate persisted food');
-      await page.getByRole('button', { name: '关闭 DeepSeek 聊天', exact: true }).click();
+      await page.getByRole('button', { name: '关闭 MAX 聊天', exact: true }).click();
       assert.equal(await page.getByTestId('nutrition-recorded-energy').innerText(), '140');
       await chat('刚才说错了，是三个鸡蛋', '早餐已更正。');
       assert.equal((await readJournal()).entries.length, 1); assert.equal(await page.getByTestId('nutrition-recorded-energy').innerText(), '210');

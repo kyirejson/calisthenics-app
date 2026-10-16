@@ -16,13 +16,13 @@ import { TodayScreen } from './src/screens/TodayScreen';
 import { TrainingScreen } from './src/screens/TrainingScreen';
 import { colors, progressPageLayout } from './src/theme';
 import { AppUpdatesProvider, useAppUpdates } from './src/components/AppUpdates';
-import { DeepseekChatHost } from './src/integrations/DeepseekChatHost';
+import { AgentChatHost } from './src/integrations/AgentChatHost';
 import type { Route } from './src/types';
 import { RunRecorderHost } from './src/running/RunRecorderHost';
 
 export default function App() {
   useWebDocumentSetup();
-  return <AppStoreProvider><StatusBar style="dark" /><AppUpdatesProvider><RunRecorderHost><DeepseekChatHost><AppShell /></DeepseekChatHost></RunRecorderHost></AppUpdatesProvider><ConfirmHost /></AppStoreProvider>;
+  return <AppStoreProvider><StatusBar style="dark" /><AppUpdatesProvider><RunRecorderHost><AgentChatHost><AppShell /></AgentChatHost></RunRecorderHost></AppUpdatesProvider><ConfirmHost /></AppStoreProvider>;
 }
 
 // web 端文档级修正：body 背景跟随屏幕主色（防深色屏露出白边）、

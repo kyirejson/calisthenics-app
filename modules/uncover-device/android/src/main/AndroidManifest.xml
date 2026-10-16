@@ -1,0 +1,14 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+  <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+  <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
+  <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+  <queries>
+    <intent><action android:name="android.intent.action.MAIN" /><category android:name="android.intent.category.LAUNCHER" /></intent>
+    <intent><action android:name="android.intent.action.VIEW" /><category android:name="android.intent.category.BROWSABLE" /><data android:scheme="https" /></intent>
+  </queries>
+  <application>
+    <service android:name="uncover.device.PhoneExecutionService" android:exported="false" android:foregroundServiceType="specialUse" android:stopWithTask="true">
+      <property android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE" android:value="Keeps only an explicitly user-requested MAX cross-application task alive while the model observes and operates the phone. Visible cancellation notification, no audio recording or playback, stops with the task." />
+    </service>
+  </application>
+</manifest>

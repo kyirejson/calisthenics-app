@@ -64,7 +64,7 @@ test('routes remain untouched, running stats live only below progress, history i
   const data = read('src/screens/DataScreen.tsx'), records = read('src/features/history/TrainingRecords.tsx'), hook = read('src/features/history/useTrainingRecords.ts');
   assert.ok(data.indexOf('<RunningMileageCard') > data.indexOf('<UnifiedProgressCard')); assert.doesNotMatch(data, /styles\.calendar|<TrainingHistoryDay/);
   assert.match(records, /profile-latest-history/); assert.match(records, /latest \? <TrainingHistoryDay/); assert.match(records, /查看全部训练历史/); assert.match(hook, /const latest = allGroups\[0\]/);
-  assert.match(read('src/screens/ProfileScreen.tsx'), /<TrainingRecords/); assert.doesNotMatch(read('src/screens/ProfileScreen.tsx'), /DeepSeek 助手|useOpenDeepseekChat/);
+  assert.match(read('src/screens/ProfileScreen.tsx'), /<TrainingRecords/); assert.doesNotMatch(read('src/screens/ProfileScreen.tsx'), /MAX 助手|DeepSeek 助手|useOpenAgentChat/);
   assert.doesNotMatch(read('src/components/TabBar.tsx'), /appearance|editorial|shadowOpacity|elevation/); assert.match(read('src/components/TabBar.tsx'), /bottom: 0/);
   assert.doesNotMatch(read('src/screens/RunScreen.tsx'), /本周|本月|播报：|announcement\.text|historyOpen/);
 });

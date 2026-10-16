@@ -1,6 +1,6 @@
 # 当前代码架构
 
-维护日期：2026-10-09。历史审核证据见 [架构审核报告](architecture-audit-2026-10-09.md)，全部整改与验收见 [整改清单](architecture-remediation-2026-10-09.md)。本文描述当前职责，不另写一套训练/营养规则。
+维护日期：2026-10-16。历史审核证据见 [架构审核报告](architecture-audit-2026-10-09.md)，全部整改与验收见 [整改清单](architecture-remediation-2026-10-09.md)。本文描述当前职责，不另写一套训练/营养规则。
 
 ## 应用与页面
 
@@ -10,7 +10,7 @@
 - `screens/TodayTrainingScreen` 管理徒手/控重训练展示与计划交互；器械分支交给 `EquipmentTodayScreen`。
 - `components/TodayTrainingTask`、`todayTrainingStyles` 统一训练清单与排版；`MovementDetail` 统一动作阅读布局。这里只展示真实处方，不定义训练剂量。
 - `TrainingScreen` 管理训练会话，`TrainingCockpit` 展示逐组操作。成功保存后才通知路由切到数据页。
-- `DataScreen`、`TrainingDaySummary` 展示按实际完成组聚合的历史；再练一次追加新会话，不覆盖前一次。
+- `DataScreen` 保留动作路线并展示真实跑步里程图；`ProfileScreen` 汇总训练日历和最新历史，查看全部后展示其他日期。`TrainingDaySummary` 按实际完成组聚合；再练一次追加新会话，不覆盖前一次。
 
 复杂页面已拆为展示与控制器：`features/today/useTodayTraining` 管计划交互；`features/training/useTrainingSession` 管会话，`TrainingDialogs` 管弹窗；`features/history/useTrainingHistory` 管统计选择/删除，`TrainingHistoryDay` 管单日展示；`features/progression/useProgressionBrowser` 管分类/搜索/进阶，`RouteViews` 管路线展示；`features/chat/useChatSession` 管请求/工具，`useChatAttachments` 管串行文件解析和释放，`ChatMessages` 管消息展示。局部样式在对应功能目录，不复制新的业务算法。
 
@@ -34,15 +34,16 @@
 | `src/integrations` | 聊天、附件、用户凭据、模型工具、连接传输 | 另一套训练/营养计算或公共开发者 Key |
 | `src/agent` | 文字/后台语音共用会话、消息订阅、取消所有权、执行回执和表达样式接线 | 关键词意图路由、第二套 Agent、工具能力/轮次数量限制 |
 | `src/voice` | 原生语音传输、后台任务及共用会话接线 | 私有语音上下文副本、录音上传或 UI 路由 |
+| `src/device` | 通用手机模型工具、原生传输和独立授权设置 | 应用白名单、关键词意图分类、固定联系人或路线流程 |
 | `src/running` | 跑步状态机、地图、Web 记录器、原生传输适配 | 强度计划、臆造 GPS 轨迹 |
-| `modules` | Android 跑步原生模块、原生附件文本解析 | 应用页面和跨域业务规则 |
+| `modules` | Android 跑步、附件、音乐、语音、网络与通用手机执行模块 | 应用页面和跨域业务规则 |
 | `scripts/lib` | Node 生成器、现行多库校验、共享测试基础设施 | 可由 App 导入的运行时模块 |
 
 原有 22 个训练/器械/体重算法文件已迁入 `domain`，所有消费者和测试同步切换，不保留旧目录转导出或双实现。静态资料不反向依赖领域算法；新贡献者不得再建第二套处方引擎。
 
 `AppStoreProvider` 只提供稳定的 `AppRepository`，`useAppStore(selector)` 使用 `useSyncExternalStore` 按选择字段通知；不允许无 selector 的全量订阅。动作引用保持稳定。模型工具通过 `useAppRepository().getSnapshot()` 调用时读取最新状态，不依赖旧 React 快照。
 
-`accountDomain`、`trainingDomain`、`nutritionDomain` 独立串行队列，失败不毒化后续任务；持久化成功后才提交不可变状态。目标快照先等待档案和训练任务；导出、重新加载、清除统一协调已接受写入，生命周期处理时拒绝新写入。历史日记能力保留，没有新增 Agent 记餐。
+`accountDomain`、`trainingDomain`、`nutritionDomain` 独立串行队列，失败不毒化后续任务；持久化成功后才提交不可变状态。目标快照先等待档案和训练任务；重新加载、清除统一协调已接受写入，生命周期处理时拒绝新写入。Agent 自主判断餐次并通过同一营养仓库增改删记录，代码负责结构校验、原子保存及操作编号防重，不按食物关键词替模型判断。
 
 训练日重置的两键写入由 `training_write_ahead_v1` 日志保护：删除日志才算提交；半写入/中断恢复原键。恢复失败保留原日志并暂停训练写入，可导出备份后重试。损坏独立领域只暂停该域，不把原始数据替换为空文档。存储键、记录格式和历史照片继续兼容。
 
@@ -54,17 +55,21 @@ Android 跑步由 `modules/uncover-running` 的前台服务记录；浏览器使
 
 文字和后台语音复用 `runAgentTurn` 的模型、全部现有工具、同一 `appRepository`。
 `agentConversation` 是两者唯一会话所有者，生成/播放中止会失效旧回调，工具成功回执仍保留。
-原生语音保持单麦克风、播放参考/回声消除、VAD、CAM++ 主人声纹验证和识别；只将通过声纹验证的对话文字送往模型。
-`VoicePacketGate` 隔离每包身份，`VoiceWakeWindow` 按关键词时间戳取音频，`VoiceTurnControl` 管理只读判定的所有权和超时；`VoiceRegistrationGate` 串行取消、删除与原子保存。主人登记包含三个个人 BLACK 模板及一次独立回读，不沿用先前音频包的身份。
+原生语音保持单麦克风、播放参考/AEC3、VAD、唤醒和中文 ASR；按用户要求已移除专属声纹，不登记、认证或宣称只接受主人的声音。
+`VoiceSessionController` 是单写者会话状态；`VoiceSpeechGate` 与 `VoiceAcousticEvidence` 根据真实播放参考和近端人声证据授权插话。`VoiceTurnControl` 隔离语义判定的所有权和超时，不把收到的所有转写直接当成新用户请求。
 本地 AEC3、声学相关性和采样时钟负责声源处理，不按文字关键词屏蔽用户输入。
 唤醒事件交给同一模型，不额外播放固定答话；语音模型可用 `continue_listening` 暂不出声，保留上下文和同批工具回执，不渲染空回复。
 
-ASR 分段只更新同一轮草稿。`src/voice/turnAssessment.ts` 使用无工具的只读模型调用判断回应/等待/忽略；正式执行只在回应判定后进入原有 `runAgentTurn`。疑似主人讲话先暂停 PCM，忽略时恢复，确认新轮次时才失效旧请求。登记在已解锁前台主动发起，声纹经 Android Keystore 加密放在不参与备份的私有目录，原始录音不落盘。
+ASR 分段只更新同一轮草稿。`src/voice/turnAssessment.ts` 使用无工具的只读模型调用判断回应/等待/忽略；正式执行只在回应判定后进入原有 `runAgentTurn`。声学确认的插话可恢复暂停 PCM，忽略时续播，确认新轮次才失效旧请求。30 秒无活动或模型调用 `end_voice_conversation` 后回到唤醒待机，不关闭全局监听或清除对话。回答使用统一流式播放器和 `VoicePlaybackTimeline`，后段提前续入，按真实播放头推进字幕。
 
 历史回执复原为匹配 `tool_call_id` 的工具消息，不再拼入助手口语。播放错误独立记录为投递故障。模型 ID 可在服务设置中配置，不默默降级到 Flash。`src/integrations/webTools.mjs` 提供搜索和分页正文读取；`modules/uncover-web` 负责可取消的公开网络访问，逐跳验证 DNS 并固定解析，不携带登录 Cookie。
 
-实现及验收边界见 [主人验证与语音轮次重构](voice-owner-turns-2026-10-15.md)。
+现行实现及验收边界见 [MAX 连续播放](max-voice-continuity-2026-10-16.md) 与 [回待机设计](voice-conversation-standby-2026-10-16.md)；更早的主人验证文档只保留历史决策证据。
 `responseStyle` 仅引导表达，不截断输出，不规定音乐或饮食意图，不限制工具轮次。
+
+通用手机与音乐共用 `modules/uncover-device/PhoneUi`，生产保留原 `MusicAccessibilityService` 组件作为薄适配器，避免重命名丢失系统授权。App 内的通用同意默认关闭；未单独开启时，事件与音乐工具仍限于原音乐范围。通用开启后动态发现所有可启动应用，不按三个验收样例路由。代码只检查真实授权、当前请求/窗口/节点、取消与操作编号，不判断消息该发给谁或地图该选哪条路。
+
+手机动作先持久化操作编号与参数摘要再派发；重试返回回执，进程中断的未决动作先回读核对，不能盲目再次发送。动作接受和后续观察独立返回。主屏任务有可停止的前台通知，结束不自动抢回 MAX；音乐独立显示器仍走原有显示器校验与路由，不悄悄降级到主屏。按需 OCR 仅在本机识别并返回文字/坐标，密码区域先遮盖，截图不落盘、不发送模型。通用控制不是全视觉模型，也不能绕过系统受保护页面。详见 [实现记录](max-phone-control-implementation-2026-10-16.md)。
 
 ## 知识库的唯一正文与私人层
 

@@ -15,7 +15,7 @@
 | 本地语音构建 | `prepare-voice-resources.cjs`、`build-running-voices.py` | 下载哈希固定的原生库/模型/AEC 源码，或在隔离工具环境重生成跑步离线播报；构建工具不进入 App |
 | 语音验证 | `test-voice-agent.cjs`、`test-voice-turn-assessment.cjs`、`test-agent-conversation.cjs`、`check-voice-models.py`、`build-wake-fixtures.ps1`、`build-voice-dialogue-fixtures.py`、`check-voice-echo.py`、`native/voice-echo-probe.c`、`inspect-apk-voice.cjs` | 共用对话/取消/文字流、只读语义判停回归；声学前端与真实本地模型检查、最终 APK 资源/原生类检查；不冒充真机验收 |
 | 公开网页工具 | `test-web-tools.cjs` | 网页分页、公开搜索解析、取消、私网保护；Android 网络另由 instrumentation 检查 |
-| 声纹测试素材 | `prepare-voice-test-fixtures.cjs` | 哈希固定的公开同人/异人示例，只写 androidTest 目录，不进入正式 APK |
+| 通用手机控制 | `test-phone-agent.cjs`、`smoke-phone-agent.cjs`、`check-phone-control.ps1`、`inspect-apk-phone.cjs` | 无应用白名单的模型工具、真实授权、隔离原生控件/Chrome/Settings/OCR 和最终 APK；模拟聊天不是微信实际发送验收 |
 | 历史研究 | `audit*`、图片研究 `.py`/`.json` | 手工研究/一次性素材工具，不属于发版门禁 |
 
 本轮已删除四个对应已退场相机/条码功能的 smoke。`test-nutrition-photo-history` 只保护历史营养照片、份量快照与照片存储兼容，不提供新拍照功能。
@@ -32,15 +32,16 @@
 
 跑步行为专项：`test-running-behaviors` 验证自动暂停的连续速度证据、手动暂停不自动恢复、校准计步来源和中断配速保护。浏览器 GPS 隔离工具集中在 `lib/browser-running-harness.cjs`。原生 MotionGate、RunDistance、StepEvidence 的 JUnit 使用 `check-android-native.ps1 -Target ModuleTests -ProjectRoot <英文路径副本>`；Windows JVM 测试进程及 C++ 完整构建需英文路径副本，原仓库不需移动。模拟测试不能证明真机计步精度。
 
-BLACK 播放专项：设置 `ANDROID_SERIAL=emulator-<编号>` 后运行
+MAX 播放专项：设置 `ANDROID_SERIAL=emulator-<编号>` 后运行
 `check-android-native.ps1 -Target VoicePlaybackTests -ProjectRoot <英文路径副本> -AndroidSdk <SDK路径>`。
-Android instrumentation 测试直接调用生产 `VoiceSpeaker`，验证静态 AudioTrack 的装载状态，
-并要求 PCM 实际播完、暂停可恢复；测试 TTS 引擎经系统接口合成文件、受控失败后重连，
-另验证实际 CAM++ 长/短同人及异人音频包、个人 BLACK 关键词模板与独立回读、加密存储及 Android 公开网页读取。测试引擎不是 ColorOS 中文音色。
+Android instrumentation 测试直接调用生产 `VoiceSpeaker` 和流式 `VoicePcmPlayer`，
+要求 PCM 实际播完、连续分段提前续入、字幕按播放位置推进、暂停恢复及取消代次隔离；
+实际内置 MeloTTS、AEC/VAD/ASR 与回声隔离也在测试范围内，不依赖手机系统 TTS，不登记声纹。
 仅进入“倾听”状态不算播放成功；不自动选中实体手机，
 不授予麦克风权限、不访问个人资料，测试 Activity 不进入正式 App。
 
-主人登记联合测试还需要本机合成素材：在 Windows PowerShell 5.1 中运行
-`build-wake-fixtures.ps1 -OutputDirectory D:/UncoverBuildTools/voice-agent-20261014/owner-v2-fixtures -OwnerEnrollment`，
-再执行 `node scripts/prepare-voice-test-fixtures.cjs --synthetic-dir=D:/UncoverBuildTools/voice-agent-20261014/owner-v2-fixtures`。
-脚本将三个固定哈希的公开录音与五个合成 WAV 写入 gitignored 的 androidTest/assets，不进入生产资源；不能用合成素材冒充用户声纹或真机验收。
+MAX 离线唤醒模型检查：在 Windows PowerShell 5.1 中运行
+`build-wake-fixtures.ps1 -OutputDirectory D:/UncoverBuildTools/voice-agent-20261014/max-fixtures`，
+再给 `check-voice-models.py` 提供 `--resources`、`--fixtures` 与上游中文 `--asr-fixture`。
+仅生成 Max / Hey Max / 非唤醒句三个合成 WAV；检测使用生产 KWS 参数及 512 样本帧，
+前置 200 毫秒静音模拟待机上下文。合成素材不进入生产 APK，不能冒充真人口音或真机麦克风验收。

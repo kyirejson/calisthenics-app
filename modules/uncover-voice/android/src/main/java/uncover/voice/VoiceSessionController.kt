@@ -36,6 +36,7 @@ internal class VoiceSessionController(private val clock: () -> Long = { System.n
   val captureAvailable get() = snapshot.captureAvailable
   private fun owns(id: String, token: Int) = snapshot.captureAvailable && snapshot.turnId == id && snapshot.generation == token
   private fun inputIsCurrent(segment: String) = captureAvailable && snapshot.segmentId == segment
+  fun accepts(segment: String) = inputIsCurrent(segment) && snapshot.input != Input.WAKE
   fun ready() { if (!stopped) snapshot = snapshot.copy(ready = true, activityAt = clock()) }
   fun listen(segment: String? = null) {
     if (captureAvailable) snapshot = snapshot.copy(input = Input.LISTENING, segmentId = segment, draft = "", activityAt = clock())
@@ -89,6 +90,16 @@ internal class VoiceSessionController(private val clock: () -> Long = { System.n
   fun complete(id: String, token: Int): Boolean {
     if (!owns(id, token)) return false
     snapshot = snapshot.copy(turnId = null, output = Output.IDLE, held = false, activityAt = clock()); return true
+  }
+  fun standby(id: String): Boolean {
+    if (!active(id)) return false
+    // Do not erase speech that began while the model was deciding to leave.
+    if (snapshot.held || snapshot.input != Input.LISTENING || snapshot.draft.isNotBlank()) {
+      complete(id, generation); return false
+    }
+    snapshot = snapshot.copy(generation = generation + 1, turnId = null, input = Input.WAKE,
+      output = Output.IDLE, held = false, segmentId = null, draft = "", activityAt = clock())
+    return true
   }
   fun cancel(id: String? = null, preserveInput: Boolean = false): String? {
     val current = turnId ?: return null

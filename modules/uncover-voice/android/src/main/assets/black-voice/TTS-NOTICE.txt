@@ -1,4 +1,4 @@
-BLACK local synthesis: MeloTTS Chinese-English, MyShell.ai, MIT license.
+MAX local synthesis: MeloTTS Chinese-English, MyShell.ai, MIT license.
 Upstream model: https://huggingface.co/myshell-ai/MeloTTS-Chinese
 ONNX distribution: https://github.com/k2-fsa/sherpa-onnx/releases/tag/tts-models
 Archive: vits-melo-tts-zh_en.tar.bz2

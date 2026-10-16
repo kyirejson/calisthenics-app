@@ -32,6 +32,7 @@ const dialogue = createVoiceDialogue({
   conversation: agentConversation,
   active: id => voiceTransport.active(id), reply: (id, text) => voiceTransport.reply(id, text),
   cancel: id => voiceTransport.cancel(id),
+  standby: id => voiceTransport.standby(id),
   subscribeCancellation: (id, callback) => cancellation.subscribe(id, 'turn', callback),
   prepare: loadConnection,
   subscribeReset: subscribeConnectionChanges,

@@ -140,8 +140,13 @@
       "path": "src/main/assets/black-voice/TTS-LICENSE.txt",
       "sha256": "88a50e5a02bbc2a5c2f084dc19da751aa97b1690f5fda76cd8005c8634d1ca70",
       "bytes": 1053
+    },
+    {
+      "path": "src/main/assets/black-voice/keywords.txt",
+      "sha256": "36947cea177f663dd19af087bdd8536435a3b680380b318a7a0703e16450f8ea",
+      "bytes": 41
     }
   ],
   "license": "Apache-2.0 AND MIT AND BSD-3-Clause",
-  "name": "BLACK"
+  "name": "MAX"
 }

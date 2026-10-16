@@ -32,6 +32,13 @@ internal object VoiceSpeechChunks {
       var end = minOf(cursor + maximum, text.length)
       val sentence = (cursor until end).firstOrNull { text[it] in "。！？!?；;\n" }
       if (sentence != null) end = sentence + 1
+      else if (end < text.length) {
+        // A synthesis budget is not a semantic boundary. Prefer the last clause
+        // or word break in the useful part of this window, not a fixed character.
+        val clause = (cursor + maximum / 3 until end).lastOrNull { text[it] in "，,、：: \t" }
+        if (clause != null) end = clause + 1
+      }
+      while (end < text.length && end - cursor < maximum && text[end] in "”’\"')）】」』") end++
       if (end < text.length && text[end - 1].isHighSurrogate() && text[end].isLowSurrogate()) end--
       val speech = spoken(text.substring(cursor, end))
       if (hasPronunciation(speech)) {

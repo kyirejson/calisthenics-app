@@ -15,6 +15,7 @@
     <service android:name="uncover.music.MusicAccessibilityService" android:exported="true" android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE" android:label="@string/uncover_music_service_name">
       <intent-filter><action android:name="android.accessibilityservice.AccessibilityService" /></intent-filter>
       <meta-data android:name="android.accessibilityservice" android:resource="@xml/uncover_music_accessibility" />
+      <meta-data android:name="uncover.phone_control" android:value="true" />
     </service>
     <service android:name="uncover.music.MusicNotificationListener" android:exported="true" android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE" android:label="@string/uncover_music_playback_name">
       <intent-filter><action android:name="android.service.notification.NotificationListenerService" /></intent-filter>

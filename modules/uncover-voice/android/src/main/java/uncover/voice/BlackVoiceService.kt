@@ -36,7 +36,7 @@ class BlackVoiceService : Service() {
     override fun run() {
       if (instance !== this@BlackVoiceService) return
       when (controller.tick()) {
-        VoiceSessionController.Tick.IDLE -> { engine?.idle(); sessionId = UUID.randomUUID().toString(); publish() }
+        VoiceSessionController.Tick.IDLE -> enterStandby()
         VoiceSessionController.Tick.RESUME -> publish()
         else -> Unit
       }
@@ -68,26 +68,29 @@ class BlackVoiceService : Service() {
     event()
     (getSystemService(NOTIFICATION_SERVICE) as NotificationManager).notify(718, notification())
   }
+  private fun enterStandby() {
+    engine?.idle(); sessionId = UUID.randomUUID().toString(); publish()
+  }
   private fun notification(): Notification {
     val stop = PendingIntent.getService(this, 719, Intent(this, BlackVoiceService::class.java).setAction("stop"), PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
     val open = PendingIntent.getActivity(this, 718, packageManager.getLaunchIntentForPackage(packageName)!!, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
-    return Notification.Builder(this, "black_voice").setSmallIcon(android.R.drawable.ic_btn_speak_now).setContentTitle("BLACK 语音对话")
+    return Notification.Builder(this, "black_voice").setSmallIcon(android.R.drawable.ic_btn_speak_now).setContentTitle("${VoiceBrand.NAME} 语音对话")
       .setContentText(when (phase) {
         "listening" -> "正在听你说话"; "assessing" -> "正在确认你的意思"; "processing" -> "正在处理你的请求"; "speaking" -> "正在回答"
         "synthesizing" -> "正在准备语音"; "buffering" -> "正在准备后续语音"
-        "blocked" -> "麦克风被系统静音或暂时被占用"; "starting" -> "正在准备内置语音"; else -> "本地监听 BLACK"
+        "blocked" -> "麦克风被系统静音或暂时被占用"; "starting" -> "正在准备内置语音"; else -> "本地监听 ${VoiceBrand.NAME}"
       }).setContentIntent(open).setOngoing(true).addAction(Notification.Action.Builder(null, "停止监听", stop).build()).build()
   }
   override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
     if (intent?.action == "stop") { VoiceState.setEnabled(this, false); stopSelf(); return START_NOT_STICKY }
     if (!VoiceState.enabled(this) || checkSelfPermission(Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) { stopSelf(); return START_NOT_STICKY }
     val notifications = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
-    notifications.createNotificationChannel(NotificationChannel("black_voice", "BLACK 语音监听", NotificationManager.IMPORTANCE_LOW))
+    notifications.createNotificationChannel(NotificationChannel("black_voice", "${VoiceBrand.NAME} 语音监听", NotificationManager.IMPORTANCE_LOW))
     try {
       startForeground(718, notification(), android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE)
       if (speaker == null) {
         VoiceState.clearError(this)
-        lock = (getSystemService(POWER_SERVICE) as PowerManager).newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "$packageName:BLACK-listening").apply { acquire() }
+        lock = (getSystemService(POWER_SERVICE) as PowerManager).newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "$packageName:MAX-listening").apply { acquire() }
         val epoch = ++audioEpoch
         fun post(action: () -> Unit) { handler.post { if (instance === this && epoch == audioEpoch) action() } }
         speaker = VoiceSpeaker(this, reference) { start, end, completed -> speechStart = start; speechEnd = end; spokenEnd = completed; event("speech") }
@@ -108,13 +111,15 @@ class BlackVoiceService : Service() {
               if (reference.isCurrent(referenceEpoch) && controller.hearing(segment)) publish()
             }
             override fun probe(segment: String, id: String, text: String, wake: Boolean, silenceMs: Long) = post {
-              if (!decisionActive(id)) return@post
-              controller.assessing(segment); publish()
+              if (!decisionActive(id) || !controller.assessing(segment)) return@post
+              publish()
               try { launch(id, text, wake, "decision", silenceMs) }
               catch (error: Exception) { engine?.decide(id, "error", error.message) }
             }
             override fun revoked(id: String) = post { event("decision_cancelled", decisionId = id) }
-            override fun utterance(text: String, wake: Boolean) = post { request(text, wake) }
+            override fun utterance(segment: String, text: String, wake: Boolean) = post {
+              if (controller.accepts(segment)) request(text, wake)
+            }
             override fun settled(segment: String, action: String) = post { if (controller.settle(segment, action)) publish() }
             override fun assessmentError(message: String) = post { fail("turn_decision_failed", message) }
             override fun microphoneState(silenced: Boolean) = post {
@@ -151,6 +156,10 @@ class BlackVoiceService : Service() {
   }
   private fun stopCancelledOutput(id: String) { speaker?.stop(); event("interrupt", id) }
   internal fun cancel(id: String?) { cancelCurrent(id) }
+  internal fun standby(id: String): Boolean {
+    if (!VoiceState.enabled(this) || !controller.standby(id)) { publish(); return false }
+    speaker?.stop(); enterStandby(); return true
+  }
   private fun request(text: String, woke: Boolean) {
     if (!captureAvailable) return
     cancelCurrent(preserveInput = true)

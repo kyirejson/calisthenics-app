@@ -1,0 +1,13 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+  <application android:label="MAX isolated phone tests">
+    <uses-library android:name="android.test.runner" />
+    <activity android:name="uncover.device.PhoneFixtureActivity" android:exported="true" android:label="MAX isolated fixture">
+      <intent-filter><action android:name="android.intent.action.MAIN" /><category android:name="android.intent.category.LAUNCHER" /></intent-filter>
+    </activity>
+    <service android:name="uncover.device.PhoneFixtureService" android:exported="true" android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE" android:label="MAX isolated test control">
+      <intent-filter><action android:name="android.accessibilityservice.AccessibilityService" /></intent-filter>
+      <meta-data android:name="android.accessibilityservice" android:resource="@xml/phone_fixture_accessibility" />
+      <meta-data android:name="uncover.phone_control" android:value="true" />
+    </service>
+  </application>
+</manifest>

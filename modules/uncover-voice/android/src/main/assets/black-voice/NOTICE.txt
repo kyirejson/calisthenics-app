@@ -1,4 +1,4 @@
-BLACK local wake-word recognition uses sherpa-onnx v1.13.8 (k2-fsa / Xiaomi).
+MAX local wake-word recognition uses sherpa-onnx v1.13.8 (k2-fsa / Xiaomi).
 Engine source: https://github.com/k2-fsa/sherpa-onnx/tree/v1.13.8
 
 The native SDK also includes Microsoft ONNX Runtime (MIT License).

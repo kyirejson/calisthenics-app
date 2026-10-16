@@ -110,20 +110,22 @@ test('clearing local data also clears our music receipts and consent, not either
 });
 test('Android interfaces use exact app scope, explicit user consent and real controls; no hardcoded tap coordinates', () => {
   const service = read('modules/uncover-music/android/src/main/java/uncover/music/MusicAccessibilityService.kt');
+  const ui = read('modules/uncover-device/android/src/main/java/uncover/device/PhoneUi.kt');
   const manifest = read('modules/uncover-music/android/src/main/AndroidManifest.xml');
   const ledger = read('modules/uncover-music/android/src/main/java/uncover/music/MusicLedger.kt');
-  assert.match(service, /node\.isPassword/); assert.match(service, /fingerprint\(node\) != anchor\.fingerprint/);
-  assert.match(service, /bounds\.exactCenterX/); assert.doesNotMatch(service, /moveTo\(\s*\d/);
+  assert.match(service, /PhoneAccessibilityService/); assert.match(service, /packageName = MusicPolicy.packageFor\(provider\)/);
+  assert.match(ui, /node\.isPassword/); assert.match(ui, /fingerprint\(node\) != anchor\.fingerprint/);
+  assert.match(ui, /area\.exactCenterX/); assert.doesNotMatch(ui, /moveTo\(\s*\d/);
   assert.match(manifest, /BIND_ACCESSIBILITY_SERVICE/); assert.match(manifest, /BIND_NOTIFICATION_LISTENER_SERVICE/); assert.doesNotMatch(manifest, /QUERY_ALL_PACKAGES|READ_CONTACTS|RECORD_AUDIO/);
   assert.match(ledger, /uncertain_operation/); assert.match(ledger, /replayed/);
   assert.doesNotMatch(read('src/music/agentRuntime.ts'), /includes\(['"]听歌|test\(.*听歌/);
   assert.match(read('src/music/transport.ts'), /native_required/);
 });
 test('keyboard-null root and touch-only controls stay usable without reading background apps', async () => {
-  const service = read('modules/uncover-music/android/src/main/java/uncover/music/MusicAccessibilityService.kt');
+  const service = read('modules/uncover-device/android/src/main/java/uncover/device/PhoneUi.kt');
   assert.doesNotMatch(service, /val active = rootInActiveWindow \?: return null/);
   assert.match(service, /active == null \|\| it.id == active.windowId/);
-  assert.match(service, /applications\.filter \{ it.isFocused \|\| it.isActive \}/);
+  assert.match(service, /apps\.filter \{ it.isFocused \|\| it.isActive \}/);
   assert.match(service, /\.put\("focused", node.isFocused\)/);
   assert.match(service, /"tap" -> touch\(\)/);
   const { musicTools } = await import('../src/music/modelTools.mjs');

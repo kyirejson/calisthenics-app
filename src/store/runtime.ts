@@ -8,6 +8,7 @@ export const appRepository = createAppRepository(AsyncStorage, {
   clearRetired: clearRetiredAssistantStorage,
   clearRunning: async () => (await import('../running/transport')).runningTransport.clear(),
   clearMusic: async () => {
+    await (await import('../device/transport')).phoneTransport.clear();
     await (await import('../voice/transport')).voiceTransport.clear();
     await (await import('../agent/runtime')).agentConversation.clear();
     await (await import('../music/transport')).musicTransport.clear();

@@ -42,7 +42,7 @@ const waitSpoken = (page, size) => page.waitForFunction(size => window.__spoken.
   try {
     for (const width of [320, 390]) {
       const { context, page, errors } = await prepare(browser, width);
-      assert.equal(await page.getByRole('button', { name: '打开 DeepSeek 聊天', exact: true }).count(), 0);
+      assert.equal(await page.getByRole('button', { name: '打开 MAX 聊天', exact: true }).count(), 0);
       assert.equal(await page.getByText('语音数数', { exact: true }).count(), 0);
       await page.getByTestId('training-actual-input').fill('3');
       await page.getByRole('button', { name: '打开训练设置', exact: true }).click();

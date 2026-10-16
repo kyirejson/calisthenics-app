@@ -1,0 +1,14 @@
+apply plugin: 'com.android.library'
+apply plugin: 'expo-module-gradle-plugin'
+group = 'uncover.device'
+version = '1.0.0'
+android {
+  namespace 'uncover.device'
+  useLibrary 'android.test.runner'
+  useLibrary 'android.test.base'
+  defaultConfig { versionCode 1; versionName '1.0.0'; testInstrumentationRunner 'android.test.InstrumentationTestRunner' }
+}
+dependencies {
+  implementation 'com.google.mlkit:text-recognition-chinese:16.0.1'
+  testImplementation 'junit:junit:4.13.2'
+}

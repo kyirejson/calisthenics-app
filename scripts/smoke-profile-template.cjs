@@ -30,8 +30,8 @@ const { chromium, prepare } = vm.runInNewContext(prefix + ';({chromium,prepare})
       await page.getByLabel('年龄', { exact: true }).waitFor(); await page.getByRole('button', { name: '取消', exact: true }).click();
       await page.getByRole('button', { name: '训练专题', exact: true }).click();
       await page.getByTestId('profile-goal-sheet').waitFor(); await page.getByRole('button', { name: '关闭训练专题选择', exact: true }).click();
-      await page.getByRole('button', { name: '打开 DeepSeek 聊天', exact: true }).click();
-      await page.getByRole('button', { name: '关闭 DeepSeek 聊天', exact: true }).click();
+      await page.getByRole('button', { name: '打开 MAX 聊天', exact: true }).click();
+      await page.getByRole('button', { name: '关闭 MAX 聊天', exact: true }).click();
       await page.getByRole('button', { name: '清除本机数据', exact: true }).click();
       await page.getByRole('button', { name: '取消', exact: true }).click();
       assert.deepEqual(await page.evaluate(() => ({ profile: localStorage.getItem('user_profile'), sessions: localStorage.getItem('sessions') })), before);

@@ -58,7 +58,7 @@ test('mobile chat redesign keeps real controls, bounded multiline input and no f
   assert.match(composer, /showStop \? stop : send/);
   assert.match(composer, /editable=\{!inputBusy\}/);
   assert.doesNotMatch(composer, /onSubmitEditing|支持 PDF|DOCX|TXT|update_memory|personalChat/);
-  const modal = read('src/integrations/DeepseekChat.tsx');
+  const modal = read('src/integrations/AgentChat.tsx');
   assert.match(modal, /<ChatComposer/);
   assert.match(modal, /behavior=\{Platform\.OS === 'ios' \? 'padding' : Platform\.OS === 'android' \? 'height' : undefined\}/);
   // Expo generates this directory; public checkouts deliberately exclude it.

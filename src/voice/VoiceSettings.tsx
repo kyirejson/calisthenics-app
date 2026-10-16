@@ -4,6 +4,7 @@ import { appPalette as c } from '../theme';
 import { loadConnection } from '../integrations/credentials';
 import { voiceTransport, type VoiceState } from './transport';
 import { voicePresentation } from './presentation';
+import { AGENT_NAME } from '../agent/identity.mjs';
 
 export function VoiceSettings() {
   const [state, setState] = useState<VoiceState | null>(null), [busy, setBusy] = useState(false), [error, setError] = useState('');
@@ -28,12 +29,12 @@ export function VoiceSettings() {
   };
   const consent = () => {
     if (state?.enabled) { void enable(); return; }
-    Alert.alert('开启 BLACK 语音对话？', '待机在本地监听 BLACK；唤醒后识别文字交给现有 Agent。使用内置中文声音，无需登记声纹，也不识别机主身份。会显示麦克风通知并增加耗电，可随时停止。', [{ text: '取消', style: 'cancel' }, { text: '开启', onPress: () => void enable() }]);
+    Alert.alert(`开启 ${AGENT_NAME} 语音对话？`, `待机在本地监听 ${AGENT_NAME}；唤醒后识别文字交给现有 Agent。使用内置中文声音，无需登记声纹，也不识别机主身份。会显示麦克风通知并增加耗电，可随时停止。`, [{ text: '取消', style: 'cancel' }, { text: '开启', onPress: () => void enable() }]);
   };
   return <View style={s.card}>
-    <View style={s.row}><View style={{ flex: 1 }}><Text style={s.title}>BLACK · 语音对话</Text><Text style={s.small}>{state?.enabled ? voicePresentation(state).label : '尚未开启'}</Text></View>
-      <Switch accessibilityLabel="BLACK 语音唤醒" value={state?.enabled ?? false} disabled={busy || Platform.OS !== 'android'} onValueChange={consent} trackColor={{ false: c.border, true: c.lime }} /></View>
-    <Text style={s.small}>喊 BLACK 后可以连续交流，回答时也能说话。语音与文字共用 Agent、上下文和原有工具，不使用手机系统 TTS。</Text>
+    <View style={s.row}><View style={{ flex: 1 }}><Text style={s.title}>{AGENT_NAME} · 语音对话</Text><Text style={s.small}>{state?.enabled ? voicePresentation(state).label : '尚未开启'}</Text></View>
+      <Switch accessibilityLabel={`${AGENT_NAME} 语音唤醒`} value={state?.enabled ?? false} disabled={busy || Platform.OS !== 'android'} onValueChange={consent} trackColor={{ false: c.border, true: c.lime }} /></View>
+    <Text style={s.small}>喊 {AGENT_NAME} 后可以连续交流，回答时也能说话。30 秒无活动或让助手结束对话后回待机，再喊 {AGENT_NAME} 即可继续。</Text>
     <Pressable accessibilityRole="button" disabled={busy || Platform.OS !== 'android'} style={s.button} onPress={() => void voiceTransport.assistant().catch(e => setError(e.message))}><Text style={s.link}>{state?.assistant ? '已选为默认助手' : '设置默认语音助手（可选）'} ›</Text></Pressable>
     <Text style={s.small}>锁屏和后台运行受系统权限与省电策略影响；强行停止后需重新打开。通知中可停止监听。</Text>
     {state?.legacyVoiceData ? <Pressable accessibilityRole="button" style={s.button} onPress={() => Alert.alert('删除旧版声纹资料？', '仅删除旧版保存在本机的声音特征及对应密钥，不影响聊天、训练和饮食。新语音功能不再使用这些资料。', [{ text: '取消' }, { text: '删除', style: 'destructive', onPress: () => void voiceTransport.forgetLegacyVoiceData().then(async () => setState(await voiceTransport.state())).catch(e => setError(e.message)) }])}><Text style={s.small}>清理旧版声纹资料</Text></Pressable> : null}

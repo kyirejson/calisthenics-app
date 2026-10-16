@@ -115,7 +115,7 @@ async function inspectDetail(page, goal, width) {
         assert.equal((await start.boundingBox()).y, pinned.y);
         const button = await start.getByRole('button').boundingBox();
         assert.ok(button.y > 0 && button.y + button.height < 871 - 68);
-        const chat = await page.getByRole('button', { name: '打开 DeepSeek 聊天', exact: true }).boundingBox();
+        const chat = await page.getByRole('button', { name: '打开 MAX 聊天', exact: true }).boundingBox();
         assert.ok(button.x + button.width <= chat.x || button.y + button.height <= chat.y || chat.y + chat.height <= button.y, 'Default chat cannot obscure start');
         await page.getByTestId(goal === 'equipment' ? 'equipment-today-scroll' : 'today-training-content').evaluate(root => {
           const scroll = root.matches('[data-testid="equipment-today-scroll"]') ? root : [...root.querySelectorAll('div')].find(node => /auto|scroll/.test(getComputedStyle(node).overflowY));

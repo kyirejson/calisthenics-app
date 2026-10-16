@@ -21,8 +21,9 @@ import { ServiceSettings } from './ServiceSettings';
 import { AppGlyph } from '../components/AppGlyph';
 
 import { MemoryEditor } from '../components/MemoryEditor';
+import { AGENT_NAME } from '../agent/identity.mjs';
 
-export function DeepseekChat(props: { visible: boolean; onClose: () => void }) {
+export function AgentChat(props: { visible: boolean; onClose: () => void }) {
   const {
     visible,
     onClose,
@@ -77,8 +78,8 @@ export function DeepseekChat(props: { visible: boolean; onClose: () => void }) {
               <View style={s.brand}>
                 <ChatMark size={32} />
                 <View style={s.brandCopy}>
-                  <Text style={s.title}>AI 助手</Text>
-                  <Text style={s.model}>DeepSeek</Text>
+                  <Text style={s.title}>{AGENT_NAME}</Text>
+                  <Text style={s.model}>AI 助手</Text>
                 </View>
               </View>
               <View style={s.headerActions}>
@@ -106,7 +107,7 @@ export function DeepseekChat(props: { visible: boolean; onClose: () => void }) {
                 </Pressable>
                 <Pressable
                   accessibilityRole="button"
-                  accessibilityLabel="关闭 DeepSeek 聊天"
+                  accessibilityLabel={`关闭 ${AGENT_NAME} 聊天`}
                   onPress={onClose}
                   style={s.hit}
                 >
@@ -156,7 +157,7 @@ export function DeepseekChat(props: { visible: boolean; onClose: () => void }) {
                       <Text style={s.close}>×</Text>
                     </Pressable>
                   </View>
-                  <Text style={s.sheetDescription}>提取文字后随消息发送给 DeepSeek</Text>
+                  <Text style={s.sheetDescription}>提取文字后交给 {AGENT_NAME}，通过已配置的模型 API 处理</Text>
                   <ScrollView
                     style={s.sheetFiles}
                     contentContainerStyle={s.sheetFilesContent}

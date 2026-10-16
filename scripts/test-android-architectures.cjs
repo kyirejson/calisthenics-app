@@ -18,6 +18,9 @@ test('a fresh Expo project receives a single ARM64 default', () => {
   const config = require('../app.json').expo;
   assert.ok(config.plugins.includes('./plugins/withAndroidArchitectures.cjs'));
   assert.ok(require('../plugins/withAndroidArchitectures.cjs')({ name: 'Uncover', slug: 'uncover' }).mods.android.gradleProperties);
+  const voice = require('node:fs').readFileSync(require.resolve('../modules/uncover-voice/android/build.gradle'), 'utf8');
+  assert.ok(voice.includes("project.findProperty('reactNativeArchitectures') ?: 'arm64-v8a'"));
+  assert.match(voice, /ndk\s*\{\s*abiFilters.addAll\(voiceArchitectures\)/);
 });
 
 test('release guard rejects any foreign ABI, even when voice libraries themselves are ARM64', () => {

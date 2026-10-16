@@ -26,7 +26,7 @@ const base = process.env.MUSIC_QA_BASE || 'http://127.0.0.1:8081/';
       });
       await page.goto(base, { waitUntil: 'domcontentloaded' });
       const settings = async () => {
-        await page.getByRole('button', { name: '打开 DeepSeek 聊天', exact: true }).click();
+        await page.getByRole('button', { name: '打开 MAX 聊天', exact: true }).click();
         await page.getByRole('button', { name: '打开服务设置', exact: true }).click();
         await page.getByTestId('music-settings').waitFor();
       };

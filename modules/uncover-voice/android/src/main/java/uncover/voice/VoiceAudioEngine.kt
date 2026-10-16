@@ -15,7 +15,7 @@ internal interface VoiceAudioEvents {
   fun ready(); fun armed(segment: String); fun partial(segment: String, text: String)
   fun candidate(segment: String); fun hearing(segment: String, referenceEpoch: Long)
   fun probe(segment: String, id: String, text: String, wake: Boolean, silenceMs: Long)
-  fun revoked(id: String); fun utterance(text: String, wake: Boolean); fun settled(segment: String, action: String)
+  fun revoked(id: String); fun utterance(segment: String, text: String, wake: Boolean); fun settled(segment: String, action: String)
   fun assessmentError(message: String); fun microphoneState(silenced: Boolean); fun failure(error: Throwable)
 }
 
@@ -34,7 +34,7 @@ internal class VoiceAudioEngine(private val context: Context, private val refere
   fun decisionActive(id: String) = !stopped && control.active(id)
   fun decide(id: String, action: String, error: String? = null) { if (!stopped && control.submit(id)) decisions.add(Triple(id, action, error)) }
   fun start() {
-    worker = thread(name = "BLACK-recognition") {
+    worker = thread(name = "MAX-recognition") {
       var kws: KeywordSpotter? = null; var asr: OnlineRecognizer? = null; var vad: Vad? = null; var echo: VoiceEcho? = null
       var ks: OnlineStream? = null; var stream: OnlineStream? = null
       try {
@@ -60,8 +60,8 @@ internal class VoiceAudioEngine(private val context: Context, private val refere
         fun resetKeyword() { ks?.release(); ks = kws.createStream(); keywordFrames = 0 }
         fun decode() { while (asr.isReady(stream)) asr.decode(stream); turn.update(asr.getResult(stream).text); show() }
         fun accept() {
-          val text = turn.text; val woke = turn.wake
-          resetTurn(); recent.clear(); events.utterance(text, woke)
+          val text = turn.text; val woke = turn.wake; val acceptedSegment = segment
+          resetTurn(); recent.clear(); events.utterance(acceptedSegment, text, woke)
         }
         if (stopped) return@thread
         capture.start { if (!stopped) events.ready() }
@@ -92,7 +92,7 @@ internal class VoiceAudioEngine(private val context: Context, private val refere
           val source = evidence.source(rendered.renderProtected, rendered.reliable && input.timestamped)
           val diagnostic = "$source protected=${rendered.renderProtected} renderClock=${rendered.reliable} captureClock=${input.timestamped}"
           if (diagnostic != lastAcoustic && now - loggedAt >= 500) {
-            Log.i("BLACK-VoiceInput", "$diagnostic near=${evidence.nearendBlocks}/${evidence.blocks} echo=${evidence.echoBlocks} delayMs=${evidence.delayMs} erleDb=${evidence.erleDb}")
+            Log.i("MAX-VoiceInput", "$diagnostic near=${evidence.nearendBlocks}/${evidence.blocks} echo=${evidence.echoBlocks} delayMs=${evidence.delayMs} erleDb=${evidence.erleDb}")
             lastAcoustic = diagnostic; loggedAt = now
           }
           // AEC always processes the full duplex waveform. Admission, not whole-frame

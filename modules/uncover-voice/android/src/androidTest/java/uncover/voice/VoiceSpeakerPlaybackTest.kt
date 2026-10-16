@@ -20,11 +20,16 @@ class VoiceSpeakerPlaybackTest : InstrumentationTestCase() {
   }
   override fun tearDown() { instrumentation.runOnMainSync { activity.finish() }; super.tearDown() }
   private fun player() = VoicePcmPlayer(VoiceRenderReference(), AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_ASSISTANT).build())
+  private fun play(player: VoicePcmPlayer, pcm: ShortArray, active: () -> Boolean, started: () -> Unit): Int {
+    val packets = java.util.ArrayDeque<VoicePlaybackPacket>()
+    packets.add(VoicePlaybackPacket.Audio(pcm, 0, 1)); packets.add(VoicePlaybackPacket.End())
+    return player.play(packets::poll, active, playback = { if (it) started() }).playedFrames.toInt()
+  }
   fun testProductionPcmPlayerActuallyPlaysAndCanPlayAgain() {
     val player = player()
     try { repeat(2) {
       var started = false; val pcm = ShortArray(8000) { (2000 * kotlin.math.sin(it * .1)).toInt().toShort() }
-      val played = player.play(pcm, { true }) { started = true }
+      val played = play(player, pcm, { true }) { started = true }
       assertTrue(started); assertEquals(pcm.size, played)
     } } finally { player.stop() }
   }
@@ -32,16 +37,16 @@ class VoiceSpeakerPlaybackTest : InstrumentationTestCase() {
     val player = player()
     try {
       var started = false
-      assertEquals(80, player.play(ShortArray(80) { 1200 }, { true }) { started = true })
+      assertEquals(80, play(player, ShortArray(80) { 1200 }, { true }) { started = true })
       assertTrue(started)
-      assertEquals(160, player.play(ShortArray(160) { 800 }, { true }) {})
+      assertEquals(160, play(player, ShortArray(160) { 800 }, { true }) {})
     } finally { player.stop() }
   }
   fun testPcmCancellationStopsRealPlaybackWithoutCompletingTheQueue() {
     val player = player(); val active = AtomicBoolean(true); val begun = CountDownLatch(1); val done = CountDownLatch(1)
     var played = -1; var error: Throwable? = null
     val worker = Thread {
-      try { played = player.play(ShortArray(160000) { 1200 }, { active.get() }) { begun.countDown() } }
+      try { played = play(player, ShortArray(160000) { 1200 }, { active.get() }) { begun.countDown() } }
       catch (failure: Throwable) { error = failure } finally { done.countDown() }
     }
     try {
@@ -52,11 +57,71 @@ class VoiceSpeakerPlaybackTest : InstrumentationTestCase() {
   fun testCandidatePauseKeepsPlaybackAndResumesRemainingSamples() {
     val player = player(); val active = AtomicBoolean(true); val begun = CountDownLatch(1); val done = CountDownLatch(1)
     var played = -1
-    val worker = Thread { try { played = player.play(ShortArray(16000) { 1200 }, { active.get() }) { begun.countDown() } } finally { done.countDown() } }
+    val worker = Thread { try { played = play(player, ShortArray(16000) { 1200 }, { active.get() }) { begun.countDown() } } finally { done.countDown() } }
     try {
       player.pause(); worker.start(); assertFalse(begun.await(200, TimeUnit.MILLISECONDS)); player.resume()
       assertTrue(begun.await(3, TimeUnit.SECONDS)); player.pause(); assertFalse(done.await(200, TimeUnit.MILLISECONDS))
       player.resume(); assertTrue(done.await(4, TimeUnit.SECONDS)); assertEquals(16000, played)
+    } finally { active.set(false); player.stop(); worker.join(1000) }
+  }
+  fun testReadySegmentsArePrefedWithoutDrainingBetweenSentences() {
+    val player = player(); val packets = java.util.ArrayDeque<VoicePlaybackPacket>()
+    val states = mutableListOf<Boolean>(); val completed = mutableListOf<Int>(); var pulled = 0
+    repeat(6) { index -> packets.add(VoicePlaybackPacket.Audio(ShortArray(4000) { 1200 }, index, index + 1)) }
+    packets.add(VoicePlaybackPacket.End())
+    try {
+      val result = player.play(next = {
+        val packet = packets.poll()
+        if (packet is VoicePlaybackPacket.Audio && ++pulled == 2)
+          assertTrue("The successor was only requested after its predecessor drained", completed.isEmpty())
+        packet
+      }, active = { true }, playback = { states.add(it) }, progress = { _, end, spoken -> if (spoken == end) completed.add(end) })
+      assertNull(result.error); assertEquals(24000L, result.playedFrames); assertEquals(result.queuedFrames, result.playedFrames)
+      assertEquals(5, result.prefedBoundaries); assertEquals(listOf(true), states)
+      assertEquals((1..6).toList(), completed)
+      android.util.Log.i("MAX-ContinuousTest", "ready segments prefed=${result.prefedBoundaries} underruns=${result.underruns} frames=${result.playedFrames}")
+    } finally { player.stop() }
+  }
+  fun testRealProducerGapIsBufferingAndATinyFinalSegmentStillRestarts() {
+    val player = player(); val packets = LinkedBlockingQueue<VoicePlaybackPacket>()
+    packets.add(VoicePlaybackPacket.Audio(ShortArray(4000) { 1200 }, 0, 1))
+    val firstDone = CountDownLatch(1); val buffering = CountDownLatch(1); val done = CountDownLatch(1)
+    val active = AtomicBoolean(true); var result: VoicePlaybackResult? = null; var failure: Throwable? = null; var spoken = 0
+    val worker = Thread {
+      try { result = player.play(packets::poll, active::get, playback = { if (!it) buffering.countDown() },
+        progress = { _, end, position -> spoken = position; if (end == 1 && position == 1) firstDone.countDown() }) }
+      catch (error: Throwable) { failure = error } finally { done.countDown() }
+    }
+    try {
+      worker.start(); assertTrue(firstDone.await(4, TimeUnit.SECONDS)); assertTrue(buffering.await(2, TimeUnit.SECONDS))
+      assertFalse(done.await(200, TimeUnit.MILLISECONDS)); assertEquals(1, spoken)
+      packets.add(VoicePlaybackPacket.Audio(ShortArray(80) { 900 }, 1, 2)); packets.add(VoicePlaybackPacket.End())
+      assertTrue(done.await(4, TimeUnit.SECONDS)); assertNull(failure); assertNull(result!!.error)
+      assertEquals(4080L, result!!.playedFrames); assertEquals(4080L, result!!.queuedFrames); assertEquals(2, spoken)
+    } finally { active.set(false); player.stop(); worker.join(1000) }
+  }
+  fun testPrefedBoundariesKeepTheActualRenderReferenceClocked() {
+    val reference = VoiceRenderReference()
+    val player = VoicePcmPlayer(reference, AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_ASSISTANT).build())
+    val packets = java.util.ArrayDeque<VoicePlaybackPacket>(); val boundary = CountDownLatch(1); val done = CountDownLatch(1)
+    val active = AtomicBoolean(true); var failure: Throwable? = null; var result: VoicePlaybackResult? = null
+    repeat(2) { index -> packets.add(VoicePlaybackPacket.Audio(ShortArray(16000) { (2000 * kotlin.math.sin(it * .1)).toInt().toShort() }, index, index + 1)) }
+    packets.add(VoicePlaybackPacket.End())
+    val worker = Thread {
+      try { result = player.play(packets::poll, active::get, progress = { _, end, spoken -> if (end == 1 && spoken == 1) boundary.countDown() }) }
+      catch (error: Throwable) { failure = error } finally { done.countDown() }
+    }
+    try {
+      worker.start(); assertTrue(boundary.await(4, TimeUnit.SECONDS))
+      var clocked = 0
+      repeat(8) {
+        val frame = reference.read(System.nanoTime(), 512)
+        assertTrue("Render protection disappeared at a sentence seam", frame.renderProtected)
+        if (frame.reliable && frame.samples.any { it != 0.toShort() }) clocked++
+        assertFalse(done.await(20, TimeUnit.MILLISECONDS))
+      }
+      assertTrue("No clocked speech reference across the sentence seam", clocked >= 3)
+      assertTrue(done.await(4, TimeUnit.SECONDS)); assertNull(failure); assertEquals(1, result!!.prefedBoundaries)
     } finally { active.set(false); player.stop(); worker.join(1000) }
   }
   fun testCoordinatorWaitsForActualAudioAndResumesTheSameHeldAnswer() {
@@ -180,7 +245,7 @@ class VoiceSpeakerPlaybackTest : InstrumentationTestCase() {
         engine.decide(id, if (probes.size == 1) "wait" else "respond")
       }
       override fun revoked(id: String) {}
-      override fun utterance(text: String, wake: Boolean) { heard.add(text); finished.countDown() }
+      override fun utterance(segment: String, text: String, wake: Boolean) { heard.add(text); finished.countDown() }
       override fun settled(segment: String, action: String) { if (action == "wait") firstProbe.countDown() }
       override fun assessmentError(message: String) { failure = IllegalStateException(message); finished.countDown(); firstProbe.countDown() }
       override fun microphoneState(silenced: Boolean) {}
@@ -224,7 +289,7 @@ class VoiceSpeakerPlaybackTest : InstrumentationTestCase() {
       }
       override fun partial(segment: String, text: String) { if (text.isNotBlank()) partials.add(text); controller.partial(segment, text) }
       override fun probe(segment: String, id: String, text: String, wake: Boolean, silenceMs: Long) { probes.add(text); engine.decide(id, "respond") }
-      override fun utterance(text: String, wake: Boolean) { submissions.add(text) }
+      override fun utterance(segment: String, text: String, wake: Boolean) { submissions.add(text) }
       override fun settled(segment: String, action: String) { controller.settle(segment, action) }
       override fun revoked(id: String) {}
       override fun assessmentError(message: String) { failure = IllegalStateException(message); finished.countDown() }
@@ -251,7 +316,7 @@ class VoiceSpeakerPlaybackTest : InstrumentationTestCase() {
     val synth = LocalVoiceSynthesizer(instrumentation.targetContext)
     return try {
       synth.prepare(); VoiceEcho(512).use { resampler ->
-        listOf("BLACK，今天已经跑了三公里。现在告诉你今天的训练安排。", "等一下，我想先听音乐，帮我播放我喜欢的歌曲。")
+        listOf("MAX，今天已经跑了三公里。现在告诉你今天的训练安排。", "等一下，我想先听音乐，帮我播放我喜欢的歌曲。")
           .map { text -> synth.generate(text).let { resampler.resample(it.samples, it.sampleRate) } }
       }
     } finally { synth.close() }
@@ -261,7 +326,7 @@ class VoiceSpeakerPlaybackTest : InstrumentationTestCase() {
     val shaped = if (clip) echo.coerceIn(-1800.0, 1800.0) else echo
     (shaped + if (noise) kotlin.math.sin(i * 2.37) * 18 else 0.0).coerceIn(-32768.0, 32767.0).toInt().toShort()
   }
-  fun testEchoOnlyCannotHoldTranscribeWakeOrSubmitEvenWhenItContainsBlack() {
+  fun testEchoOnlyCannotHoldTranscribeWakeOrSubmitEvenWhenItContainsMax() {
     val own = acousticSpeech()[0]
     val far = ShortArray(6400 + own.size * 3 + 8000) { i -> if (i in 6400 until 6400 + own.size * 3) own[(i - 6400) % own.size] else 0 }
     val room = reflected(far, 1280)
@@ -571,7 +636,7 @@ class VoiceSpeakerPlaybackTest : InstrumentationTestCase() {
     }
     // Finer alignment is diagnostic only: do not loosen the original acceptance assertion.
     val nearGain = nearGain(16); val sampleAlignedGain = nearGain(1)
-    android.util.Log.i("BLACK-EchoTest", "speech echo energy ratio=$echoRatio; double-talk near gain=$nearGain; sample-aligned gain=$sampleAlignedGain")
+    android.util.Log.i("MAX-EchoTest", "speech echo energy ratio=$echoRatio; double-talk near gain=$nearGain; sample-aligned gain=$sampleAlignedGain")
     assertTrue("Delayed echo was not reduced: $echoRatio", echoRatio < .2)
     assertTrue("Independent near-end speech was suppressed: $nearGain", nearGain > .2)
   }

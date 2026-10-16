@@ -1,0 +1,15 @@
+MAX general phone control
+
+The foreground UI execution engine is shared with the existing, independently
+authorized music controller. There is no fixed list of supported app workflows.
+Screen pixels are captured only for an explicitly requested local text-reading
+operation; known password fields are masked. Images are not saved or uploaded.
+Recognized text/coordinates are returned to the user's configured model API.
+Protected windows remain protected by Android. OCR is not general image reasoning.
+
+Local Chinese/Latin text recognition uses the bundled Android ML Kit artifact
+com.google.mlkit:text-recognition-chinese:16.0.1 (via Gradle).
+Official implementation and terms:
+https://developers.google.com/ml-kit/vision/text-recognition/v2/android
+https://developers.google.com/ml-kit/terms
+Dependency notices and applicable terms remain those of their respective owners.

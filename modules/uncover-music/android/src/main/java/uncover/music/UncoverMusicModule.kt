@@ -37,8 +37,8 @@ class UncoverMusicModule : Module() {
     MusicExecutionService.cancelActive()
     MusicBackground.close()
     MusicAccessibilityService.instance?.forgetScreens()
-    MusicAccessibilityService.instance?.disableSelf()
     MusicLedger.clear(context)
+    MusicAccessibilityService.instance?.refreshAccess()
   }
   internal suspend fun executeRequest(requestId: String, raw: String, executionId: String): JSONObject = safeRequest {
       if (MusicLedger.isCancelled(executionId)) throw MusicFailure("cancelled", "音乐请求已取消。")
@@ -125,7 +125,8 @@ class UncoverMusicModule : Module() {
     AsyncFunction("finishWithoutUi") { requestId: String, executionId: String -> finishRequest(requestId, executionId, false) }.runOnQueue(Queues.MAIN)
     AsyncFunction("consent") { value: Boolean ->
       MusicLedger.setConsent(context, "screen", value)
-      if (!value) { MusicExecutionService.cancelActive(); MusicBackground.close(); MusicAccessibilityService.instance?.forgetScreens(); MusicAccessibilityService.instance?.disableSelf() }
+      if (!value) { MusicExecutionService.cancelActive(); MusicBackground.close(); MusicAccessibilityService.instance?.forgetScreens() }
+      MusicAccessibilityService.instance?.refreshAccess()
     }.runOnQueue(Queues.MAIN)
     AsyncFunction("backgroundConsent") { value: Boolean ->
       if (value && android.os.Build.VERSION.SDK_INT < MusicDisplayPolicy.MIN_API) throw MusicFailure("background_unsupported", "后台点歌需要 Android 14 或以上。")

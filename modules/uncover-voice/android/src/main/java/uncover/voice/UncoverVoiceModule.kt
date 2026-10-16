@@ -21,7 +21,7 @@ class UncoverVoiceModule : Module() {
     OnDestroy { if (instance === this@UncoverVoiceModule) instance = null }
     AsyncFunction("state") { VoiceState.snapshot(context).toString() }
     AsyncFunction("enable") { enabled: Boolean ->
-      if (enabled && Build.VERSION.SDK_INT < 29) error("BLACK 语音唤醒需要 Android 10 或以上。")
+      if (enabled && Build.VERSION.SDK_INT < 29) error("${VoiceBrand.NAME} 语音唤醒需要 Android 10 或以上。")
       if (enabled && context.checkSelfPermission(Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) error("请先授权麦克风。")
       if (enabled && appContext.currentActivity == null) error("请从 App 中主动开启语音监听。")
       VoiceState.setEnabled(context, enabled)
@@ -34,7 +34,7 @@ class UncoverVoiceModule : Module() {
       VoiceLegacyData.clear(context); status()
     }.runOnQueue(Queues.MAIN)
     AsyncFunction("assistant") {
-      if (Build.VERSION.SDK_INT < 29) error("BLACK 默认语音助手需要 Android 10 或以上。")
+      if (Build.VERSION.SDK_INT < 29) error("${VoiceBrand.NAME} 默认语音助手需要 Android 10 或以上。")
       val activity = appContext.currentActivity ?: error("请从 App 中设置默认语音助手。")
       try { activity.startActivity(Intent(Settings.ACTION_VOICE_INPUT_SETTINGS)) }
       catch (_: ActivityNotFoundException) {
@@ -47,6 +47,7 @@ class UncoverVoiceModule : Module() {
     AsyncFunction("decide") { id: String, action: String, error: String? -> BlackVoiceService.instance?.decide(id, action, error) }.runOnQueue(Queues.MAIN)
     AsyncFunction("dialogue") { BlackVoiceService.instance?.dialogue() ?: "{\"kind\":\"status\",\"sequence\":0,\"phase\":\"stopped\"}" }
     AsyncFunction("cancel") { id: String? -> BlackVoiceService.instance?.cancel(id) }.runOnQueue(Queues.MAIN)
+    AsyncFunction("standby") { id: String -> BlackVoiceService.instance?.standby(id) == true }.runOnQueue(Queues.MAIN)
     AsyncFunction("reply") { id: String, text: String -> BlackVoiceService.instance?.reply(id, text) }.runOnQueue(Queues.MAIN)
     AsyncFunction("clear") { VoiceState.setEnabled(context, false); BlackVoiceService.stop(context); VoiceLegacyData.clear(context); VoiceState.clearError(context); status() }.runOnQueue(Queues.MAIN)
   }

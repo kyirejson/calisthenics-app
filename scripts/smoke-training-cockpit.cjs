@@ -25,7 +25,7 @@ const noOverflow = async page => assert.equal(await page.evaluate(() => document
       const { context, page, errors } = await prepare(browser, width);
       try {
         assert.equal((await records(page)).length, 0, 'Opening training never creates a record');
-        assert.equal(await page.getByRole('button', { name: '打开 DeepSeek 聊天', exact: true }).count(), 0, 'Training has no header chat or floating assistant');
+        assert.equal(await page.getByRole('button', { name: '打开 MAX 聊天', exact: true }).count(), 0, 'Training has no header chat or floating assistant');
         await page.getByTestId('training-actual-input').fill('8');
         await page.screenshot({ path: `D:/UncoverBuildTools/temp/training-cockpit-active-${width}.png` });
         await page.getByTestId('training-primary').click();

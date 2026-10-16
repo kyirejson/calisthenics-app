@@ -4,13 +4,14 @@ require('./lib/register-typescript.cjs')();
 const { createVoiceDialogue } = require('../src/voice/dialogue.ts');
 const { createAgentConversation } = require('../src/agent/conversation.ts');
 function dialogueHarness() {
-  const calls = [], replies = []; let active = true;
+  const calls = [], replies = [], standbys = []; let active = true;
   const cancellations = new Map();
   const storage = new Map(); const conversation = createAgentConversation({ getItem: async key => storage.get(key) || null, setItem: async (key, value) => storage.set(key, value), removeItem: async key => storage.delete(key) });
-  const dependencies = { conversation, cancel: async () => {}, active: async () => active, reply: async (id, text) => { replies.push({ id, text }); }, subscribeReset: () => () => {},
+  const dependencies = { conversation, cancel: async () => {}, active: async () => active, reply: async (id, text) => { replies.push({ id, text }); },
+    standby: async id => { standbys.push(id); active = false; return true; }, subscribeReset: () => () => {},
     subscribeCancellation: (id, cancel) => { cancellations.set(id, cancel); return () => cancellations.delete(id); },
     turn: async input => { calls.push(input); return '真实模型回答'; } };
-  return { dependencies, calls, replies, stop: () => { active = false; }, cancel: id => { active = false; cancellations.get(id)?.(); }, task: createVoiceDialogue(dependencies) };
+  return { dependencies, calls, replies, standbys, stop: () => { active = false; }, wake: () => { active = true; }, cancel: id => { active = false; cancellations.get(id)?.(); }, task: createVoiceDialogue(dependencies) };
 }
 test('voice and text use the same tool runner and repository instead of keyword music/meal routes', () => {
   const chat = read('src/features/chat/useChatSession.ts'), voice = read('src/voice/agentTask.ts'), runner = read('src/integrations/runAgentTurn.ts');
@@ -133,7 +134,7 @@ test('native ownership handoff does not poll or cancel a synthesized or silent a
       const h = dialogueHarness();
       h.dependencies.turn = async input => { seen = input.controller; return answer; };
       h.dependencies.reply = async () => { h.stop(); await new Promise(resolve => setImmediate(resolve)); };
-      await h.task({ requestId: 'handoff', sessionId: 's', text: 'BLACK' });
+      await h.task({ requestId: 'handoff', sessionId: 's', text: 'MAX' });
       assert.equal(seen.signal.aborted, false);
       assert.equal(h.dependencies.conversation.getSnapshot().turns[1].status, answer ? 'complete' : 'silent');
     }
@@ -154,7 +155,7 @@ test('cancellation during initial storage hydration cannot persist an empty repl
   ] });
   let release, cancel; const writes = [], replies = [];
   const conversation = createAgentConversation({ getItem: () => new Promise(resolve => { release = resolve; }), setItem: async (_key, value) => writes.push(value), removeItem: async () => {} });
-  const task = createVoiceDialogue({ conversation, active: async () => true, cancel: async () => {},
+  const task = createVoiceDialogue({ conversation, active: async () => true, cancel: async () => {}, standby: async () => false,
     reply: async (...args) => replies.push(args), subscribeReset: () => () => {},
     subscribeCancellation: (_id, callback) => { cancel = callback; return () => {}; },
     turn: async () => { throw Error('Cancelled initialization must not call the model'); },
@@ -172,7 +173,7 @@ test('initialization completes before the first model turn and wake metadata doe
     assert.equal(metadata.wakeDetected, true); assert.equal('ownerVerified' in metadata, false);
     return '我在。';
   };
-  await h.task({ requestId: 'wake', sessionId: 's', text: 'BLACK', wake: true });
+  await h.task({ requestId: 'wake', sessionId: 's', text: 'MAX', wake: true });
   assert.equal(h.replies.length, 1);
 });
 test('production has no enrollment or phone TTS fallback and pins the bundled local model', () => {
@@ -189,4 +190,134 @@ test('production has no enrollment or phone TTS fallback and pins the bundled lo
   assert.ok(!artifacts.some(a => /campplus/.test(a.name)));
   for (const name of ['VoiceIdentity','VoiceBiometrics','VoiceOwnerStore','VoiceRegistrationGate','VoicePacketGate'])
     assert.equal(fs.existsSync(path.join(__dirname, '../modules/uncover-voice/android/src/main/java/uncover/voice/' + name + '.kt')), false);
+});
+
+test('model-selected standby ends silently once and the next wake retains context and tools', async () => {
+  const { personalChat, personalTools } = await import('../src/integrations/personalTools.mjs');
+  const h = dialogueHarness(); let generated = 0, seenController;
+  h.dependencies.turn = input => {
+    seenController = input.controller;
+    return personalChat({ responseMode: 'voice', date: '2026-10-16', ...input,
+      client: { generate: async (_messages, options) => {
+        generated++; assert.deepEqual(options.tools.slice(0, personalTools.length), personalTools);
+        assert.ok(options.tools.some(t => t.function.name === 'end_voice_conversation'));
+        return { role: 'assistant', tool_calls: [{ id: 'standby', function: { name: 'end_voice_conversation', arguments: JSON.stringify({ reason: '用户表示这次先聊到这里' }) } }] };
+      } }, execute: async () => { throw Error('Session control must not reach data/music tools'); },
+    });
+  };
+  const input = { requestId: 'bye', sessionId: 's', text: '这次先到这里吧，改天再说' };
+  await h.task(input);
+  assert.deepEqual(h.standbys, ['bye']); assert.equal(h.replies.length, 0); assert.equal(generated, 1);
+  assert.equal(seenController.signal.aborted, false);
+  const saved = h.dependencies.conversation.getSnapshot();
+  assert.equal(saved.turns[0].content, input.text); assert.equal(saved.turns[1].status, 'silent');
+  assert.equal(saved.turns[1].receipts[0].result.standbyScheduled, true); assert.equal(saved.generating, false); assert.equal(saved.error, '');
+  h.wake(); await h.task(input); assert.equal(generated, 1); assert.equal(h.standbys.length, 1);
+  h.dependencies.turn = async input => {
+    assert.ok(input.messages.some(m => m.role === 'user' && m.content === '这次先到这里吧，改天再说'));
+    assert.ok(input.messages.some(m => m.role === 'tool' && JSON.parse(m.content).standbyScheduled));
+    return '我在。';
+  };
+  await h.task({ requestId: 'wake-again', sessionId: 'new', text: 'MAX', wake: true });
+  assert.deepEqual(h.replies, [{ id: 'wake-again', text: '我在。' }]); assert.equal(h.standbys.length, 1);
+});
+
+test('dismissal words are forwarded to the model and never matched by the scaffold', async () => {
+  const h = dialogueHarness();
+  for (const [index, text] of ['“退下吧”是什么意思？', '我刚才让同事先退下吧，你继续说', '退下吧'].entries()) {
+    h.dependencies.turn = async input => {
+      assert.equal(input.messages.at(-1).content, text);
+      return '由模型决定继续回答。';
+    };
+    await h.task({ requestId: `not-a-keyword-${index}`, sessionId: 's', text });
+  }
+  assert.equal(h.standbys.length, 0); assert.equal(h.replies.length, 3);
+});
+
+test('standby control is voice-only and preserves all existing text/business tools', async () => {
+  const { personalChat, personalTools } = await import('../src/integrations/personalTools.mjs');
+  let standby = 0;
+  for (const responseMode of ['voice', 'text']) {
+    await personalChat({ responseMode, messages: [], date: '2026-10-16', endVoiceConversation: async () => { standby++; },
+      client: { generate: async (_messages, options) => {
+        assert.deepEqual(options.tools.slice(0, personalTools.length), personalTools);
+        assert.equal(options.tools.some(t => t.function.name === 'end_voice_conversation'), responseMode === 'voice');
+        return { content: '正常回答，不退出。' };
+      } }, execute: async () => ({ ok: true }),
+    });
+  }
+  assert.equal(standby, 0);
+});
+
+test('a mixed standby batch waits for all effects and an explicit final model choice', async () => {
+  const { personalChat } = await import('../src/integrations/personalTools.mjs');
+  const effects = [], receipts = []; let generated = 0, standby = 0;
+  const answer = await personalChat({ responseMode: 'voice', messages: [], date: '2026-10-16',
+    endVoiceConversation: async () => { standby++; },
+    client: { generate: async history => {
+      if (generated++ === 0) return { role: 'assistant', tool_calls: [
+        { id: 'early', function: { name: 'end_voice_conversation', arguments: '{"reason":"用户说任务做完后退下"}' } },
+        { id: 'meal', function: { name: 'write_meal_records', arguments: '{"operationKey":"meal-1"}' } },
+      ] };
+      assert.equal(standby, 0); assert.match(history.at(-1).content, /保存失败/);
+      assert.equal(receipts[0].result.standbyScheduled, false); assert.equal(receipts[0].result.pendingReview, true);
+      return { content: '饮食没能保存，先不退出。' };
+    } }, execute: async (name, args) => { effects.push({ name, args }); return { ok: false, error: '保存失败' }; },
+    onToolResult: call => receipts.push(call),
+  });
+  assert.equal(answer, '饮食没能保存，先不退出。'); assert.equal(standby, 0);
+  assert.equal(effects.length, 1); assert.equal(effects[0].name, 'write_meal_records');
+});
+
+test('reviewed successful mixed tasks can then enter standby without repeating their effects', async () => {
+  const { personalChat } = await import('../src/integrations/personalTools.mjs');
+  let round = 0, effects = 0, standby = 0;
+  const end = { id: 'end', function: { name: 'end_voice_conversation', arguments: '{"reason":"请求的任务已核实，用户要求完成后结束"}' } };
+  const answer = await personalChat({ responseMode: 'voice', messages: [], date: '2026-10-16',
+    endVoiceConversation: async () => { standby++; },
+    client: { generate: async history => {
+      if (round++ === 0) return { role: 'assistant', tool_calls: [end, { id: 'music', function: { name: 'control_music', arguments: '{"action":"play","operationKey":"play-1"}' } }] };
+      assert.equal(standby, 0); assert.equal(effects, 1); assert.equal(JSON.parse(history.at(-1).content).ok, true);
+      return { role: 'assistant', tool_calls: [{ ...end, id: 'reviewed-end' }] };
+    } }, execute: async () => { effects++; return { ok: true }; },
+  });
+  assert.equal(answer, ''); assert.equal(standby, 1); assert.equal(effects, 1); assert.equal(round, 2);
+});
+
+test('invalid, disconnected and failed standby requests do not silently end the conversation', async () => {
+  const { personalChat } = await import('../src/integrations/personalTools.mjs');
+  for (const scenario of ['invalid', 'disconnected', 'failed']) {
+    let round = 0, attempts = 0; const receipts = [];
+    const answer = await personalChat({ responseMode: 'voice', messages: [], date: '2026-10-16',
+      endVoiceConversation: scenario === 'disconnected' ? undefined : async () => { attempts++; throw Error('当前语音请求已失效'); },
+      client: { generate: async history => {
+        if (round++ === 0) return { role: 'assistant', tool_calls: [{ id: 'invalid-end', function: { name: 'end_voice_conversation', arguments: JSON.stringify(scenario === 'invalid' ? { reason: '' } : { reason: '用户要结束' }) } }] };
+        assert.equal(JSON.parse(history.at(-1).content).ok, false); return { content: '尚未退出。' };
+      } }, execute: async () => { throw Error('Wrong tool dispatch'); }, onToolResult: call => receipts.push(call),
+    });
+    assert.equal(answer, '尚未退出。'); assert.equal(receipts[0].result.ok, false); assert.equal(attempts, scenario === 'failed' ? 1 : 0);
+  }
+});
+
+test('a cancelled model standby choice cannot end a replacement voice request', async () => {
+  const h = dialogueHarness(); let release, attempted;
+  h.dependencies.turn = input => new Promise(resolve => { release = async () => {
+    attempted = input.endVoiceConversation().catch(() => {}); await attempted; resolve('');
+  }; });
+  const old = h.task({ requestId: 'old-standby', sessionId: 's', text: '先结束' });
+  await new Promise(resolve => setImmediate(resolve));
+  h.cancel('old-standby'); h.wake();
+  h.dependencies.turn = async () => '新对话继续。';
+  await h.task({ requestId: 'new-turn', sessionId: 's', text: '等等，继续' });
+  await release(); await old;
+  assert.equal(h.standbys.length, 0); assert.deepEqual(h.replies, [{ id: 'new-turn', text: '新对话继续。' }]);
+});
+
+test('a native standby failure reports the error and keeps the conversation available', async () => {
+  const h = dialogueHarness();
+  h.dependencies.turn = async input => { await input.endVoiceConversation(); return ''; };
+  h.dependencies.standby = async () => { throw Error('回待机接口暂不可用。'); };
+  await h.task({ requestId: 'standby-error', sessionId: 's', text: '先聊到这里' });
+  assert.equal(h.replies[0].text, '回待机接口暂不可用。');
+  assert.equal(h.dependencies.conversation.getSnapshot().turns[1].status, 'failed');
 });

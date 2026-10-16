@@ -6,7 +6,7 @@ import org.junit.Test
 class VoiceAudioPolicyTest {
   @Test fun recognitionSegmentsKeepOneTurnUntilTheModelCommits() {
     val turn = VoiceTurnBuffer(); turn.activate()
-    assertEquals("BLACK", turn.text)
+    assertEquals("MAX", turn.text)
     turn.update("帮我播放"); turn.seal(); turn.update("我喜欢的歌")
     assertEquals("帮我播放 我喜欢的歌", turn.text)
     turn.seal(); assertEquals("帮我播放 我喜欢的歌", turn.text)

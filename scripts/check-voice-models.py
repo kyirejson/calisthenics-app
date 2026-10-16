@@ -24,12 +24,15 @@ def samples(path):
     return np.concatenate((values, np.zeros(16000, dtype=np.float32)))
 
 kws = sherpa_onnx.KeywordSpotter(tokens=str(args.resources / "kws/tokens.txt"), encoder=str(args.resources / "kws/encoder.onnx"), decoder=str(args.resources / "kws/decoder.onnx"), joiner=str(args.resources / "kws/joiner.onnx"), keywords_file=str(args.resources / "keywords.txt"), keywords_score=1.0, keywords_threshold=0.5, num_trailing_blanks=1, num_threads=1)
-for name in ["black", "hey-black", "negative"]:
+for name in ["max", "hey-max", "negative"]:
     stream = kws.create_stream()
     detected = []
-    values = samples(args.fixtures / (name + ".wav"))
-    for start in range(0, len(values), 1600):
-        stream.accept_waveform(16000, values[start:start + 1600])
+    # A standing microphone supplies context before the call. Do not start this
+    # very short keyword at the first feature frame of a cold file decoder.
+    # Match the production 512-sample capture frames and unchanged KWS settings.
+    values = np.concatenate((np.zeros(3200, dtype=np.float32), samples(args.fixtures / (name + ".wav"))))
+    for start in range(0, len(values), 512):
+        stream.accept_waveform(16000, values[start:start + 512])
         while kws.is_ready(stream):
             kws.decode_stream(stream)
             result = kws.get_result(stream)
@@ -39,7 +42,7 @@ for name in ["black", "hey-black", "negative"]:
     if name == "negative":
         assert not detected, detected
     else:
-        assert any("BLACK" in item for item in detected), (name, detected)
+        assert any("MAX" in item for item in detected), (name, detected)
     print(name, "detected:", detected, flush=True)
 
 asr = sherpa_onnx.OnlineRecognizer.from_zipformer2_ctc(model=str(args.resources / "asr/model.int8.onnx"), tokens=str(args.resources / "asr/tokens.txt"), num_threads=2)

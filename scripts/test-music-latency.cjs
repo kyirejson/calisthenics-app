@@ -73,7 +73,7 @@ test('interruption preserves a dispatched music receipt but prevents all followi
   assert.equal(generations, 1); assert.equal(receipts.length, 1); assert.equal(receipts[0].name, 'control_music_and_observe');
   assert.equal(receipts[0].result.action.status, 'dispatched'); assert.equal(receipts[0].result.playback.verifiedPlaying, true);
   assert.deepEqual(h.calls, [{ cancel: 'attempt-1' }]);
-  assert.match(read('src/integrations/runAgentTurn.ts'), /onInterruptedMusicResult: onToolResult/);
+  assert.match(read('src/integrations/runAgentTurn.ts'), /onInterruptedToolResult: onToolResult/);
 });
 test('the same model-planned three actions need four tool rounds instead of seven separate observations', async () => {
   const { personalChat } = await import('../src/integrations/personalTools.mjs'), h = harness();
@@ -93,5 +93,7 @@ test('native observation is cancellable, bounded, parallel, cleans subscriptions
   const playback = read('modules/uncover-music/android/src/main/java/uncover/music/MusicPlaybackObservation.kt');
   assert.match(playback, /onPlaybackStateChanged/); assert.match(playback, /onMetadataChanged/); assert.match(playback, /removeOnActiveSessionsChangedListener/); assert.match(playback, /unregisterCallback/);
   const service = read('modules/uncover-music/android/src/main/java/uncover/music/MusicAccessibilityService.kt');
-  assert.match(service, /if \(cancelled\(\)\)/); assert.match(service, /no_event_fallback/);
+  const shared = read('modules/uncover-device/android/src/main/java/uncover/device/PhoneUi.kt');
+  assert.match(service, /phoneUi.awaitScreen/); assert.match(service, /MusicObservationPolicy::ready/);
+  assert.match(shared, /if \(cancelled\(\)\)/); assert.match(shared, /no_event_fallback/);
 });

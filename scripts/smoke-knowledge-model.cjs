@@ -57,7 +57,7 @@ const { chromium } = require(process.env.PLAYWRIGHT_PATH || 'playwright');
       } else await route.fulfill({ json: { choices: [{ finish_reason, message }] } });
     });
     await page.goto('http://127.0.0.1:8081/');
-    await page.getByRole('button', { name: '打开 DeepSeek 聊天', exact: true }).click();
+    await page.getByRole('button', { name: '打开 MAX 聊天', exact: true }).click();
     await page.getByRole('button', { name: '打开服务设置', exact: true }).click();
     await page.getByLabel('个人 DeepSeek 密钥', { exact: true }).fill('sk-isolated-knowledge');
     await page.getByRole('button', { name: '保存并连接', exact: true }).click();

@@ -121,6 +121,8 @@ if (($apkPermissions -join "`n") -match "android.permission.CAMERA'") { throw 'R
 if (($apkPermissions -join "`n") -match "android.permission.ACCESS_MOCK_LOCATION'") { throw 'Emulator QA permission must not enter the production APK' }
 & $publishNode (Join-Path $publishRoot 'scripts/inspect-apk-running-diagnostics.cjs') $apk
 if ($LASTEXITCODE -ne 0) { throw 'GPS repair missing from release artifact; publication stopped' }
+& $publishNode (Join-Path $publishRoot 'scripts/inspect-apk-phone.cjs') $apk
+if ($LASTEXITCODE -ne 0) { throw 'General phone-control features missing from release artifact; publication stopped' }
 if ($releaseConfig.plugins -contains './modules/uncover-voice/plugin.cjs') {
   & $publishNode (Join-Path $publishRoot 'scripts/inspect-apk-voice.cjs') $apk
   if ($LASTEXITCODE -ne 0) { throw 'Voice/music candidate missing features; publication stopped' }

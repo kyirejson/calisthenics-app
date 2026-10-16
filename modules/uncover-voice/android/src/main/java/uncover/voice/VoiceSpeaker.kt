@@ -42,13 +42,9 @@ internal class VoiceSpeaker(private val context: Context, private val reference:
   private val synthesizer: VoiceSynthesizer = LocalVoiceSynthesizer(context),
   private val outputTimeoutMs: Long = 30000,
   private val progress: (start: Int, end: Int, spokenEnd: Int) -> Unit) {
-  private sealed interface Packet {
-    data class Audio(val pcm: ShortArray, val start: Int, val end: Int) : Packet
-    data class End(val error: String? = null) : Packet
-  }
   private val handler = Handler(Looper.getMainLooper())
-  private val synthWorker = Executors.newSingleThreadExecutor { Thread(it, "BLACK-local-synthesis") }
-  private val renderWorker = Executors.newSingleThreadExecutor { Thread(it, "BLACK-stream-render") }
+  private val synthWorker = Executors.newSingleThreadExecutor { Thread(it, "MAX-local-synthesis") }
+  private val renderWorker = Executors.newSingleThreadExecutor { Thread(it, "MAX-stream-render") }
   private val manager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
   private val attributes = AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_ASSISTANT).setContentType(AudioAttributes.CONTENT_TYPE_SPEECH).build()
   private val player = VoicePcmPlayer(reference, attributes)
@@ -69,19 +65,19 @@ internal class VoiceSpeaker(private val context: Context, private val reference:
   private fun finish(token: Int, error: String? = null) {
     if (generation != token || done == null) return
     val callback = done; done = null; generation++
-    Log.i("BLACK-VoiceOutput", "request=$token outcome=${if (error == null) "completed" else "failed"}")
+    Log.i("MAX-VoiceOutput", "request=$token outcome=${if (error == null) "completed" else "failed"}")
     player.stop(); releaseFocus(); callback?.invoke(error)
   }
   fun speak(text: String, playback: (Boolean) -> Unit = {}, callback: (String?) -> Unit) {
     stop(); check(!closed) { "语音输出已关闭。" }; done = callback
-    val token = generation; val queue = ArrayBlockingQueue<Packet>(2)
-    val blocks = VoiceSpeechChunks.split(text, 40)
+    val token = generation; val queue = ArrayBlockingQueue<VoicePlaybackPacket>(2)
+    val blocks = VoiceSpeechChunks.split(text, 64)
     if (blocks.isEmpty()) { finish(token); return }
     // A late focus event from a cancelled answer cannot stop its replacement.
     val request = AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN_TRANSIENT_MAY_DUCK).setAudioAttributes(attributes)
       .setOnAudioFocusChangeListener({ value ->
         if (value == AudioManager.AUDIOFOCUS_LOSS || value == AudioManager.AUDIOFOCUS_LOSS_TRANSIENT) {
-          Log.i("BLACK-VoiceOutput", "request=$token event=focus_loss value=$value")
+          Log.i("MAX-VoiceOutput", "request=$token event=focus_loss value=$value")
           finish(token, "音频焦点被占用（audio_focus_lost），完整文字已保留。")
         }
       }, handler).build()
@@ -90,25 +86,25 @@ internal class VoiceSpeaker(private val context: Context, private val reference:
       finish(token, "系统未允许播放语音（audio_focus_denied），完整文字已保留。"); return
     }
     val work = VoiceOutputProgress(blocks.size, SystemClock.elapsedRealtime(), outputTimeoutMs)
-    Log.i("BLACK-VoiceOutput", "request=$token event=queued segments=${blocks.size} sourceChars=${text.length}")
+    Log.i("MAX-VoiceOutput", "request=$token event=queued segments=${blocks.size} sourceChars=${text.length}")
     fun active() = generation == token && !closed
-    fun put(packet: Packet): Boolean { while (active()) if (queue.offer(packet, 100, TimeUnit.MILLISECONDS)) return true; return false }
+    fun put(packet: VoicePlaybackPacket): Boolean { while (active()) if (queue.offer(packet, 100, TimeUnit.MILLISECONDS)) return true; return false }
     fun synthesize(index: Int, block: VoiceSpeechChunk): VoicePcm? {
       for (attempt in 1..2) {
         if (!active()) return null
         work.synthesis(index, block, attempt, SystemClock.elapsedRealtime())
-        Log.i("BLACK-VoiceOutput", "request=$token event=synthesis_start ${work.details(SystemClock.elapsedRealtime())}")
+        Log.i("MAX-VoiceOutput", "request=$token event=synthesis_start ${work.details(SystemClock.elapsedRealtime())}")
         try {
           val audio = synthesizer.generate(block.text)
           if (!active()) return null // Native inference may return after a real cancellation/timeout.
           if (audio.samples.none { it != 0.toShort() })
             throw VoiceSynthesisException("synthesis_invalid_audio", "内置合成引擎返回了无效或全静音音频。")
-          Log.i("BLACK-VoiceOutput", "request=$token event=synthesis_ready samples=${audio.samples.size} rate=${audio.sampleRate} ${work.details(SystemClock.elapsedRealtime())}")
+          Log.i("MAX-VoiceOutput", "request=$token event=synthesis_ready samples=${audio.samples.size} rate=${audio.sampleRate} ${work.details(SystemClock.elapsedRealtime())}")
           return audio
         } catch (error: VoiceSynthesisException) {
           if (!active()) return null
           if (error.code != "synthesis_empty" || attempt == 2) throw error
-          Log.w("BLACK-VoiceOutput", "request=$token event=retry_empty_audio ${work.details(SystemClock.elapsedRealtime())}")
+          Log.w("MAX-VoiceOutput", "request=$token event=retry_empty_audio ${work.details(SystemClock.elapsedRealtime())}")
         }
       }
       return null
@@ -127,46 +123,35 @@ internal class VoiceSpeaker(private val context: Context, private val reference:
             val pcm = resampler.resample(audio.samples, audio.sampleRate)
             if (pcm.isEmpty()) throw VoiceSynthesisException("synthesis_invalid_audio", "重采样后没有可播放的音频。")
             work.buffered(SystemClock.elapsedRealtime())
-            if (!put(Packet.Audio(pcm, block.start, block.end))) break
+            if (!put(VoicePlaybackPacket.Audio(pcm, block.start, block.end))) break
           }
         }
-        if (active()) { work.ended(SystemClock.elapsedRealtime()); put(Packet.End()) }
+        if (active()) { work.ended(SystemClock.elapsedRealtime()); put(VoicePlaybackPacket.End()) }
       } catch (error: Throwable) {
         if (active()) {
-          Log.e("BLACK-VoiceOutput", "request=$token event=synthesis_failed type=${error.javaClass.simpleName} ${work.details(SystemClock.elapsedRealtime())}")
+          Log.e("MAX-VoiceOutput", "request=$token event=synthesis_failed type=${error.javaClass.simpleName} ${work.details(SystemClock.elapsedRealtime())}")
           // FIFO terminal events drain all earlier audio; synthesis failure must not cut off a healthy sentence.
-          val message = work.failure(error); work.ended(SystemClock.elapsedRealtime()); put(Packet.End(message))
+          val message = work.failure(error); work.ended(SystemClock.elapsedRealtime()); put(VoicePlaybackPacket.End(message))
         }
       }
     }
     renderWorker.execute {
-      var playing = false
       try {
-        while (active()) {
-          val packet = queue.poll(100, TimeUnit.MILLISECONDS)
-          if (packet == null) {
-            if (playing) {
-              playing = false
-              handler.post { if (active()) playback(false) }
-            }
-            // Only waiting for missing audio is timed. Player consumption has its own watchdog.
-            work.timeout(SystemClock.elapsedRealtime())?.let { error(it) }
-            continue
-          }
-          if (packet is Packet.End) { handler.post { finish(token, packet.error) }; break }
-          packet as Packet.Audio
-          Log.i("BLACK-VoiceOutput", "request=$token event=playback_start range=${packet.start}:${packet.end}")
-          val played = player.play(packet.pcm, ::active) {
-            playing = true
-            handler.post { if (active()) { playback(true); progress(packet.start, packet.end, packet.start) } }
-          }
-          if (active() && played != packet.pcm.size) error("音频未完整播放。")
-          handler.post { if (active()) progress(packet.start, packet.end, packet.end) }
-          Log.i("BLACK-VoiceOutput", "request=$token event=playback_end range=${packet.start}:${packet.end} played=$played/${packet.pcm.size}")
+        val result = player.play(queue::poll, ::active,
+          waiting = { work.timeout(SystemClock.elapsedRealtime())?.let { error(it) } },
+          playback = { playing -> handler.post { if (active()) playback(playing) } },
+          progress = { start, end, spoken ->
+            Log.i("MAX-VoiceOutput", "request=$token event=playback_progress range=$start:$end spokenEnd=$spoken")
+            handler.post { if (active()) progress(start, end, spoken) }
+          })
+        if (active()) {
+          check(result.playedFrames == result.queuedFrames) { "音频未完整播放。" }
+          Log.i("MAX-VoiceOutput", "request=$token event=playback_drained frames=${result.playedFrames} prefedBoundaries=${result.prefedBoundaries} underruns=${result.underruns}")
+          handler.post { finish(token, result.error) }
         }
       } catch (error: Throwable) {
         if (active()) {
-          Log.e("BLACK-VoiceOutput", "request=$token event=output_failed type=${error.javaClass.simpleName} ${work.details(SystemClock.elapsedRealtime())}")
+          Log.e("MAX-VoiceOutput", "request=$token event=output_failed type=${error.javaClass.simpleName} ${work.details(SystemClock.elapsedRealtime())}")
           handler.post { finish(token, "语音输出失败：${error.message ?: error.javaClass.simpleName} 完整文字已保留。") }
         }
       }
@@ -174,7 +159,7 @@ internal class VoiceSpeaker(private val context: Context, private val reference:
   }
   fun hold(value: Boolean) { if (value) player.pause() else player.resume() }
   fun stop() {
-    if (done != null) Log.i("BLACK-VoiceOutput", "request=$generation event=cancelled")
+    if (done != null) Log.i("MAX-VoiceOutput", "request=$generation event=cancelled")
     generation++; done = null
     player.stop(); releaseFocus()
   }

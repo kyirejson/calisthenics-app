@@ -1,5 +1,5 @@
 <resources>
-  <string name="uncover_music_service_name">Uncover 音乐界面控制</string>
+  <string name="uncover_music_service_name">MAX 手机与音乐控制</string>
   <string name="uncover_music_playback_name">Uncover 音乐播放状态</string>
-  <string name="uncover_music_service_description">仅在你要求播放音乐时，读取和操作网易云音乐、QQ音乐的界面。必要的界面文字会发送给你配置的大模型，用于搜索、选择歌单及播放。默认关闭，不读取密码，不自动登录、购买或更改系统权限；可随时关闭。</string>
+  <string name="uncover_music_service_description">按你在 App 内分别授权的范围执行任务。仅开启音乐控制时，只处理网易云音乐与 QQ 音乐；另外开启通用手机控制后，MAX 可按你的请求打开其他应用、读取当前页面、点击、输入、滚动和切换应用。必要的界面文字会发送给你配置的模型 API。不在待机中持续读取应用内容，不读取密码；登录、身份验证及系统授权由本人处理。可在 App 设置或任务通知中停止。</string>
 </resources>

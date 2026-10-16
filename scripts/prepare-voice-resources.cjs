@@ -18,6 +18,7 @@ const artifacts = [
 ];
 const digest = file => crypto.createHash('sha256').update(fs.readFileSync(file)).digest('hex');
 async function main() {
+  const { AGENT_NAME } = await import('../src/agent/identity.mjs');
   fs.mkdirSync(cache, { recursive: true });
   // Retire only the previously pinned public model, never private enrollment files.
   const retiredSpeaker = path.join(assets, 'speaker/campplus.onnx');
@@ -25,7 +26,7 @@ async function main() {
     if (digest(retiredSpeaker) !== 'f682b514c05d947ee3fa91cd6ec6c5c7543479a128373fa29b1faedccd21fd11') throw Error('Retired speaker asset has unexpected contents; remove it explicitly before building');
     fs.unlinkSync(retiredSpeaker);
   }
-  const manifest = { version: 1, artifacts, files: [], license: 'Apache-2.0 AND MIT AND BSD-3-Clause', name: 'BLACK' };
+  const manifest = { version: 1, artifacts, files: [], license: 'Apache-2.0 AND MIT AND BSD-3-Clause', name: AGENT_NAME };
   for (const artifact of artifacts) {
     const source = path.join(cache, artifact.name);
     if (!fs.existsSync(source)) {
@@ -59,8 +60,10 @@ async function main() {
       }
     }
   }
+  const keywordPath = path.join(assets, 'keywords.txt');
+  manifest.files.push({ path: 'src/main/assets/black-voice/keywords.txt', sha256: digest(keywordPath), bytes: fs.statSync(keywordPath).size });
   fs.writeFileSync(path.join(assets, 'resources.json'), JSON.stringify(manifest, null, 2));
-  console.log('Verified BLACK resources:', manifest.files.length, 'files; wake/ASR/AEC processing stays local.');
+  console.log('Verified ' + AGENT_NAME + ' resources:', manifest.files.length, 'files; wake/ASR/AEC processing stays local.');
 }
 if (require.main === module) main().catch(error => { console.error(error.message); process.exitCode = 1; });
 module.exports = { artifacts };

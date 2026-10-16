@@ -4,7 +4,7 @@ import { appPalette } from '../theme';
 import { weekdayLabels } from '../components/todayTrainingStyles';
 import { TodayTrainingScreen, type TodayTrainingProps } from './TodayTrainingScreen';
 import { NutritionScreen } from './NutritionScreen';
-import { useHideDeepseekDock } from '../integrations/DeepseekChatHost';
+import { useHideAgentDock } from '../integrations/AgentChatHost';
 import { RunScreen } from './RunScreen';
 import { useRunRecorder } from '../running/RunRecorderHost';
 
@@ -15,7 +15,7 @@ export function TodayScreen(props: TodayTrainingProps) {
   const pager = useRef<ScrollView>(null);
   const [pageWidth, setPageWidth] = useState(0);
   const [selectedPage, setSelectedPage] = useState<0 | 1 | 2>(run.snapshot.phase === 'idle' ? 0 : 2);
-  useHideDeepseekDock(selectedPage === 2 && run.snapshot.phase !== 'idle');
+  useHideAgentDock(selectedPage === 2 && run.snapshot.phase !== 'idle');
   const selectedRef = useRef<0 | 1 | 2>(selectedPage);
   const scrollTarget = useRef<0 | 1 | 2 | null>(null);
   const resizing = useRef(false);

@@ -19,8 +19,8 @@ function find(nodes, description) { return nodes.find(node => node['content-desc
 function restartSettings() {
   run('shell', 'am', 'force-stop', app); run('shell', 'am', 'start', '-n', `${app}/com.zizhong.jinjie.MainActivity`);
   let nodes; const deadline = Date.now() + 20000;
-  do { nodes = screen(); } while (!find(nodes, '打开 DeepSeek 聊天') && Date.now() < deadline);
-  tap(find(nodes, '打开 DeepSeek 聊天')); nodes = screen(); tap(find(nodes, '打开服务设置')); return screen();
+  do { nodes = screen(); } while (!find(nodes, '打开 MAX 聊天') && Date.now() < deadline);
+  tap(find(nodes, '打开 MAX 聊天')); nodes = screen(); tap(find(nodes, '打开服务设置')); return screen();
 }
 let original;
 try {
