@@ -7,7 +7,7 @@ import java.util.concurrent.ArrayBlockingQueue
 import java.util.concurrent.TimeUnit
 import kotlin.concurrent.thread
 
-internal data class CapturedVoiceFrame(val samples: ShortArray, val startNs: Long)
+internal data class CapturedVoiceFrame(val samples: ShortArray, val startNs: Long, val timestamped: Boolean = true, val routeId: Int = 0, val clockRevision: Long = 0)
 internal interface VoiceFrameSource {
   fun start(ready: () -> Unit)
   fun next(): CapturedVoiceFrame?
@@ -56,7 +56,7 @@ internal class VoiceCaptureDriver(private val state: (Boolean) -> Unit, private 
           if (stopped) break
           val timestamped = input.getTimestamp(stamp, AudioTimestamp.TIMEBASE_MONOTONIC) == AudioRecord.SUCCESS
           val start = clock.frame(total, pcm.size, if (timestamped) stamp.framePosition else null, if (timestamped) stamp.nanoTime else null)
-          check(frames.offer(CapturedVoiceFrame(pcm, start))) { "语音处理持续落后，录音队列已满；请重新开启语音。" }
+          check(frames.offer(CapturedVoiceFrame(pcm, start, timestamped, input.routedDevice?.id ?: 0, clock.revision))) { "语音处理持续落后，录音队列已满；请重新开启语音。" }
         }
       } catch (error: Throwable) { if (!stopped) failure(error) }
       finally {

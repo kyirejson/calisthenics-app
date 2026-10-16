@@ -10,6 +10,7 @@ if(NOT EXISTS "${AEC_DIR}/audio_processing/aec3/echo_canceller3.cc")
   message(FATAL_ERROR "Run scripts/prepare-voice-resources.cjs for pinned local AEC3 sources")
 endif()
 file(GLOB_RECURSE AEC_SRC CONFIGURE_DEPENDS "${AEC_DIR}/*.cc" "${AEC_DIR}/*.c" "${AEC_DIR}/*.cpp")
+include("${CMAKE_CURRENT_SOURCE_DIR}/observe_echo.cmake")
 # Android has its own cpufeatures implementation; compiling the Linux one too
 # only fails on ARM, not the x86 emulator.
 list(FILTER AEC_SRC EXCLUDE REGEX "/cpu_features_linux\\.c$")
@@ -31,7 +32,7 @@ add_library(black-echo SHARED echo.c echo_core.cc ${AEC_SRC}
   "${SPEEX_DIR}/libspeexdsp/resample.c"
   "${ANDROID_NDK}/sources/android/cpufeatures/cpu-features.c")
 target_compile_features(black-echo PRIVATE cxx_std_20)
-target_include_directories(black-echo PRIVATE "${SPEEX_DIR}/include" "${CMAKE_CURRENT_SOURCE_DIR}/include" "${CMAKE_CURRENT_SOURCE_DIR}/include/speex"
+target_include_directories(black-echo PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}" "${SPEEX_DIR}/include" "${CMAKE_CURRENT_SOURCE_DIR}/include" "${CMAKE_CURRENT_SOURCE_DIR}/include/speex"
   "${AEC_DIR}" "${AEC_DIR}/base"
   "${AEC_DIR}/api" "${AEC_DIR}/base/rtc_base" "${AEC_DIR}/base/system_wrappers/include"
   "${AEC_DIR}/audio_processing" "${AEC_DIR}/audio_processing/aec3" "${AEC_DIR}/audio_processing/resampler"

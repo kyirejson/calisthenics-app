@@ -16,6 +16,7 @@ internal class VoicePcmPlayer(private val reference: VoiceRenderReference, priva
   private var writtenFrames = 0
   private var writeAhead = 1600
   private var startupThreshold = 0
+  private var routeId = 0
   fun pause() { paused.set(true) }
   fun resume() { paused.set(false) }
   fun stop() {
@@ -37,13 +38,16 @@ internal class VoicePcmPlayer(private val reference: VoiceRenderReference, priva
       startupThreshold = if (Build.VERSION.SDK_INT >= 31) output.setStartThresholdInFrames(512) else output.bufferSizeInFrames
       writeAhead = maxOf(1600, startupThreshold)
       if (!active()) { output.release(); return 0 }
-      writtenFrames = 0; track.set(output); output.play()
+      writtenFrames = 0; routeId = 0; track.set(output); output.play()
     }
     val target = output; val first = writtenFrames; var offset = 0; var played = 0; var announced = false
     val pending = mutableListOf<Pending>(); val stamp = AudioTimestamp()
     var lastHead = first; var progressedAt = System.nanoTime(); var pausedTrack = false; var resumedAt = 0L
     fun owned() = active() && track.get() === target
     fun update(): Int {
+      val routed = target.routedDevice?.id ?: 0
+      if (routeId != 0 && routed != 0 && routeId != routed) reference.routeChanged(System.nanoTime())
+      if (routed != 0) routeId = routed
       val head = target.playbackHeadPosition
       if (head > lastHead) { lastHead = head; progressedAt = System.nanoTime() }
       played = (head - first).coerceIn(0, pcm.size)

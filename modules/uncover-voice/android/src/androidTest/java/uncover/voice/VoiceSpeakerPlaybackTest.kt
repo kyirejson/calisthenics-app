@@ -174,7 +174,7 @@ class VoiceSpeakerPlaybackTest : InstrumentationTestCase() {
       override fun armed(segment: String) {}
       override fun partial(segment: String, text: String) { synchronized(heard) { heard.add(text) } }
       override fun candidate(segment: String) { synchronized(order) { order.add("candidate") } }
-      override fun hearing(segment: String) { synchronized(order) { order.add("hearing") } }
+      override fun hearing(segment: String, referenceEpoch: Long) { synchronized(order) { order.add("hearing") } }
       override fun probe(segment: String, id: String, text: String, wake: Boolean, silenceMs: Long) {
         synchronized(order) { order.add("probe") }; probes.add(text)
         engine.decide(id, if (probes.size == 1) "wait" else "respond")
@@ -201,6 +201,102 @@ class VoiceSpeakerPlaybackTest : InstrumentationTestCase() {
       assertEquals(2, probes.size); assertTrue(probes[1].startsWith(probes[0])); assertTrue(probes[1].length > probes[0].length)
       assertTrue("Speech was not held before semantic submission: $order", order.indexOf("hearing") in 0 until order.indexOf("probe"))
     } finally { engine.stop() }
+  }
+  private data class AcousticResult(val holds: Int, val firstHoldAt: Int?, val partials: List<String>, val probes: List<String>, val submissions: List<String>)
+  private fun acousticFixture(far: ShortArray, mic: ShortArray, clocked: Boolean = true, armed: Boolean = true, captureClocked: Boolean = true): AcousticResult {
+    val base = System.nanoTime(); val size = 512
+    val reference = VoiceRenderReference()
+    val clip = reference.begin(far, base)
+    if (clocked) reference.clock(clip, 0, base)
+    val finished = CountDownLatch(1); val ready = CountDownLatch(1)
+    val controller = VoiceSessionController(); controller.ready(); val token = controller.begin("answer")
+    controller.prepare("answer"); controller.render("answer", token, true)
+    val partials = mutableListOf<String>(); val probes = mutableListOf<String>(); val submissions = mutableListOf<String>()
+    var holds = 0; var firstHoldAt: Int? = null; var failure: Throwable? = null; var offset = 0
+    lateinit var engine: VoiceAudioEngine
+    val events = object : VoiceAudioEvents {
+      override fun ready() { ready.countDown() }
+      override fun armed(segment: String) { controller.listen(segment) }
+      override fun candidate(segment: String) { controller.candidate(segment) }
+      override fun hearing(segment: String, referenceEpoch: Long) {
+        if (!reference.isCurrent(referenceEpoch)) return
+        holds++; if (firstHoldAt == null) firstHoldAt = offset - size; controller.hearing(segment)
+      }
+      override fun partial(segment: String, text: String) { if (text.isNotBlank()) partials.add(text); controller.partial(segment, text) }
+      override fun probe(segment: String, id: String, text: String, wake: Boolean, silenceMs: Long) { probes.add(text); engine.decide(id, "respond") }
+      override fun utterance(text: String, wake: Boolean) { submissions.add(text) }
+      override fun settled(segment: String, action: String) { controller.settle(segment, action) }
+      override fun revoked(id: String) {}
+      override fun assessmentError(message: String) { failure = IllegalStateException(message); finished.countDown() }
+      override fun microphoneState(silenced: Boolean) {}
+      override fun failure(error: Throwable) { failure = error; finished.countDown(); ready.countDown() }
+    }
+    engine = VoiceAudioEngine(instrumentation.targetContext, reference, events) { _, _ -> object : VoiceFrameSource {
+      override fun start(ready: () -> Unit) { ready() }
+      override fun next(): CapturedVoiceFrame? {
+        if (offset >= mic.size) { finished.countDown(); Thread.sleep(10); return null }
+        val start = offset; offset += size
+        return CapturedVoiceFrame(ShortArray(size) { i -> mic.getOrElse(start + i) { 0 } }, base + start * 1_000_000_000L / 16000, captureClocked)
+      }
+      override fun stop() {}
+    } }
+    try {
+      if (armed) engine.arm()
+      engine.start(); assertTrue(ready.await(30, TimeUnit.SECONDS))
+      assertTrue("Acoustic fixture did not finish", finished.await(60, TimeUnit.SECONDS)); assertNull(failure)
+      return AcousticResult(holds, firstHoldAt, partials.toList(), probes.toList(), submissions.toList())
+    } finally { engine.stop() }
+  }
+  private fun acousticSpeech(): List<ShortArray> {
+    val synth = LocalVoiceSynthesizer(instrumentation.targetContext)
+    return try {
+      synth.prepare(); VoiceEcho(512).use { resampler ->
+        listOf("BLACK，今天已经跑了三公里。现在告诉你今天的训练安排。", "等一下，我想先听音乐，帮我播放我喜欢的歌曲。")
+          .map { text -> synth.generate(text).let { resampler.resample(it.samples, it.sampleRate) } }
+      }
+    } finally { synth.close() }
+  }
+  private fun reflected(far: ShortArray, delay: Int, clip: Boolean = false, noise: Boolean = false): ShortArray = ShortArray(far.size + 32000) { i ->
+    val echo = far.getOrElse(i - delay) { 0 } * .55 + far.getOrElse(i - delay - 432) { 0 } * .12
+    val shaped = if (clip) echo.coerceIn(-1800.0, 1800.0) else echo
+    (shaped + if (noise) kotlin.math.sin(i * 2.37) * 18 else 0.0).coerceIn(-32768.0, 32767.0).toInt().toShort()
+  }
+  fun testEchoOnlyCannotHoldTranscribeWakeOrSubmitEvenWhenItContainsBlack() {
+    val own = acousticSpeech()[0]
+    val far = ShortArray(6400 + own.size * 3 + 8000) { i -> if (i in 6400 until 6400 + own.size * 3) own[(i - 6400) % own.size] else 0 }
+    val room = reflected(far, 1280)
+    val louder = ShortArray(room.size) { i -> (room[i] * if (i < room.size / 2) 1.0 else 1.8).coerceIn(-32768.0, 32767.0).toInt().toShort() }
+    val delayed = reflected(far, 3200)
+    val shifted = ShortArray(room.size) { i -> if (i < room.size / 2) room[i] else delayed[i] }
+    val compressed = ShortArray(room.size) { i -> (kotlin.math.tanh(room[i] / 32768.0 * 5) / 5 * 32768).toInt().toShort() }
+    for ((label, mic) in listOf("early" to reflected(far, 320), "room" to reflected(far, 1280, noise = true),
+      "long-delay-clipped" to reflected(far, 5120, clip = true), "gain-change" to louder,
+      "delay-change" to shifted, "compression" to compressed)) {
+      val result = acousticFixture(far, mic)
+      assertEquals("$label self-pause: $result", 0, result.holds)
+      assertTrue("$label echo reached ASR/model: $result", result.partials.isEmpty() && result.probes.isEmpty() && result.submissions.isEmpty())
+    }
+    val wake = acousticFixture(far, reflected(far, 1280), armed = false)
+    assertTrue("Assistant woke itself: $wake", wake.partials.isEmpty() && wake.probes.isEmpty() && wake.submissions.isEmpty())
+  }
+  fun testUnreliablePlaybackClockCannotAuthorizeAnInterruptionOrFeedTheModel() {
+    val own = acousticSpeech()[0]
+    val far = ShortArray(6400 + own.size + 16000) { i -> own.getOrElse(i - 6400) { 0 } }
+    for (captureClocked in listOf(true, false)) {
+      val result = acousticFixture(far, reflected(far, 2560), clocked = !captureClocked, captureClocked = captureClocked)
+      assertEquals(0, result.holds); assertTrue(result.partials.isEmpty()); assertTrue(result.probes.isEmpty()); assertTrue(result.submissions.isEmpty())
+    }
+  }
+  fun testIndependentUserSpeechDuringPlaybackStillHoldsAndReachesTheModel() {
+    val speech = acousticSpeech(); val own = speech[0]; val user = speech[1]; val at = 128000
+    val far = ShortArray(at + user.size + 32000) { own[it % own.size] }
+    val mic = reflected(far, 1280)
+    for (i in user.indices) mic[at + i] = (mic[at + i] + user[i] * .8).coerceIn(-32768.0, 32767.0).toInt().toShort()
+    val result = acousticFixture(far, mic)
+    assertTrue("Double-talk could not interrupt: $result", result.holds > 0)
+    assertTrue("Held before user speech, or too late to be useful: $result", (result.firstHoldAt ?: -1) in at until at + 24000)
+    assertTrue("Real user was lost before semantic submission: $result", result.probes.isNotEmpty() && result.submissions.isNotEmpty())
+    assertTrue("The submitted text was not the actual user command: $result", result.submissions.any { it.contains("音乐") || it.contains("播放") })
   }
   fun testBundledChineseModelActuallySynthesizesWithoutPhoneTts() {
     val synth = LocalVoiceSynthesizer(instrumentation.targetContext)

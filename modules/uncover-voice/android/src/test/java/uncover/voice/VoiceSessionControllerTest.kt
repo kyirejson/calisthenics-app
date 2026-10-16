@@ -89,4 +89,11 @@ class VoiceSessionControllerTest {
     c.begin("answer"); c.prepare("answer"); c.render("answer", c.generation, true)
     c.candidate("next"); c.settle("next", "noise"); assertEquals("speaking", c.phase)
   }
+  @Test fun aConfirmedSoundWithoutWordsResumesImmediatelyInsteadOfHoldingForThirtySeconds() {
+    val c = VoiceSessionController(); c.ready(); val token = c.begin("answer"); c.prepare("answer"); c.render("answer", token, true)
+    c.candidate("sound"); c.hearing("sound"); assertTrue(c.snapshot.held)
+    c.settle("sound", "noise")
+    assertFalse(c.snapshot.held); assertEquals("speaking", c.phase); assertEquals(token, c.generation)
+    assertEquals("answer", c.turnId)
+  }
 }

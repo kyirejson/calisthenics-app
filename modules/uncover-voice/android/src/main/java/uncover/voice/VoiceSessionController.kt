@@ -58,7 +58,7 @@ internal class VoiceSessionController(private val clock: () -> Long = { System.n
   fun settle(segment: String, action: String): Boolean {
     if (!inputIsCurrent(segment)) return false
     // A semantic wait preserves the draft and the reversible hold, not a second chat turn.
-    snapshot = snapshot.copy(input = Input.LISTENING, held = action in listOf("wait", "noise") && snapshot.held,
+    snapshot = snapshot.copy(input = Input.LISTENING, held = snapshot.held && (action == "wait" || (action == "noise" && snapshot.draft.isNotBlank())),
       draft = if (action == "ignore") "" else snapshot.draft, activityAt = clock()); return true
   }
   fun block(value: Boolean): String? {

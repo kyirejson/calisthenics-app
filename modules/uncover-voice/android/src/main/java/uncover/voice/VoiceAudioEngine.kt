@@ -2,6 +2,7 @@ package uncover.voice
 
 import android.content.Context
 import android.os.SystemClock
+import android.util.Log
 import com.k2fsa.sherpa.onnx.*
 import java.util.ArrayDeque
 import java.util.UUID
@@ -12,7 +13,7 @@ import kotlin.concurrent.thread
 internal data class VoiceAudioFrame(val samples: FloatArray, val speech: Boolean, val timeMs: Long = 0)
 internal interface VoiceAudioEvents {
   fun ready(); fun armed(segment: String); fun partial(segment: String, text: String)
-  fun candidate(segment: String); fun hearing(segment: String)
+  fun candidate(segment: String); fun hearing(segment: String, referenceEpoch: Long)
   fun probe(segment: String, id: String, text: String, wake: Boolean, silenceMs: Long)
   fun revoked(id: String); fun utterance(text: String, wake: Boolean); fun settled(segment: String, action: String)
   fun assessmentError(message: String); fun microphoneState(silenced: Boolean); fun failure(error: Throwable)
@@ -51,6 +52,8 @@ internal class VoiceAudioEngine(private val context: Context, private val refere
         var recognizing = false; var collecting = false; var segment = UUID.randomUUID().toString(); var displayed = ""
         var lastSpeech = 0L
         var keywordFrames = 0
+        var referenceEpoch = 0L; var captureRoute = 0; var captureClockRevision = 0L
+        var lastAcoustic = ""; var loggedAt = 0L
         fun show() { if (turn.text != displayed) { displayed = turn.text; control.revise(displayed)?.let(events::revoked); events.partial(segment, displayed) } }
         fun resetSegment() { collecting = false; asr.reset(stream); gate.reset() }
         fun resetTurn() { control.reset()?.let(events::revoked); turn.clear(); segment = UUID.randomUUID().toString(); displayed = ""; resetSegment() }
@@ -69,13 +72,36 @@ internal class VoiceAudioEngine(private val context: Context, private val refere
             if (armed) events.armed(segment)
           }
           if (silenced) continue
-          val floats = echo.process(input.samples, reference.frame(input.startNs, input.samples.size))
+          if ((captureRoute != 0 && input.routeId != 0 && captureRoute != input.routeId) || input.clockRevision != captureClockRevision)
+            reference.routeChanged(input.startNs)
+          captureClockRevision = input.clockRevision
+          if (input.routeId != 0) captureRoute = input.routeId
+          val rendered = reference.read(input.startNs, input.samples.size)
+          if (rendered.epoch != referenceEpoch) {
+            referenceEpoch = rendered.epoch
+            echo?.close(); echo = VoiceEcho(512); vad.reset(); recent.clear()
+            // Keep already accepted user words, but not a hypothesis from an old route.
+            if (collecting) turn.seal()
+            resetSegment(); resetKeyword()
+          }
+          val processor = checkNotNull(echo)
+          val floats = processor.process(input.samples, rendered.samples)
           val detected = vad.compute(floats)
           val probability = if (floats.any { it != 0f }) detected else 0f
-          val frame = VoiceAudioFrame(floats, probability >= .55f, input.startNs / 1_000_000)
+          val evidence = processor.evidence
+          val source = evidence.source(rendered.renderProtected, rendered.reliable && input.timestamped)
+          val diagnostic = "$source protected=${rendered.renderProtected} renderClock=${rendered.reliable} captureClock=${input.timestamped}"
+          if (diagnostic != lastAcoustic && now - loggedAt >= 500) {
+            Log.i("BLACK-VoiceInput", "$diagnostic near=${evidence.nearendBlocks}/${evidence.blocks} echo=${evidence.echoBlocks} delayMs=${evidence.delayMs} erleDb=${evidence.erleDb}")
+            lastAcoustic = diagnostic; loggedAt = now
+          }
+          // AEC always processes the full duplex waveform. Admission, not whole-frame
+          // DSP muting, keeps echo/unknown candidates out of KWS, ASR and the model.
+          val admitted = if (source == VoiceSoundSource.NEAR_END) floats else FloatArray(floats.size)
+          val frame = VoiceAudioFrame(admitted, source == VoiceSoundSource.NEAR_END && probability >= .55f, input.startNs / 1_000_000)
           recent.addLast(frame); if (recent.size > 12) recent.removeFirst()
           if (!recognizing) {
-            ks!!.acceptWaveform(floats, 16000)
+            ks!!.acceptWaveform(admitted, 16000)
             while (kws.isReady(ks!!)) kws.decode(ks!!)
             if (kws.getResult(ks!!).keyword.isBlank()) {
               if (++keywordFrames >= 1000) resetKeyword()
@@ -89,15 +115,15 @@ internal class VoiceAudioEngine(private val context: Context, private val refere
             recent.clear(); continue
           }
           if (frame.speech) lastSpeech = frame.timeMs
-          val candidate = gate.observe(probability)
-          if (candidate) events.candidate(segment)
-          if (!collecting && candidate) {
+          val onset = gate.observe(probability, source)
+          if (onset == VoiceSpeechGate.Event.CANDIDATE) events.candidate(segment)
+          if (onset == VoiceSpeechGate.Event.HEARING) events.hearing(segment, rendered.epoch)
+          if (!collecting && onset.startsRecognition(rendered.renderProtected)) {
             collecting = true
             recent.forEach { stream!!.acceptWaveform(it.samples, 16000) }; decode()
           } else if (collecting) {
-            stream!!.acceptWaveform(floats, 16000); decode()
+            stream!!.acceptWaveform(admitted, 16000); decode()
           }
-          if (gate.confirm(turn.partial)) events.hearing(segment)
           if (collecting && frame.timeMs - lastSpeech >= 650) {
             stream!!.acceptWaveform(FloatArray(11200), 16000); decode()
             val emptySegment = turn.partial.isBlank()

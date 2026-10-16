@@ -27,35 +27,121 @@ class VoiceAudioPolicyTest {
   }
   @Test fun clicksDoNotBargeButOrdinarySustainedSpeechDoes() {
     val gate = VoiceSpeechGate()
-    repeat(4) { assertFalse(gate.observe(.95f)) }
-    assertFalse(gate.observe(.1f))
-    repeat(4) { assertFalse(gate.observe(.9f)) }
-    assertTrue(gate.observe(.9f)); gate.reset(); assertFalse(gate.observe(.9f))
+    repeat(4) { assertEquals(VoiceSpeechGate.Event.NONE, gate.observe(.95f, VoiceSoundSource.NEAR_END)) }
+    assertEquals(VoiceSpeechGate.Event.NONE, gate.observe(.1f, VoiceSoundSource.NEAR_END))
+    repeat(4) { assertEquals(VoiceSpeechGate.Event.NONE, gate.observe(.9f, VoiceSoundSource.NEAR_END)) }
+    assertEquals(VoiceSpeechGate.Event.CANDIDATE, gate.observe(.9f, VoiceSoundSource.NEAR_END))
+    gate.reset(); assertEquals(VoiceSpeechGate.Event.NONE, gate.observe(.9f, VoiceSoundSource.NEAR_END))
   }
-  @Test fun aCandidateNeedsBothSustainedCleanSpeechAndTextBeforeHoldingPlayback() {
+  @Test fun hearingNeedsSustainedIndependentSpeechAndNeverAnAsrString() {
     val gate = VoiceSpeechGate()
-    repeat(5) { gate.observe(.95f) }; assertFalse(gate.confirm("停"))
-    repeat(3) { assertFalse(gate.observe(.95f)) }
-    assertFalse(gate.confirm("…")); assertFalse(gate.confirm(""))
-    assertTrue(gate.confirm("停")); assertFalse(gate.confirm("停"))
-    gate.reset(); repeat(7) { gate.observe(.95f) }; gate.observe(.1f)
-    assertFalse(gate.confirm("噪声残留文字"))
+    repeat(7) { assertNotEquals(VoiceSpeechGate.Event.HEARING, gate.observe(.95f, VoiceSoundSource.NEAR_END)) }
+    assertEquals(VoiceSpeechGate.Event.HEARING, gate.observe(.95f, VoiceSoundSource.NEAR_END))
+    assertEquals(VoiceSpeechGate.Event.NONE, gate.observe(.95f, VoiceSoundSource.NEAR_END))
+    gate.reset(); repeat(7) { gate.observe(.95f, VoiceSoundSource.NEAR_END) }
+    gate.observe(.95f, VoiceSoundSource.UNKNOWN)
+    assertEquals(VoiceSpeechGate.Event.NONE, gate.observe(.95f, VoiceSoundSource.NEAR_END))
+  }
+  @Test fun aPlaybackCandidateCannotBypassConfirmationThroughAnAsrModelRequest() {
+    assertFalse(VoiceSpeechGate.Event.CANDIDATE.startsRecognition(true))
+    assertTrue(VoiceSpeechGate.Event.CANDIDATE.startsRecognition(false))
+    assertTrue(VoiceSpeechGate.Event.HEARING.startsRecognition(true))
+    assertTrue(VoiceSpeechGate.Event.HEARING.startsRecognition(false))
+    assertFalse(VoiceSpeechGate.Event.NONE.startsRecognition(true))
+    assertFalse(VoiceSpeechGate.Event.NONE.startsRecognition(false))
+  }
+  @Test fun evenContinuousHighVadEchoAndUnknownCannotPauseOrChangeTheAnswer() {
+    for (source in listOf(VoiceSoundSource.ECHO, VoiceSoundSource.UNKNOWN)) {
+      val c = VoiceSessionController(); c.ready(); val token = c.begin("answer"); c.prepare("answer"); c.render("answer", token, true)
+      val gate = VoiceSpeechGate()
+      repeat(1000) {
+        when (gate.observe(.999f, source)) {
+          VoiceSpeechGate.Event.CANDIDATE -> c.candidate("echo")
+          VoiceSpeechGate.Event.HEARING -> c.hearing("echo")
+          else -> Unit
+        }
+      }
+      assertFalse(c.snapshot.held); assertEquals("speaking", c.phase); assertEquals("answer", c.turnId)
+      assertEquals("", c.snapshot.draft); assertFalse(gate.candidate)
+    }
+  }
+  @Test fun playbackNeedsAecEvidenceNotJustGoodErleOrQuietOutput() {
+    val valid = VoiceAcousticEvidence(8, 8, 0, 8, 0, 1000.0, 50.0, 20.0, 80.0, 30.0)
+    assertEquals(VoiceSoundSource.NEAR_END, valid.source(true, true))
+    assertEquals(VoiceSoundSource.UNKNOWN, valid.source(true, false))
+    for (uncertain in listOf(valid.copy(nearendBlocks = 0), valid.copy(reliableBlocks = 7), valid.copy(saturatedBlocks = 1),
+      valid.copy(nearendPower = Double.NaN), valid.copy(echoPower = 500.0), VoiceAcousticEvidence())) {
+      assertEquals(VoiceSoundSource.UNKNOWN, uncertain.source(true, true))
+    }
+    assertEquals(VoiceSoundSource.ECHO, valid.copy(nearendBlocks = 0, echoBlocks = 8).source(true, true))
+    // Same voice/words are valid input when there is no playback reference. No text blacklist.
+    assertEquals(VoiceSoundSource.NEAR_END, VoiceAcousticEvidence().source(false, false))
   }
   @Test fun renderClockAlignsReferenceAndNeverFeedsUnplayedAudioAfterStop() {
     val ref = VoiceRenderReference(); val clip = ShortArray(16000) { (it % 1000).toShort() }
     val id = ref.begin(clip, 1_000_000_000L)
     ref.clock(id, 1600, 1_200_000_000L) // Actual render began at 1.1 seconds, not the prepare time.
-    assertArrayEquals(clip.copyOfRange(1600, 2112), ref.frame(1_200_000_000L, 512))
+    assertArrayEquals(clip.copyOfRange(1600, 2112), ref.read(1_200_000_000L, 512).samples)
     ref.end(id, 2000)
-    val tail = ref.frame(1_200_000_000L, 512)
+    val tail = ref.read(1_200_000_000L, 512).samples
     assertEquals(0, tail[450].toInt()); assertEquals(clip[1700], tail[100])
-    assertTrue(ref.frame(3_000_000_000L, 512).all { it == 0.toShort() })
+    assertTrue(ref.read(3_000_000_000L, 512).samples.all { it == 0.toShort() })
   }
   @Test fun cancellationRetainsAlreadyRenderedAcousticTail() {
     val ref = VoiceRenderReference(); val id = ref.begin(shortArrayOf(1, 2, 3, 4), 1_000_000_000L)
     ref.end(id, 3)
-    assertArrayEquals(shortArrayOf(1, 2, 3, 0), ref.frame(1_000_000_000L, 4))
-    ref.clear(); assertArrayEquals(ShortArray(4), ref.frame(1_000_000_000L, 4))
+    assertArrayEquals(shortArrayOf(1, 2, 3, 0), ref.read(1_000_000_000L, 4).samples)
+    ref.clear(); assertArrayEquals(ShortArray(4), ref.read(1_000_000_000L, 4).samples)
+  }
+  @Test fun writeAheadFallbackSilenceAndTailRemainProtectedUntilTheirRealEnd() {
+    val ref = VoiceRenderReference(); val id = ref.begin(ShortArray(1600), 1_000_000_000L)
+    val pending = ref.read(950_000_000L, 512)
+    assertTrue(pending.renderProtected); assertFalse(pending.reliable)
+    ref.clock(id, 0, 1_000_000_000L)
+    assertTrue(ref.read(1_050_000_000L, 512).reliable)
+    ref.end(id, 800)
+    val tail = ref.read(1_100_000_000L, 512)
+    assertTrue(tail.samples.all { it == 0.toShort() }); assertTrue(tail.renderProtected)
+    assertFalse(ref.read(1_800_000_000L, 512).renderProtected)
+  }
+  @Test fun routeChangesInvalidateEvidenceAndCannotReuseOldClocks() {
+    val ref = VoiceRenderReference(); val id = ref.begin(ShortArray(16000), 1_000_000_000L)
+    ref.clock(id, 0, 1_000_000_000L)
+    val old = ref.read(1_050_000_000L, 512); assertTrue(old.reliable)
+    ref.routeChanged(1_100_000_000L)
+    val changed = ref.read(1_150_000_000L, 512)
+    assertTrue(changed.renderProtected); assertFalse(changed.reliable); assertNotEquals(old.epoch, changed.epoch)
+    ref.clock(id, 2400, 1_150_000_000L)
+    assertFalse(ref.read(1_200_000_000L, 512).reliable)
+    assertTrue(ref.read(1_850_000_000L, 512).reliable)
+  }
+  @Test fun queuedCaptureDoesNotLoseItsReferenceWhenTheProducerWritesAhead() {
+    val ref = VoiceRenderReference(); val id = ref.begin(ShortArray(512) { 1234 }, 1_000_000_000L)
+    ref.clock(id, 0, 1_000_000_000L)
+    ref.begin(ShortArray(512) { 9876 }, 2_200_000_000L)
+    val queued = ref.read(1_000_000_000L, 512)
+    assertTrue(queued.renderProtected); assertTrue(queued.reliable)
+    assertEquals(1234.toShort(), queued.samples.first())
+  }
+  @Test fun largeHardwareClockCorrectionInvalidatesOldAecEvidence() {
+    val clock = VoiceCaptureClock(1_000_000_000L)
+    clock.frame(512, 512, 512, 1_032_000_000L); assertEquals(0L, clock.revision)
+    clock.frame(1024, 512, 1024, 1_264_000_000L); assertEquals(1L, clock.revision)
+    val ref = VoiceRenderReference(); val id = ref.begin(ShortArray(16000), 1_000_000_000L)
+    ref.clock(id, 0, 1_000_000_000L); val old = ref.read(1_100_000_000L, 512)
+    ref.clock(id, 1600, 1_300_000_000L)
+    val corrected = ref.read(1_350_000_000L, 512)
+    assertNotEquals(old.epoch, corrected.epoch); assertFalse(corrected.reliable); assertTrue(corrected.renderProtected)
+  }
+  @Test fun aQueuedHearingEventFromAnOldRouteCannotPauseCurrentPlayback() {
+    val ref = VoiceRenderReference(); val observed = ref.read(1_000_000_000L, 512)
+    val controller = VoiceSessionController(); controller.ready(); val token = controller.begin("answer")
+    controller.prepare("answer"); controller.render("answer", token, true); controller.candidate("input")
+    ref.routeChanged(1_100_000_000L)
+    // Same guard used by the Service when an audio-worker event reaches its main queue.
+    if (ref.isCurrent(observed.epoch)) controller.hearing("input")
+    assertFalse(controller.snapshot.held); assertEquals("speaking", controller.phase)
+    assertTrue(ref.isCurrent(ref.read(1_200_000_000L, 512).epoch))
   }
   @Test fun localPcmRetainsCompleteSamplesAndItsOriginalRate() {
     val pcm = shortArrayOf(10, 20, 30)

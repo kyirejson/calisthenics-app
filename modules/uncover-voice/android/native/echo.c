@@ -9,15 +9,22 @@
 JNIEXPORT jlong JNICALL Java_uncover_voice_VoiceEcho_nativeCreate(JNIEnv *env, jobject self, jint frame) {
   return (jlong)(intptr_t)black_echo_create(frame);
 }
-JNIEXPORT void JNICALL Java_uncover_voice_VoiceEcho_nativeProcess(JNIEnv *env, jobject self, jlong pointer, jshortArray captured, jshortArray rendered, jshortArray output) {
+JNIEXPORT jboolean JNICALL Java_uncover_voice_VoiceEcho_nativeProcess(JNIEnv *env, jobject self, jlong pointer, jshortArray captured, jshortArray rendered, jshortArray output, jdoubleArray evidence) {
   BlackEcho *state = (BlackEcho *)(intptr_t)pointer;
   int frame = black_echo_frame_size(state);
-  if (!state || (*env)->GetArrayLength(env, captured) != frame || (*env)->GetArrayLength(env, rendered) != frame || (*env)->GetArrayLength(env, output) != frame) return;
+  if (!state || (*env)->GetArrayLength(env, captured) != frame || (*env)->GetArrayLength(env, rendered) != frame || (*env)->GetArrayLength(env, output) != frame || (*env)->GetArrayLength(env, evidence) != 11) return JNI_FALSE;
   jshort *mic = (*env)->GetShortArrayElements(env, captured, NULL), *ref = (*env)->GetShortArrayElements(env, rendered, NULL), *out = (*env)->GetShortArrayElements(env, output, NULL);
   if (mic && ref && out) black_echo_process(state, mic, ref, out);
   if (mic) (*env)->ReleaseShortArrayElements(env, captured, mic, JNI_ABORT);
   if (ref) (*env)->ReleaseShortArrayElements(env, rendered, ref, JNI_ABORT);
   if (out) (*env)->ReleaseShortArrayElements(env, output, out, 0);
+  if (!mic || !ref || !out) return JNI_FALSE;
+  BlackEchoEvidence observed; black_echo_evidence(state, &observed);
+  const jdouble values[11] = {observed.blocks, observed.nearend_blocks, observed.echo_blocks,
+    observed.reliable_blocks, observed.saturated_blocks, observed.nearend_power,
+    observed.residual_echo_power, observed.noise_power, observed.delay_ms, observed.erle_db, observed.erl_db};
+  (*env)->SetDoubleArrayRegion(env, evidence, 0, 11, values);
+  return JNI_TRUE;
 }
 JNIEXPORT void JNICALL Java_uncover_voice_VoiceEcho_nativeRelease(JNIEnv *env, jobject self, jlong pointer) {
   BlackEcho *state = (BlackEcho *)(intptr_t)pointer;

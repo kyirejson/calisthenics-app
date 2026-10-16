@@ -104,7 +104,9 @@ class BlackVoiceService : Service() {
               if (controller.partial(segment, text)) event("transcript", null)
             }
             override fun candidate(segment: String) = post { controller.candidate(segment); publish() }
-            override fun hearing(segment: String) = post { if (controller.hearing(segment)) publish() }
+            override fun hearing(segment: String, referenceEpoch: Long) = post {
+              if (reference.isCurrent(referenceEpoch) && controller.hearing(segment)) publish()
+            }
             override fun probe(segment: String, id: String, text: String, wake: Boolean, silenceMs: Long) = post {
               if (!decisionActive(id)) return@post
               controller.assessing(segment); publish()
