@@ -16,6 +16,8 @@
 | 语音验证 | `test-voice-agent.cjs`、`test-voice-turn-assessment.cjs`、`test-agent-conversation.cjs`、`check-voice-models.py`、`build-wake-fixtures.ps1`、`build-voice-dialogue-fixtures.py`、`check-voice-echo.py`、`native/voice-echo-probe.c`、`inspect-apk-voice.cjs` | 共用对话/取消/文字流、只读语义判停回归；声学前端与真实本地模型检查、最终 APK 资源/原生类检查；不冒充真机验收 |
 | 公开网页工具 | `test-web-tools.cjs` | 网页分页、公开搜索解析、取消、私网保护；Android 网络另由 instrumentation 检查 |
 | 通用手机控制 | `test-phone-agent.cjs`、`smoke-phone-agent.cjs`、`check-phone-control.ps1`、`inspect-apk-phone.cjs` | 无应用白名单的模型工具、真实授权、隔离原生控件/Chrome/Settings/OCR 和最终 APK；模拟聊天不是微信实际发送验收 |
+| 手机可靠性/提醒/缓存 | `test-agent-reliability.cjs`、`check-phone-reminders.ps1` | 稳定前缀、真实 usage 计数、流程参数、短摘要收尾；独立 Android 测试包进程退出后的系统通知验收，不自动选择实体手机 |
+| 模型日志/缓存结构 | `test-agent-journal.cjs`、`check-agent-browser-storage.cjs` | 原始消息/推理/工具批次、迁移/清空竞态、完整资料引用、显式检查点；后者接收已安装的 Playwright 绝对模块路径和可选浏览器 channel（如 msedge），在隔离浏览器测试 8 MB IndexedDB 写入、刷新恢复和清空，不安装依赖、不调用模型 |
 | 历史研究 | `audit*`、图片研究 `.py`/`.json` | 手工研究/一次性素材工具，不属于发版门禁 |
 
 本轮已删除四个对应已退场相机/条码功能的 smoke。`test-nutrition-photo-history` 只保护历史营养照片、份量快照与照片存储兼容，不提供新拍照功能。

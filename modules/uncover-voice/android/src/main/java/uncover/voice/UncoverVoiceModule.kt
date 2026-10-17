@@ -5,6 +5,8 @@ import android.content.ActivityNotFoundException
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
+import android.os.Handler
+import android.os.Looper
 import android.provider.Settings
 import expo.modules.kotlin.functions.Queues
 import expo.modules.kotlin.modules.Module
@@ -15,9 +17,19 @@ class UncoverVoiceModule : Module() {
   private val context get() = appContext.reactContext ?: error("App 尚未就绪。")
   internal fun status() { runCatching { sendEvent("status", emptyMap<String, Any>()) } }
   internal fun dialogue(data: Map<String, Any>) { runCatching { sendEvent("dialogue", data) } }
+  private fun restoreListening() {
+    if (appContext.currentActivity == null || !VoiceState.enabled(context) || BlackVoiceService.instance != null) return
+    if (context.checkSelfPermission(Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
+      VoiceState.error(context, "microphone_permission_revoked", "语音开关已保存，但系统麦克风权限已撤销；请恢复麦克风授权。")
+      return
+    }
+    try { BlackVoiceService.start(context) }
+    catch (error: Exception) { VoiceState.error(context, "voice_restore_failed", error.message ?: "系统暂未允许恢复语音监听。") }
+  }
   override fun definition() = ModuleDefinition {
     Name("UncoverVoice"); Events("status", "dialogue")
-    OnCreate { instance = this@UncoverVoiceModule }
+    OnCreate { instance = this@UncoverVoiceModule; Handler(Looper.getMainLooper()).post { restoreListening() } }
+    OnActivityEntersForeground { restoreListening() }
     OnDestroy { if (instance === this@UncoverVoiceModule) instance = null }
     AsyncFunction("state") { VoiceState.snapshot(context).toString() }
     AsyncFunction("enable") { enabled: Boolean ->
@@ -25,7 +37,7 @@ class UncoverVoiceModule : Module() {
       if (enabled && context.checkSelfPermission(Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) error("请先授权麦克风。")
       if (enabled && appContext.currentActivity == null) error("请从 App 中主动开启语音监听。")
       VoiceState.setEnabled(context, enabled)
-      if (enabled) try { BlackVoiceService.start(context) } catch (error: Exception) { VoiceState.setEnabled(context, false); throw error }
+      if (enabled) try { BlackVoiceService.start(context) } catch (error: Exception) { VoiceState.error(context, "voice_start_failed", error.message ?: "语音服务未启动。"); throw error }
       else BlackVoiceService.stop(context)
       status()
     }.runOnQueue(Queues.MAIN)
@@ -49,6 +61,7 @@ class UncoverVoiceModule : Module() {
     AsyncFunction("cancel") { id: String? -> BlackVoiceService.instance?.cancel(id) }.runOnQueue(Queues.MAIN)
     AsyncFunction("standby") { id: String -> BlackVoiceService.instance?.standby(id) == true }.runOnQueue(Queues.MAIN)
     AsyncFunction("reply") { id: String, text: String -> BlackVoiceService.instance?.reply(id, text) }.runOnQueue(Queues.MAIN)
+    AsyncFunction("replyThenStandby") { id: String, text: String -> BlackVoiceService.instance?.reply(id, text, true) }.runOnQueue(Queues.MAIN)
     AsyncFunction("clear") { VoiceState.setEnabled(context, false); BlackVoiceService.stop(context); VoiceLegacyData.clear(context); VoiceState.clearError(context); status() }.runOnQueue(Queues.MAIN)
   }
 }

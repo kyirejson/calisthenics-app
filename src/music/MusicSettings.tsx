@@ -42,17 +42,20 @@ export function MusicSettings() {
   const choose = (provider: MusicProvider) => run(() => updateSettings({ music: { ...preferences, provider } }));
   const allowScreen = () => {
     if (capability?.screenConsent) { void run(() => musicTransport.consent(false)); return; }
-    confirmAction('允许模型操作音乐界面？', '仅处理网易云音乐和 QQ 音乐。必要的界面文字会发送给你配置的 DeepSeek，用来搜索、选择歌单和播放；不读取密码，不自动登录、购买或更改权限。系统无障碍授权需你手动完成，可随时关闭。', () => void run(async () => { await musicTransport.consent(true); await musicTransport.permission('accessibility'); }), { confirmLabel: '同意并前往设置' });
+    if (capability?.screenConsentAccepted) { void run(async () => { await musicTransport.consent(true); if (!capability.accessibilityGranted) await musicTransport.permission('accessibility'); }); return; }
+    confirmAction('允许模型操作音乐界面？', '仅处理网易云音乐和 QQ 音乐。必要的界面文字会发送给你配置的 DeepSeek，用来搜索、选择歌单和播放；不读取密码，不自动登录、购买或更改权限。系统无障碍授权需你手动完成，可随时关闭。', () => void run(async () => { await musicTransport.consent(true); if (!capability?.accessibilityGranted) await musicTransport.permission('accessibility'); }), { confirmLabel: '同意并前往设置' });
   };
   const allowPlayback = () => {
     if (capability?.playbackConsent) { void run(() => musicTransport.playbackConsent(false)); return; }
-    confirmAction('读取音乐播放状态？', 'Android 的通知使用权范围较广。本应用仅查询两款音乐软件的媒体播放状态，不采集或发送其他通知内容。开启后模型可以核实是否播放成功；系统授权仍需你手动完成。', () => void run(async () => { await musicTransport.playbackConsent(true); await musicTransport.permission('notifications'); }), { confirmLabel: '同意并前往设置' });
+    if (capability?.playbackConsentAccepted) { void run(async () => { await musicTransport.playbackConsent(true); if (!capability.notificationAccess) await musicTransport.permission('notifications'); }); return; }
+    confirmAction('读取音乐播放状态？', 'Android 的通知使用权范围较广。本应用仅查询两款音乐软件的媒体播放状态，不采集或发送其他通知内容。开启后模型可以核实是否播放成功；系统授权仍需你手动完成。', () => void run(async () => { await musicTransport.playbackConsent(true); if (!capability?.notificationAccess) await musicTransport.permission('notifications'); }), { confirmLabel: '同意并前往设置' });
   };
   const allowBackground = () => {
     if (capability?.backgroundEnabled) { void run(() => musicTransport.backgroundConsent(false)); return; }
+    if (capability?.backgroundConsentAccepted) { void run(async () => { await musicTransport.backgroundConsent(true); if (capability.shizukuRunning && !capability.shizukuGranted) await musicTransport.permission('shizuku'); }); return; }
     confirmAction('启用不切换页面的后台点歌？', '需要 Android 14+、Shizuku 和音乐无障碍授权。Shizuku 提供较高的系统调试权限，请仅从官方渠道安装并由你手动启动、授权。音乐软件在独立虚拟屏幕运行，模型只操作两款音乐软件，不操作你的主屏。失败时不会偷偷改为前台操作。手机重启后需重新启动 Shizuku；不自动登录、购买或绕过锁屏。', () => void run(async () => {
       await musicTransport.backgroundConsent(true);
-      if (capability?.shizukuRunning) await musicTransport.permission('shizuku');
+      if (capability?.shizukuRunning && !capability.shizukuGranted) await musicTransport.permission('shizuku');
     }), { confirmLabel: '同意并启用' });
   };
   return <View testID="music-settings" style={s.card}>

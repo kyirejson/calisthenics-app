@@ -1,13 +1,14 @@
 import { isClearContextCommand } from '../features/chat/commands';
-import type { AgentConversation, ModelMessage, ToolReceipt, TurnHandle } from '../agent/conversation';
-export type VoiceInput = { requestId: string; sessionId: string; text: string; wake?: boolean };
+import type { AgentConversation, ToolReceipt, TurnHandle } from '../agent/conversation';
+export type VoiceInput = { requestId: string; sessionId: string; text: string; wake?: boolean; taskId?: string };
 type Dependencies = {
   prepare?(): Promise<void>;
   conversation: AgentConversation;
-  active(id: string): Promise<boolean>; reply(id: string, text: string): Promise<void>; cancel(id: string): Promise<void>;
+  active(id: string): Promise<boolean>; reply(id: string, text: string, standbyAfterReply?: boolean): Promise<void>; cancel(id: string): Promise<void>;
   standby(id: string): Promise<boolean>;
-  turn(input: { messages: ModelMessage[]; requestId: string; controller: AbortController;
+  turn(input: { journal: ReturnType<AgentConversation['journal']>; wakeDetected: boolean; requestId: string; controller: AbortController; usageTaskId?: string; sessionId?: string;
     endVoiceConversation(): Promise<void>;
+    onTaskFinished(standby: boolean): void;
     onDelta(delta: string, accumulated: string): void; onRoundStart(): void;
     onToolCall(call: { name: string; args: Record<string, unknown> }): void; onToolResult(call: ToolReceipt): void }): Promise<string>;
   subscribeReset(callback: () => void): () => void;
@@ -24,6 +25,7 @@ export function createVoiceDialogue(dependencies: Dependencies) {
     let handle: TurnHandle | null = null;
     let delivered = false;
     let returnToWake = false;
+    let standbyAfterReply = false;
     const cancelled = () => { if (handle) conversation.interrupt(input.requestId); void dependencies.cancel(input.requestId).catch(() => {}); };
     controller.signal.addEventListener('abort', cancelled, { once: true });
     const unlisten = dependencies.subscribeReset(() => controller.abort());
@@ -31,7 +33,7 @@ export function createVoiceDialogue(dependencies: Dependencies) {
     const deliver = async (text: string) => {
       // Generation finishes here; the native coordinator continues to own synthesis/playback.
       delivered = true;
-      await dependencies.reply(input.requestId, text);
+      await dependencies.reply(input.requestId, text, standbyAfterReply);
     };
     try {
       await dependencies.prepare?.();
@@ -46,11 +48,13 @@ export function createVoiceDialogue(dependencies: Dependencies) {
       if (!handle) return;
       const activeHandle = handle;
       const answer = await dependencies.turn({
-        messages: [...(input.wake ? [{ role: 'system', content: JSON.stringify({ type: 'voice_input_state', wakeDetected: true }) }] : []), ...conversation.messages(handle)], requestId: input.requestId, controller,
+        journal: conversation.journal(handle), wakeDetected: input.wake === true, requestId: input.requestId, controller,
+        usageTaskId: input.taskId || input.requestId, sessionId: input.sessionId,
         endVoiceConversation: async () => {
           if (controller.signal.aborted || !(await dependencies.active(input.requestId)) || controller.signal.aborted) throw Error('本次语音请求已失效，不能结束新的对话。');
           returnToWake = true;
         },
+        onTaskFinished: standby => { standbyAfterReply = standby; },
         onRoundStart: () => conversation.round(activeHandle), onDelta: (_delta, accumulated) => conversation.delta(activeHandle, accumulated),
         onToolCall: call => conversation.tool(activeHandle, call), onToolResult: call => conversation.receipt(activeHandle, call),
       });

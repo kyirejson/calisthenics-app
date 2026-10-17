@@ -13,12 +13,23 @@ import { isValidDateKey } from '../nutrition/validation';
 import type { StoreActions } from '../store/contracts';
 import { musicTools } from '../music/modelTools.mjs';
 import { phoneTools } from '../device/modelTools.mjs';
+import { reminderTools } from '../reminders/modelTools.mjs';
+import { workflowTools } from '../device/workflowTools.mjs';
 import { executeWebTool, webTools } from './webTools.mjs';
 export type PersonalData = { profile: Profile | null; sessions: TrainingSession[]; dailyEdits: DailyWorkoutEdits; nutritionJournal: NutritionJournal; settings?: Settings };
 export async function executePersonalTool(name: string, input: unknown, data: PersonalData, signal?: AbortSignal,
  writes?: { requestId: string; executionId?: string; apply: StoreActions['applyMealOperations']; updateSettings?: StoreActions['updateSettings'];
    onInterruptedToolResult?: (call: { name: string; args: Record<string, unknown>; result: unknown }) => void }) {
  if (signal?.aborted) throw Error('请求已取消。');
+ if (workflowTools.some(tool => tool.function.name === name)) {
+   const { executeWorkflowTool } = await import('../device/workflowRuntime');
+   return executeWorkflowTool(name, input, writes?.requestId ?? '', writes?.executionId ?? writes?.requestId ?? '', signal, writes?.onInterruptedToolResult);
+ }
+ if (reminderTools.some(tool => tool.function.name === name)) {
+   const { executeReminderTool } = await import('../reminders/agentRuntime');
+   const { reminderTransport } = await import('../reminders/transport');
+   return executeReminderTool(name, input, reminderTransport, writes?.requestId ?? '', signal);
+ }
  if (webTools.some(tool => tool.function.name === name)) {
    const { requestPublicWeb } = await import('./webTransport');
    return executeWebTool(name, input, requestPublicWeb, signal);
@@ -40,6 +51,7 @@ export async function executePersonalTool(name: string, input: unknown, data: Pe
  }
  const date=localWeightDate(new Date());
  switch(name){
+  case 'read_agent_usage': return { ok: true, scope: 'last_500_model_requests_and_2000_task_events', ...await (await import('../agent/usageRuntime')).readAgentUsage(input ?? {}), note: '只保存计数、协议编号和耗时，无消息、参数、屏幕正文或录音。taskRanking 关联同一任务的语音判停、模型请求和工具执行。分页可继续读取。只覆盖保留窗口，不是全生命周期；请求耗时可重叠，不能相加冒充总等待时间。cacheHitRate=null 表示服务未报告缓存计数。outcome 是本轮模型结论/取消状态，不代替真实任务验收。' };
   case 'read_memory': {const markdown=await readMemory();return {ok:true,markdown:markdown??'',exists:markdown!==null};}
   case 'update_memory': return editMemory(input as Parameters<typeof editMemory>[0],signal);
   case 'read_today_training': {

@@ -1,6 +1,7 @@
 package uncover.device
 
 import android.accessibilityservice.AccessibilityService
+import android.accessibilityservice.AccessibilityServiceInfo
 import android.view.accessibility.AccessibilityEvent
 
 /** Shared service implementation. The existing Android component remains the sole binding entry. */
@@ -10,7 +11,10 @@ open class PhoneAccessibilityService : AccessibilityService() {
   protected open fun legacyPackages(): List<String> = emptyList()
   fun refreshAccess() {
     phoneUi.clear()
-    serviceInfo = serviceInfo.apply { packageNames = if (PhoneLedger.enabled(this@PhoneAccessibilityService)) null else legacyPackages().ifEmpty { listOf(packageName) }.toTypedArray() }
+    serviceInfo = serviceInfo.apply {
+      packageNames = if (PhoneLedger.enabled(this@PhoneAccessibilityService)) null else legacyPackages().ifEmpty { listOf(packageName) }.toTypedArray()
+      flags = flags or AccessibilityServiceInfo.FLAG_REPORT_VIEW_IDS or AccessibilityServiceInfo.FLAG_RETRIEVE_INTERACTIVE_WINDOWS or AccessibilityServiceInfo.FLAG_INCLUDE_NOT_IMPORTANT_VIEWS
+    }
     UncoverDeviceModule.changed()
   }
   override fun onServiceConnected() { instance = this; refreshAccess() }

@@ -27,12 +27,15 @@ test('a text panel cancelling its own retired request cannot interrupt the curre
   assert.equal(voice.controller.signal.aborted, false); assert.equal(c.valid(voice), true);
   assert.equal(c.getSnapshot().generating, true); assert.equal(c.getSnapshot().turns[3].status, 'generating');
 });
-test('completed tools survive a cancellation race and are provided to the next model turn, not replayed', async () => {
+test('out-of-band native receipts survive cancellation as facts without fabricating missing model tool calls', async () => {
   const { conversation: c } = harness(); const a = await begin(c, 'old', 'voice'); c.interrupt('old');
   c.receipt(a, { name: 'write_meal_records', args: { operationKey: 'meals_1' }, result: { ok: true, entryIds: ['saved'] } });
-  const b = await begin(c, 'new'); const messages = c.messages(b);
-  const result = messages.find(m => m.role === 'tool'); assert.match(result.content, /saved/);
-  assert.equal(messages.find(m => m.tool_calls?.[0].id === result.tool_call_id).tool_calls[0].function.name, 'write_meal_records');
+  const b = await begin(c, 'new');
+  assert.equal(c.messages(b).some(m => m.role === 'system' && m.content.includes('execution_reconciliation')), false);
+  await c.journal(b).prepare({ system: 'fixture', tools: [], memory: '', context: {} });
+  const messages = c.messages(b);
+  const result = messages.find(m => m.role === 'system' && m.content.includes('execution_reconciliation')); assert.match(result.content, /saved/);
+  assert.equal(JSON.parse(result.content).name, 'write_meal_records'); assert.equal(messages.some(m => m.role === 'tool'), false);
   assert.ok(messages.filter(m => m.role === 'assistant').every(m => !String(m.content).includes('工具执行回执')));
 });
 test('tool rounds replace intermediate text instead of appending it to a final answer', async () => {
@@ -42,8 +45,9 @@ test('tool rounds replace intermediate text instead of appending it to a final a
 test('only actual spoken progress is retained, and an interrupted answer is marked as not fully heard', async () => {
   const { conversation: c } = harness(); const a = await begin(c, 'a', 'voice'); c.complete(a, '第一句。第二句。');
   c.voice({ phase: 'speaking', requestId: 'a', spokenEnd: 4 }); c.interrupt('a');
-  const b = await begin(c, 'b', 'voice'); const state = JSON.parse(c.messages(b).find(m => m.role === 'system').content);
-  assert.equal(state.turns[0].spokenText, '第一句。'); assert.equal(state.turns[0].status, 'interrupted');
+  const b = await begin(c, 'b', 'voice'); await c.journal(b).prepare({ system: 'fixture', tools: [], memory: '', context: { responseMode: 'voice' } });
+  const state = c.messages(b).filter(m => m.role === 'system' && m.content.includes('conversation_delivery_event')).map(m => JSON.parse(m.content)).at(-1);
+  assert.equal(state.spokenEnd, 4); assert.equal(state.status, 'interrupted');
   assert.equal(c.messages(b).find(m => m.role === 'assistant' && m.content).content, '第一句。第二句。');
 });
 test('clear context aborts all in-flight writes and prevents stale results from restoring cleared content', async () => {
@@ -73,7 +77,8 @@ test('concise style is a prompt only, preserving all tools and unrestricted mode
   });
   assert.equal(count, 13); assert.equal(answer, '必要的完整解释'.repeat(100));
   assert.deepEqual(options.tools.slice(0, personalTools.length), personalTools);
-  assert.deepEqual(options.tools.slice(personalTools.length).map(tool => tool.function.name), ['continue_listening', 'end_voice_conversation']);
+  assert.deepEqual(options.tools, personalTools);
+  assert.ok(options.tools.some(tool => tool.function.name === 'continue_listening')); assert.ok(options.tools.some(tool => tool.function.name === 'end_voice_conversation'));
   assert.equal(options.maxTokens, undefined);
   assert.match(prompt, /简洁、干练、自然/); assert.match(prompt, /当前是语音对话/); assert.match(prompt, /保留必要信息/);
 });

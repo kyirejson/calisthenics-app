@@ -55,7 +55,3 @@ export function extractText(bytes, kind) {
   if (text.includes('\u0000')) throw Error('文件不是可读取的文本，请另存为 UTF-8 后添加。');
   return checkedText(text);
 }
-// Attachments are user data. No extra system instructions, tool or memory writes.
-export function attachmentMessage(turn) {
-  return { role: turn.role, content: [turn.content, ...(turn.attachments || []).map(file => `【附件：${file.name}】\n${file.text}\n【附件结束】`)].filter(Boolean).join('\n\n') };
-}

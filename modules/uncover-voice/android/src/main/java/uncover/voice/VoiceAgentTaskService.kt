@@ -14,6 +14,7 @@ class VoiceAgentTaskService : HeadlessJsTaskService() {
     if (if (kind == "decision") BlackVoiceService.instance?.decisionActive(requestId) != true else BlackVoiceService.instance?.active(requestId) != true) return null
     return HeadlessJsTaskConfig("UncoverVoiceAgent", Arguments.createMap().apply {
       putString("requestId", requestId); putString("text", text); putString("sessionId", sessionId)
+      putString("taskId", intent.getStringExtra("taskId") ?: requestId)
       putString("kind", kind); putBoolean("wake", intent.getBooleanExtra("wake", false)); putDouble("silenceMs", intent.getLongExtra("silenceMs", 0).toDouble())
     }, 0, true) // No artificial tool-round cap; service cancellation still terminates requests.
   }

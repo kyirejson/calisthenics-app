@@ -1,17 +1,13 @@
-# Uncover v1.8.0
+# Uncover v1.8.1
 
-App version: 1.8.0
+App version: 1.8.1
 
-Android versionCode: 32
+Android versionCode: 33
 
-- 新增 MAX 通用手机控制：动态查找已安装的可启动应用，由模型自主规划并组合读屏、点击、输入、滚动、手势、返回及跨应用任务，不只限三个示例，不增加关键词导航脚本。
-- 独立全机授权默认关闭，请在 MAX「服务设置 → 手机控制」中本人开启并完成系统无障碍授权。此功能操作真实主屏幕；音乐独立的可选后台模式保留，不混用授权或自动降级到主屏。
-- 共用一套真实界面执行引擎；操作先写回执，旧页面/请求引用明确失败，取消停止后续步骤，重复编号返回原结果。系统接受操作不等于消息已送达或导航已完成。
-- 模型可按需使用本机捆绑 OCR 读取自绘文字与坐标，不保存或上传截图，不增加云视觉服务。系统保护、登录、授权和身份验证仍由本人处理；识字不是任意图像理解。
-- BLACK 正式更名 MAX，DeepSeek 仅为用户配置的模型 API 提供方；保留原本机设置和 Android 组件。30 秒无活动或模型判断结束交互后回唤醒待机，连续播放提前续入后段，保留回声隔离、真正插话与全部业务工具。手机 APK 仍仅支持 ARM64，无专属声纹。
+- MAX now keeps the model conversation intact across text and voice turns, app restarts, and interrupted requests. Completed actions stay recorded and uncertain actions are not silently repeated.
+- Attachments and long reference material are stored privately on the device and remain available to MAX in full. Long conversations keep their original archive when an older part is summarized.
+- Request diagnostics distinguish the model's first response, visible text, and first tool call, and report cache tokens only when the provider supplies valid counts.
+- Added Android reminders delivered by the system after the app leaves the foreground.
+- Continued MAX phone operation with sequential UI actions and preserved the user's existing fitness records, app settings, and model configuration.
 
-开发验证：TypeScript、580 项项目回归、五模块共 96 项 Kotlin 策略、Android 通用控制原生 12/12 和 320/390px 隔离浏览器通过。原生实测含 Chrome/Settings 真启动、隔离控件与物理手势、真实本机 OCR、撤权/取消、跨执行快照及防重复；隔离聊天不等于真实微信。既有连续语音原生 28/28 验证保留，不能外推所有真机外放和真人发音均已验收。
-
-待验收：已登录微信的真实收件对象发送，以及高德/腾讯/百度地图实际搜索和路线选择；ColorOS 全链路亦须真机确认。此说明明确区分待验收产物与正式发布，不宣称“三个标准已全部通过”或“所有 App 所有页面百分百控制”。详见 docs/max-phone-control-implementation-2026-10-16.md。
-
-沿用正式包名与签名，覆盖安装保留本机数据，不要先卸载。这是原生代码更新，必须安装新版 APK 才会生效。
+This is an APK update. Install over the existing app to preserve local data; do not uninstall first.

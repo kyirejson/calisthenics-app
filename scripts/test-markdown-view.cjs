@@ -64,7 +64,7 @@ test('personalChat invokes onToolCall callback for captured tool execution', asy
     execute: async (name, args) => ({ ok: true, name, args }),
     client: {
       generate: async (messages) => {
-        if (messages.length === 2) {
+        if (!messages.some(message => message.role === 'tool')) {
           return {
             role: 'assistant',
             content: null,

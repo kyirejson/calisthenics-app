@@ -5,6 +5,7 @@ export type VoicePresentation = {
   output?: 'idle' | 'generating' | 'synthesizing' | 'playing' | 'buffering'; held?: boolean;
   requestId?: string; segmentId?: string; text?: string; spokenEnd?: number;
   speechStart?: number; speechEnd?: number; error?: string;
+  inputSuppressed?: boolean; externalPlayback?: 'none' | 'navigation' | 'external_speech'; externalMetadataAvailable?: boolean;
 };
 export type VoiceEvent = VoicePresentation & {
   kind: 'status' | 'transcript' | 'interrupt' | 'speech' | 'playback_error' | 'decision_cancelled'; sequence: number;

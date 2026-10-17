@@ -41,12 +41,14 @@ internal object MusicBackground {
     if (!enabled(context)) throw MusicFailure("background_consent_required", "请先在音乐设置中启用后台点歌。")
     if (Build.VERSION.SDK_INT < MusicDisplayPolicy.MIN_API) throw MusicFailure("background_unsupported", "不抢主屏的后台点歌需要 Android 14 或以上；当前版本请选择前台方式。")
     if (!MusicLedger.consent(context, "screen")) throw MusicFailure("screen_consent_required", "请先在音乐设置中同意模型操作音乐界面。")
-    if (!granted()) throw MusicFailure("shizuku_required", "请手动启动 Shizuku 并授权本应用；后台模式不会改为前台操作。")
+    if (!runCatching { Shizuku.pingBinder() }.getOrDefault(false)) throw MusicFailure("shizuku_not_running", "Shizuku 当前未运行；已保存的 App 授权仍保留，只需手动启动 Shizuku。")
+    if (!granted()) throw MusicFailure("shizuku_required", "Shizuku 正在运行，但本应用未获其授权；请在 Shizuku 中授权一次。")
     if ((context.getSystemService(Context.KEYGUARD_SERVICE) as android.app.KeyguardManager).isKeyguardLocked) throw MusicFailure("device_locked", "手机已锁屏，请解锁后再选歌；不会绕过锁屏。")
   }
   fun requestPermission(context: Context) {
     if (!enabled(context)) throw MusicFailure("background_consent_required", "请先同意后台点歌授权说明。")
     if (!Shizuku.pingBinder()) throw MusicFailure("shizuku_not_running", "请先安装并启动 Shizuku，再返回授权；不需要连接电脑。")
+    if (granted()) return
     Shizuku.requestPermission(4302)
   }
   suspend fun connect(context: Context) {

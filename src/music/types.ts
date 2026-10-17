@@ -4,6 +4,7 @@ export type MusicCapability = {
   provider: MusicProvider; installed: boolean; version?: string; searchIntent: boolean;
   native: boolean; accessibilityGranted: boolean; accessibilityConnected: boolean; notificationAccess: boolean; screenConsent: boolean; playbackConsent: boolean;
   taskNotificationsEnabled?: boolean; message?: string;
+  screenConsentAccepted?: boolean; playbackConsentAccepted?: boolean; backgroundConsentAccepted?: boolean;
   backgroundEnabled?: boolean; backgroundSupported?: boolean; executionMode?: 'foreground' | 'background';
   shizukuInstalled?: boolean; shizukuRunning?: boolean; shizukuGranted?: boolean; backgroundDisplayId?: number; androidApi?: number;
 };

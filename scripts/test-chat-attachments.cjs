@@ -3,13 +3,15 @@ const test = require('node:test'), assert = require('node:assert/strict'), fs = 
 const fixtures = require('./chat-file-fixtures.cjs'), { strToU8, zipSync } = require('fflate');
 const core = import('../src/integrations/chatAttachments.mjs');
 test('chat text attachments preserve Chinese, Markdown and UTF-16 without adding instructions', async () => {
-  const { extractText, attachmentMessage } = await core;
+  const { extractText } = await core;
   assert.equal(extractText(strToU8('\uFEFF# 食物\n豆腐 & 鸡蛋'), 'md'), '# 食物\n豆腐 & 鸡蛋');
   assert.equal(extractText(Buffer.concat([Buffer.from([255, 254]), Buffer.from('中文正文', 'utf16le')]), 'txt'), '中文正文');
-  assert.deepEqual(attachmentMessage({ role: 'user', content: '普通对话' }), { role: 'user', content: '普通对话' });
-  const wire = attachmentMessage({ role: 'user', content: '帮我看看', attachments: [{ name: '资料.md', text: '# 原文' }], toolsUsed: ['not a wire property'] });
-  assert.deepEqual(Object.keys(wire), ['role', 'content']);
-  assert.equal(wire.content, '帮我看看\n\n【附件：资料.md】\n# 原文\n【附件结束】');
+  const { createPromptJournal } = await import('../src/agent/promptJournal.mjs'), disk = new Map();
+  const journal = createPromptJournal({ getItem: async key => disk.get(key) ?? null, setItem: async (key, value) => disk.set(key, value), removeItem: async key => disk.delete(key) });
+  const bound = await journal.bind('attachment', { content: '帮我看看', attachments: [{ id: 'f', name: '资料.md', kind: 'md', size: 8, text: '# 原文' }] });
+  const wire = journal.events().find(event => event.type === 'user_input').data;
+  assert.equal(wire.message.role, 'user'); assert.ok(wire.message.content.startsWith('帮我看看\n\n'));
+  assert.equal((await bound.readArtifact({ artifactId: wire.attachments[0].artifactId, full: true })).text, '# 原文');
 });
 test('DOCX reads body text and escapes, ignores embedded pictures, preserves paragraph boundaries', async () => {
   const { extractText } = await core;
@@ -39,8 +41,8 @@ test('local PDF worker matches installed version and PDF text is actual selectab
 });
 test('UI upload path preserves attachments independently of personal data tools', () => {
   const ui = readFeature('chat');
-  assert.match(ui, /messages: agentConversation.messages\(handle\)/);
-  assert.match(fs.readFileSync(path.join(__dirname, '../src/agent/conversation.ts'), 'utf8'), /attachmentMessage\(turn\)/);
+  assert.match(ui, /journal: agentConversation.journal\(handle\)/);
+  assert.match(fs.readFileSync(path.join(__dirname, '../src/agent/conversation.ts'), 'utf8'), /createPromptJournal/);
   assert.match(ui, /setDraft\(''\);[\s\S]*?setFiles\(\[\]\)/);
   assert.doesNotMatch(ui, /专属体能与营养私教|Flash 1M|正在思考并检索数据/);
   assert.doesNotMatch(fs.readFileSync(path.join(__dirname, '../src/integrations/chatAttachments.mjs'), 'utf8'), /localStorage|update_memory|writeMemory/);

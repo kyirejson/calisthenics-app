@@ -44,8 +44,11 @@ test('playback failure is delivery metadata, never a user interruption or assist
   const h = harness(async () => ({}));
   const a = await h.conversation.begin({ requestId: 'a', source: 'voice', user: { content: '解释一下' }, controller: new AbortController() });
   h.conversation.complete(a, '已经完成的回答。'); h.conversation.deliveryError('a', '引擎连接断开');
-  const messages = h.conversation.messages(), state = JSON.parse(messages.find(m => m.role === 'system').content);
-  assert.equal(state.turns[0].status, 'complete'); assert.equal(state.turns[0].playbackError, '引擎连接断开');
+  await h.conversation.flush();
+  const next = await h.conversation.begin({ requestId: 'next', source: 'voice', user: { content: '继续' }, controller: new AbortController() });
+  await h.conversation.journal(next).prepare({ system: 'fixture', tools: [], memory: '', context: { responseMode: 'voice' } });
+  const messages = h.conversation.messages(), state = messages.filter(m => m.role === 'system' && m.content.includes('conversation_delivery_event')).map(m => JSON.parse(m.content)).at(-1);
+  assert.equal(state.status, 'playback_failed'); assert.equal(state.playbackError, '引擎连接断开');
   assert.equal(messages.find(m => m.role === 'assistant').content, '已经完成的回答。');
 });
 
@@ -58,4 +61,19 @@ test('an end-conversation intent reaches the formal Agent instead of being disca
   });
   await h.assess({ kind: 'decision', requestId: 'leave', sessionId: 's', text: '你先退下，待会儿再叫你' });
   assert.equal(h.decisions[0][1], 'respond'); assert.equal(h.conversation.getSnapshot().turns.length, 0);
+});
+test('semantic assessment keeps dialogue and result states without replaying full screen or attachment payloads', async () => {
+  const h = harness(async () => ({ action: 'respond', reason: '完整请求' }));
+  const handle = await h.conversation.begin({ requestId: 'history', source: 'text', user: { content: '先打开目标应用' }, controller: new AbortController() });
+  h.conversation.receipt(handle, { name: 'read_phone_screen', args: {}, result: { ok: true, nodes: [{ text: 'FULL_PRIVATE_SCREEN_SENTINEL' }] } });
+  h.conversation.complete(handle, '已打开。');
+  await h.assess({ kind: 'decision', requestId: 'probe', sessionId: 'session', taskId: 'stable-segment', text: '接着搜索刚才的地点' });
+  const assessed = JSON.stringify(h.calls[0][0]);
+  assert.ok(assessed.includes('先打开目标应用')); assert.ok(assessed.includes('read_phone_screen'));
+  assert.equal(assessed.includes('FULL_PRIVATE_SCREEN_SENTINEL'), false);
+  assert.ok(JSON.stringify(h.conversation.getSnapshot().turns).includes('FULL_PRIVATE_SCREEN_SENTINEL'));
+  assert.equal(JSON.stringify(h.conversation.messages()).includes('FULL_PRIVATE_SCREEN_SENTINEL'), false);
+  await h.conversation.journal(handle).beforeRequest();
+  assert.ok(JSON.stringify(h.conversation.messages()).includes('FULL_PRIVATE_SCREEN_SENTINEL'));
+  assert.equal(h.calls[0][2].taskId, 'stable-segment'); assert.equal(h.calls[0][2].stage, 'voice_turn_assessment');
 });

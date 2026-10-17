@@ -11,6 +11,7 @@ internal class VoiceSessionController(private val clock: () -> Long = { System.n
     val turnId: String? = null, val generation: Int = 0,
     val segmentId: String? = null, val draft: String = "", val held: Boolean = false,
     val activityAt: Long = 0,
+    val inputSuppressed: Boolean = false, val externalPlayback: String = "none", val externalMetadataAvailable: Boolean = false,
   ) {
     val captureAvailable get() = ready && !stopped && input != Input.BLOCKED
     val phase get() = when {
@@ -38,6 +39,9 @@ internal class VoiceSessionController(private val clock: () -> Long = { System.n
   private fun inputIsCurrent(segment: String) = captureAvailable && snapshot.segmentId == segment
   fun accepts(segment: String) = inputIsCurrent(segment) && snapshot.input != Input.WAKE
   fun ready() { if (!stopped) snapshot = snapshot.copy(ready = true, activityAt = clock()) }
+  fun externalAudio(suppressed: Boolean, reason: String, available: Boolean) {
+    if (!stopped) snapshot = snapshot.copy(inputSuppressed = suppressed, externalPlayback = reason, externalMetadataAvailable = available)
+  }
   fun listen(segment: String? = null) {
     if (captureAvailable) snapshot = snapshot.copy(input = Input.LISTENING, segmentId = segment, draft = "", activityAt = clock())
   }
@@ -87,9 +91,11 @@ internal class VoiceSessionController(private val clock: () -> Long = { System.n
     if (!owns(id, token) || snapshot.output == Output.GENERATING) return false
     snapshot = snapshot.copy(output = if (playing) Output.PLAYING else Output.BUFFERING); return true
   }
-  fun complete(id: String, token: Int): Boolean {
+  fun complete(id: String, token: Int, standbyAfterReply: Boolean = false): Boolean {
     if (!owns(id, token)) return false
-    snapshot = snapshot.copy(turnId = null, output = Output.IDLE, held = false, activityAt = clock()); return true
+    val idle = standbyAfterReply && !snapshot.held && snapshot.input == Input.LISTENING && snapshot.draft.isBlank()
+    snapshot = snapshot.copy(turnId = null, output = Output.IDLE, held = false, activityAt = clock(),
+      input = if (idle) Input.WAKE else snapshot.input, segmentId = if (idle) null else snapshot.segmentId); return true
   }
   fun standby(id: String): Boolean {
     if (!active(id)) return false

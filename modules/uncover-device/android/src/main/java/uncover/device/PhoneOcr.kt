@@ -14,6 +14,9 @@ import com.google.mlkit.vision.text.chinese.ChineseTextRecognizerOptions
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withTimeout
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import org.json.JSONArray
 import org.json.JSONObject
 import kotlin.coroutines.resume
@@ -21,8 +24,25 @@ import kotlin.coroutines.resumeWithException
 
 /** Optional, local-only pixels -> text. No image file, image upload, camera or GMS model download. */
 object PhoneOcr {
+  private val captures = Mutex()
+  private fun captureFailure(code: Int): PhoneFailure = when (code) {
+    AccessibilityService.ERROR_TAKE_SCREENSHOT_INTERVAL_TIME_SHORT -> PhoneFailure("screenshot_throttled", "系统截图间隔限制（$code），不是窗口范围变化或定位失败。")
+    AccessibilityService.ERROR_TAKE_SCREENSHOT_NO_ACCESSIBILITY_ACCESS -> PhoneFailure("screenshot_access_denied", "系统未允许无障碍截图（$code）；请核对服务连接及截图能力，不重复申请无关权限。")
+    AccessibilityService.ERROR_TAKE_SCREENSHOT_INVALID_DISPLAY -> PhoneFailure("screenshot_display_unavailable", "系统拒绝了当前显示器截图（$code），需要重新观察显示器状态。")
+    AccessibilityService.ERROR_TAKE_SCREENSHOT_INVALID_WINDOW -> PhoneFailure("screenshot_window_unavailable", "截图窗口已不可用（$code），需要重新观察窗口。")
+    AccessibilityService.ERROR_TAKE_SCREENSHOT_SECURE_WINDOW -> PhoneFailure("screenshot_secure_window", "该页面包含系统保护内容，不能截图识字（$code）；可使用其公开控件，不能绕过保护。")
+    else -> PhoneFailure("screenshot_internal_error", "系统截图失败（代码 $code），不是已确认的授权或页面范围问题。")
+  }
+  private suspend fun capture(service: AccessibilityService): Bitmap = captures.withLock {
+    try { captureOnce(service) }
+    catch (error: PhoneFailure) {
+      if (error.code != "screenshot_throttled") throw error
+      // A single local retry for the explicit Android interval error, not ten model round trips.
+      delay(400); captureOnce(service)
+    }
+  }
   @OptIn(ExperimentalCoroutinesApi::class)
-  private suspend fun capture(service: AccessibilityService): Bitmap {
+  private suspend fun captureOnce(service: AccessibilityService): Bitmap {
     if (Build.VERSION.SDK_INT < 30) throw PhoneFailure("ocr_unsupported", "本机截图识字需要 Android 11 或更高；仍可使用控件读屏。")
     return withTimeout(8000) {
       suspendCancellableCoroutine { continuation ->
@@ -37,7 +57,7 @@ object PhoneOcr {
             finally { buffer.close() }
           }
           override fun onFailure(errorCode: Int) {
-            if (continuation.isActive) continuation.resumeWithException(PhoneFailure("screenshot_failed", "系统拒绝截图识字（代码 $errorCode）；可能是受保护窗口、截图间隔或无障碍授权。不会绕过保护。"))
+            if (continuation.isActive) continuation.resumeWithException(captureFailure(errorCode))
           }
         })
       }
@@ -47,7 +67,8 @@ object PhoneOcr {
     val captured = capture(service)
     val area = Rect(viewport)
     val cropped = try {
-      if (!area.intersect(0, 0, captured.width, captured.height) || area.isEmpty) throw PhoneFailure("screenshot_bounds", "画面范围已改变，请重新读屏。")
+      if (area.isEmpty) area.set(0, 0, captured.width, captured.height)
+      if (!area.intersect(0, 0, captured.width, captured.height) || area.isEmpty) throw PhoneFailure("screenshot_bounds", "窗口范围与实际截图不相交，请重新观察窗口；不是定位或授权失败。")
       val canvas = Canvas(captured); val mask = Paint().apply { color = Color.BLACK }
       passwords.forEach { canvas.drawRect(it, mask) }
       Bitmap.createBitmap(captured, area.left, area.top, area.width(), area.height()).let {

@@ -22,8 +22,10 @@ object PhoneController {
     if (Build.VERSION.SDK_INT >= 30) service?.systemActions?.forEach { actions.put(JSONObject().put("id", it.id).put("label", it.label?.toString() ?: JSONObject.NULL)) }
     else for ((id, label) in listOf(1 to "返回", 2 to "主页", 3 to "最近应用", 4 to "通知", 5 to "快捷设置")) actions.put(JSONObject().put("id", id).put("label", label))
     return JSONObject().put("ok", true).put("native", true).put("enabled", PhoneLedger.enabled(context)).put("accessibilityGranted", PhoneAccess.granted(context))
+      .put("consentAccepted", PhoneLedger.accepted(context))
       .put("connected", service != null).put("locked", (context.getSystemService(Context.KEYGUARD_SERVICE) as KeyguardManager).isKeyguardLocked)
       .put("mode", "foreground").put("androidApi", Build.VERSION.SDK_INT).put("appScope", "all_launchable_apps")
+      .put("accessibilityFlags", service?.serviceInfo?.flags ?: JSONObject.NULL)
       .put("systemActions", actions).put("message", "通用控制操作真实主屏幕；不继承音乐的后台专用屏幕模式。系统授权和身份验证由本人处理。")
   }
   private fun check(context: Context, execution: String) {
@@ -36,14 +38,22 @@ object PhoneController {
       check(context, execution)
       if (PhoneAccessibilityService.instance !== service) throw PhoneFailure("service_changed", "手机控制服务已重连，请重新观察。")
     })
+  private suspend fun observe(context: Context, service: PhoneAccessibilityService, selected: PhoneUiTarget, execution: String,
+    offset: Int = 0, before: Long? = null, visualText: Boolean = false, deadlineMs: Long = PhonePolicy.DEADLINE_MS): JSONObject {
+    val started = SystemClock.elapsedRealtime()
+    val frame = service.phoneUi.awaitScreen(selected, offset, before, cancelled = { PhoneLedger.isCancelled(execution) }, deadlineMs = deadlineMs)
+      .put("systemActions", status(context).getJSONArray("systemActions"))
+    frame.optString("packageName").takeIf { it.isNotBlank() }?.let { frame.put("appVersion", PhoneApps.version(context, it)) }
+    val observedAt = SystemClock.elapsedRealtime()
+    if (visualText || frame.optBoolean("emptyTree"))
+      frame.put("visualText", safeRequest { service.phoneUi.visualText(selected, frame.getString("snapshotId")) })
+    return frame.put("timings", JSONObject().put("observeMs", observedAt - started).put("ocrMs", SystemClock.elapsedRealtime() - observedAt))
+  }
   suspend fun screen(context: Context, request: String, execution: String, offset: Int, expected: String? = null, visualText: Boolean = false): JSONObject {
     check(context, execution)
     require(request.isNotBlank()); val service = PhoneAccess.requireUi(context)
     val selected = target(context, service, request, execution, expected)
-    val frame = service.phoneUi.awaitScreen(selected, offset, cancelled = { PhoneLedger.isCancelled(execution) })
-      .put("systemActions", status(context).getJSONArray("systemActions"))
-    if (visualText) frame.put("visualText", safeRequest { service.phoneUi.visualText(selected, frame.getString("snapshotId")) })
-    return frame
+    return observe(context, service, selected, execution, offset, visualText = visualText)
   }
   private suspend fun execute(context: Context, request: String, execution: String, command: JSONObject): JSONObject = mutations.withLock {
     check(context, execution)
@@ -83,13 +93,18 @@ object PhoneController {
     val prior = PhoneAccessibilityService.instance?.phoneUi?.foregroundRoot()?.packageName?.toString()
     val before = prior?.let { PhoneAccessibilityService.instance?.phoneUi?.revision(it) }
     val action = safeRequest { execute(context, request, execution, command) }
+    val actedAt = SystemClock.elapsedRealtime()
     val screen = safeRequest {
       val service = PhoneAccess.requireUi(context)
       val expected = if (command.optString("type") == "open" && action.optBoolean("ok") && !action.optBoolean("replayed")) command.optString("packageName").takeIf { it.isNotBlank() } else null
-      service.phoneUi.awaitScreen(target(context, service, request, execution, expected), before = if (action.optBoolean("ok") && !action.optBoolean("replayed")) before ?: 0L else null,
-        cancelled = { PhoneLedger.isCancelled(execution) }).put("systemActions", status(context).getJSONArray("systemActions"))
+      observe(context, service, target(context, service, request, execution, expected), execution,
+        before = if (action.optBoolean("ok") && !action.optBoolean("replayed")) before ?: 0L else null,
+        deadlineMs = command.optLong("observationTimeoutMs", PhonePolicy.DEADLINE_MS).coerceAtLeast(1))
     }
+    PhoneLedger.observed(context, request, command, screen)
     return JSONObject().put("ok", action.optBoolean("ok")).put("action", action).put("screen", screen).put("elapsedMs", SystemClock.elapsedRealtime() - started)
+      .put("timings", JSONObject().put("actionMs", actedAt - started).put("observationMs", SystemClock.elapsedRealtime() - actedAt)
+        .put("observeMs", screen.optJSONObject("timings")?.optLong("observeMs") ?: 0L).put("ocrMs", screen.optJSONObject("timings")?.optLong("ocrMs") ?: 0L))
       .put("observedRequestedApp", command.optString("type") == "open" && screen.optBoolean("ok") && screen.optString("packageName") == command.optString("packageName"))
   }
 }

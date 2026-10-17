@@ -3,10 +3,11 @@ import { requireOptionalNativeModule } from 'expo';
 import { AGENT_NAME } from '../agent/identity.mjs';
 import type { VoiceEvent, VoicePhase } from './protocol';
 export type { VoiceEvent } from './protocol';
-export type VoiceState = { enabled: boolean; running: boolean; phase: VoicePhase; assistant: boolean; microphone: boolean; message: string; name: string; error?: string; legacyVoiceData?: boolean };
+export type VoiceState = { enabled: boolean; running: boolean; phase: VoicePhase; assistant: boolean; microphone: boolean; message: string; name: string; error?: string; legacyVoiceData?: boolean; consentAccepted?: boolean; inputSuppressed?: boolean; externalPlayback?: 'none' | 'navigation' | 'external_speech'; externalMetadataAvailable?: boolean };
 type NativeVoice = {
   state(): Promise<string>; enable(value: boolean): Promise<void>; assistant(): Promise<void>;
   reply(requestId: string, text: string): Promise<void>; active(requestId: string): Promise<boolean>;
+  replyThenStandby(requestId: string, text: string): Promise<void>;
   cancel(requestId: string | null): Promise<void>; dialogue(): Promise<string>;
   standby(requestId: string): Promise<boolean>;
   clear(): Promise<void>; addListener(name: string, callback: (event: VoiceEvent) => void): { remove(): void };
@@ -18,7 +19,7 @@ const fail = async () => { throw Error(`${AGENT_NAME} 语音对话需要新版 A
 export const voiceTransport = native ? {
   state: async (): Promise<VoiceState> => JSON.parse(await native.state()),
   enable: (value: boolean) => native.enable(value), assistant: () => native.assistant(),
-  reply: (requestId: string, text: string) => native.reply(requestId, text), active: (requestId: string) => native.active(requestId), clear: () => native.clear(),
+  reply: (requestId: string, text: string, standbyAfterReply = false) => standbyAfterReply ? native.replyThenStandby(requestId, text) : native.reply(requestId, text), active: (requestId: string) => native.active(requestId), clear: () => native.clear(),
   cancel: (requestId?: string) => native.cancel(requestId ?? null), dialogue: async (): Promise<VoiceEvent> => JSON.parse(await native.dialogue()),
   standby: (requestId: string) => native.standby(requestId),
   forgetLegacyVoiceData: () => native.forgetLegacyVoiceData(),

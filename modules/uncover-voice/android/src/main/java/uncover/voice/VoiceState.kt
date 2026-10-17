@@ -11,7 +11,7 @@ internal object VoiceState {
   private fun preferences(context: Context) = context.getSharedPreferences("black_voice_v1", Context.MODE_PRIVATE)
   fun enabled(context: Context) = preferences(context).getBoolean("enabled", false)
   fun setEnabled(context: Context, value: Boolean) {
-    check(preferences(context).edit().putBoolean("enabled", value).commit()) { "语音监听设置未能保存。" }
+    check(preferences(context).edit().putBoolean("enabled", value).apply { if (value) putBoolean("consentAccepted", true) }.commit()) { "语音监听设置未能保存。" }
   }
   fun error(context: Context, code: String, message: String) {
     preferences(context).edit().putString("error", code).putString("message", message).apply()
@@ -22,7 +22,10 @@ internal object VoiceState {
     val session = BlackVoiceService.instance?.snapshot
     return JSONObject()
     .put("name", VoiceBrand.NAME).put("enabled", enabled(context)).put("running", session?.captureAvailable == true)
+    .put("consentAccepted", preferences(context).getBoolean("consentAccepted", enabled(context)))
     .put("phase", session?.phase ?: "stopped")
+    .put("inputSuppressed", session?.inputSuppressed ?: false).put("externalPlayback", session?.externalPlayback ?: "none")
+    .put("externalMetadataAvailable", session?.externalMetadataAvailable ?: false)
     .put("legacyVoiceData", VoiceLegacyData.exists(context))
     .put("assistant", VoiceInteractionService.isActiveService(context, ComponentName(context, BlackAssistantService::class.java)))
     .put("microphone", context.checkSelfPermission(Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED)

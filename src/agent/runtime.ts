@@ -1,7 +1,7 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { agentStorage } from './storage';
 import { createAgentConversation } from './conversation';
 
-export const agentConversation = createAgentConversation(AsyncStorage);
+export const agentConversation = createAgentConversation(agentStorage);
 
 export async function stopAgentReply() {
   await agentConversation.load();

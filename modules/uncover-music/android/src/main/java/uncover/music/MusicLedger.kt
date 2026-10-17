@@ -10,8 +10,9 @@ internal object MusicLedger {
   private const val FILE = "uncover_music_v1"
   private fun prefs(context: Context) = context.getSharedPreferences(FILE, Context.MODE_PRIVATE)
   fun consent(context: Context, kind: String): Boolean = prefs(context).getBoolean("consent_$kind", false)
+  fun accepted(context: Context, kind: String): Boolean = prefs(context).getBoolean("accepted_$kind", consent(context, kind))
   fun setConsent(context: Context, kind: String, value: Boolean) {
-    if (!prefs(context).edit().putBoolean("consent_$kind", value).commit()) throw MusicFailure("storage_failed", "音乐授权设置保存失败。")
+    if (!prefs(context).edit().putBoolean("consent_$kind", value).apply { if (value) putBoolean("accepted_$kind", true) }.commit()) throw MusicFailure("storage_failed", "音乐授权设置保存失败。")
   }
   private fun entries(context: Context): JSONObject = try { JSONObject(prefs(context).getString("receipts", "{}")!!) }
     catch (_: Exception) { throw MusicFailure("journal_corrupt", "音乐操作记录无法读取，请先在音乐设置中关闭控制并清理音乐操作记录。") }

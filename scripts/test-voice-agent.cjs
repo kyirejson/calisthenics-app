@@ -11,6 +11,9 @@ function dialogueHarness() {
     standby: async id => { standbys.push(id); active = false; return true; }, subscribeReset: () => () => {},
     subscribeCancellation: (id, cancel) => { cancellations.set(id, cancel); return () => cancellations.delete(id); },
     turn: async input => { calls.push(input); return '真实模型回答'; } };
+  // Fixtures may inspect current input; production gets only the bound canonical journal.
+  let turn = dependencies.turn;
+  Object.defineProperty(dependencies, 'turn', { get: () => input => turn({ ...input, messages: conversation.messages({ id: input.requestId }) }), set: value => { turn = value; } });
   return { dependencies, calls, replies, standbys, stop: () => { active = false; }, wake: () => { active = true; }, cancel: id => { active = false; cancellations.get(id)?.(); }, task: createVoiceDialogue(dependencies) };
 }
 test('voice and text use the same tool runner and repository instead of keyword music/meal routes', () => {
@@ -100,7 +103,7 @@ test('silence is an additional voice tool, not a text intent filter, response tr
   const invoke = (responseMode, reply) => personalChat({ date: '2026-10-15', responseMode, messages: [{ role: 'user', content: '任意请求' }],
     client: { generate: async (_history, options) => {
       assert.deepEqual(options.tools.slice(0, personalTools.length), personalTools);
-      assert.equal(options.tools.some(t => t.function.name === 'continue_listening'), responseMode === 'voice'); return reply;
+      assert.equal(options.tools.some(t => t.function.name === 'continue_listening'), true); return reply;
     } }, execute: async () => ({ ok: true }),
   });
   await assert.rejects(invoke('voice', { content: '' }), /模型未返回有效内容/);
@@ -154,7 +157,7 @@ test('cancellation during initial storage hydration cannot persist an empty repl
     { id: 'saved:assistant', requestId: 'saved', role: 'assistant', source: 'text', status: 'complete', content: '已有回答' },
   ] });
   let release, cancel; const writes = [], replies = [];
-  const conversation = createAgentConversation({ getItem: () => new Promise(resolve => { release = resolve; }), setItem: async (_key, value) => writes.push(value), removeItem: async () => {} });
+  const conversation = createAgentConversation({ getItem: key => key === 'uncover.agent.conversation.v1' ? new Promise(resolve => { release = resolve; }) : Promise.resolve(null), setItem: async (key, value) => writes.push({ key, value }), removeItem: async () => {} });
   const task = createVoiceDialogue({ conversation, active: async () => true, cancel: async () => {}, standby: async () => false,
     reply: async (...args) => replies.push(args), subscribeReset: () => () => {},
     subscribeCancellation: (_id, callback) => { cancel = callback; return () => {}; },
@@ -162,15 +165,14 @@ test('cancellation during initial storage hydration cannot persist an empty repl
   });
   const pending = task({ requestId: 'initial', sessionId: 's', text: '尚未加载完的输入' });
   await new Promise(resolve => setImmediate(resolve)); cancel(); release(saved); await pending; await conversation.flush();
-  assert.equal(writes.length, 0); assert.equal(replies.length, 0); assert.equal(conversation.getSnapshot().turns[0].content, '已有问题');
+  assert.equal(writes.some(row => row.key === 'uncover.agent.conversation.v1'), false); assert.equal(replies.length, 0); assert.equal(conversation.getSnapshot().turns[0].content, '已有问题');
 });
 test('initialization completes before the first model turn and wake metadata does not invent identity', async () => {
   const h = dialogueHarness(); let ready = false;
   h.dependencies.prepare = async () => { ready = true; };
   h.dependencies.turn = async input => {
     assert.equal(ready, true);
-    const metadata = JSON.parse(input.messages[0].content);
-    assert.equal(metadata.wakeDetected, true); assert.equal('ownerVerified' in metadata, false);
+    assert.equal(input.wakeDetected, true); assert.equal('ownerVerified' in input, false);
     return '我在。';
   };
   await h.task({ requestId: 'wake', sessionId: 's', text: 'MAX', wake: true });
@@ -241,7 +243,7 @@ test('standby control is voice-only and preserves all existing text/business too
     await personalChat({ responseMode, messages: [], date: '2026-10-16', endVoiceConversation: async () => { standby++; },
       client: { generate: async (_messages, options) => {
         assert.deepEqual(options.tools.slice(0, personalTools.length), personalTools);
-        assert.equal(options.tools.some(t => t.function.name === 'end_voice_conversation'), responseMode === 'voice');
+        assert.equal(options.tools.some(t => t.function.name === 'end_voice_conversation'), true);
         return { content: '正常回答，不退出。' };
       } }, execute: async () => ({ ok: true }),
     });

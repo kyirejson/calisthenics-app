@@ -50,7 +50,8 @@ class BlackVoiceService : Service() {
     val state = controller.snapshot
     val data = mutableMapOf<String, Any>("kind" to kind, "sequence" to ++sequence, "serviceEpoch" to serviceEpoch,
       "sessionId" to sessionId, "phase" to state.phase, "segmentId" to (state.segmentId ?: ""), "text" to (text ?: state.draft),
-      "input" to state.input.name.lowercase(), "output" to state.output.name.lowercase(), "held" to state.held)
+      "input" to state.input.name.lowercase(), "output" to state.output.name.lowercase(), "held" to state.held,
+      "inputSuppressed" to state.inputSuppressed, "externalPlayback" to state.externalPlayback, "externalMetadataAvailable" to state.externalMetadataAvailable)
     if (id != null) data["requestId"] = id
     if (decisionId != null) data["decisionId"] = decisionId
     (error ?: presentationError)?.let { data["error"] = it }
@@ -75,7 +76,9 @@ class BlackVoiceService : Service() {
     val stop = PendingIntent.getService(this, 719, Intent(this, BlackVoiceService::class.java).setAction("stop"), PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
     val open = PendingIntent.getActivity(this, 718, packageManager.getLaunchIntentForPackage(packageName)!!, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
     return Notification.Builder(this, "black_voice").setSmallIcon(android.R.drawable.ic_btn_speak_now).setContentTitle("${VoiceBrand.NAME} 语音对话")
-      .setContentText(when (phase) {
+      .setContentText(if (snapshot.inputSuppressed && snapshot.output == VoiceSessionController.Output.IDLE && phase != "blocked") {
+        if (snapshot.externalPlayback == "navigation") "导航播报中，结束后继续听" else "手机播报中，结束后继续听"
+      } else when (phase) {
         "listening" -> "正在听你说话"; "assessing" -> "正在确认你的意思"; "processing" -> "正在处理你的请求"; "speaking" -> "正在回答"
         "synthesizing" -> "正在准备语音"; "buffering" -> "正在准备后续语音"
         "blocked" -> "麦克风被系统静音或暂时被占用"; "starting" -> "正在准备内置语音"; else -> "本地监听 ${VoiceBrand.NAME}"
@@ -113,12 +116,12 @@ class BlackVoiceService : Service() {
             override fun probe(segment: String, id: String, text: String, wake: Boolean, silenceMs: Long) = post {
               if (!decisionActive(id) || !controller.assessing(segment)) return@post
               publish()
-              try { launch(id, text, wake, "decision", silenceMs) }
+              try { launch(id, text, wake, "decision", silenceMs, segment) }
               catch (error: Exception) { engine?.decide(id, "error", error.message) }
             }
             override fun revoked(id: String) = post { event("decision_cancelled", decisionId = id) }
             override fun utterance(segment: String, text: String, wake: Boolean) = post {
-              if (controller.accepts(segment)) request(text, wake)
+              if (controller.accepts(segment)) request(text, wake, segment)
             }
             override fun settled(segment: String, action: String) = post { if (controller.settle(segment, action)) publish() }
             override fun assessmentError(message: String) = post { fail("turn_decision_failed", message) }
@@ -128,6 +131,9 @@ class BlackVoiceService : Service() {
               else { presentationError = null; VoiceState.clearError(this@BlackVoiceService) }
               publish()
             }
+            override fun externalPlayback(suppressed: Boolean, reason: String, available: Boolean) = post {
+              controller.externalAudio(suppressed, reason, available); publish()
+            }
             override fun failure(error: Throwable) = post { fail("capture_or_recognition_failed", error.message ?: "本地输入失败。"); stopSelf() }
           }).also { it.start() }
         }
@@ -136,9 +142,9 @@ class BlackVoiceService : Service() {
     } catch (error: Exception) { fail("microphone_service_failed", error.message ?: "系统未允许麦克风服务。"); stopSelf() }
     return START_STICKY
   }
-  private fun launch(id: String, text: String, wake: Boolean, kind: String = "turn", silenceMs: Long = 0) {
+  private fun launch(id: String, text: String, wake: Boolean, kind: String = "turn", silenceMs: Long = 0, taskId: String = id) {
     startService(Intent(this, VoiceAgentTaskService::class.java).putExtra("requestId", id).putExtra("sessionId", sessionId)
-      .putExtra("serviceEpoch", serviceEpoch).putExtra("text", text).putExtra("kind", kind).putExtra("wake", wake).putExtra("silenceMs", silenceMs))
+      .putExtra("serviceEpoch", serviceEpoch).putExtra("text", text).putExtra("kind", kind).putExtra("wake", wake).putExtra("silenceMs", silenceMs).putExtra("taskId", taskId))
   }
   internal fun wake() {
     if (!VoiceState.enabled(this)) return
@@ -160,17 +166,17 @@ class BlackVoiceService : Service() {
     if (!VoiceState.enabled(this) || !controller.standby(id)) { publish(); return false }
     speaker?.stop(); enterStandby(); return true
   }
-  private fun request(text: String, woke: Boolean) {
+  private fun request(text: String, woke: Boolean, taskId: String) {
     if (!captureAvailable) return
     cancelCurrent(preserveInput = true)
     presentationError = null; VoiceState.clearError(this)
     val id = "voice-" + UUID.randomUUID(); controller.begin(id)
     spokenEnd = 0; speechStart = 0; speechEnd = 0; event("transcript", id, text = text); publish()
-    try { launch(id, text, woke) }
+    try { launch(id, text, woke, taskId = taskId) }
     catch (error: Exception) { controller.cancel(id); fail("agent_start_failed", error.message ?: "后台 Agent 未启动。"); publish() }
   }
   internal fun active(id: String) = controller.active(id) && VoiceState.enabled(this)
-  internal fun reply(id: String, text: String) {
+  internal fun reply(id: String, text: String, standbyAfterReply: Boolean = false) {
     if (!active(id)) return
     val token = controller.generation
     if (text.isBlank()) { controller.complete(id, token); publish(); return }
@@ -181,7 +187,8 @@ class BlackVoiceService : Service() {
     }) { error ->
       if (controller.turnId != id || controller.generation != token) return@speak
       if (error != null) { event("playback_error", id, error); fail("local_output_failed", error) }
-      controller.complete(id, token); publish()
+      controller.complete(id, token, standbyAfterReply && error == null)
+      if (controller.snapshot.input == VoiceSessionController.Input.WAKE) enterStandby() else publish()
     }; syncOutput() }.onFailure { controller.complete(id, token); event("playback_error", id, it.message); fail("local_output_failed", it.message ?: "本地输出失败。"); publish() }
   }
   private fun fail(code: String, message: String) { presentationError = message; VoiceState.error(this, code, message); event(error = message) }

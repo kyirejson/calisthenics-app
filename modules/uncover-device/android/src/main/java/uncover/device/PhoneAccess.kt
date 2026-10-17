@@ -27,6 +27,7 @@ object PhoneAccess {
   }
   fun requireUi(context: Context): PhoneAccessibilityService {
     requireConsent(context); requireUnlocked(context)
-    return PhoneAccessibilityService.instance ?: throw PhoneFailure("accessibility_required", "手机界面控制尚未连接，请在系统无障碍中手动开启 MAX 手机与音乐控制。")
+    return PhoneAccessibilityService.instance ?: if (granted(context)) throw PhoneFailure("accessibility_disconnected", "系统无障碍已授权，但服务连接已断开；请等待系统重连。若持续断开，只需重启该服务，不必重新授予所有权限。")
+      else throw PhoneFailure("accessibility_required", "系统无障碍尚未授权，请在系统设置开启 MAX 手机与音乐控制。")
   }
 }

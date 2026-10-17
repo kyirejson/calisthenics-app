@@ -73,7 +73,8 @@ test('interruption preserves a dispatched music receipt but prevents all followi
   assert.equal(generations, 1); assert.equal(receipts.length, 1); assert.equal(receipts[0].name, 'control_music_and_observe');
   assert.equal(receipts[0].result.action.status, 'dispatched'); assert.equal(receipts[0].result.playback.verifiedPlaying, true);
   assert.deepEqual(h.calls, [{ cancel: 'attempt-1' }]);
-  assert.match(read('src/integrations/runAgentTurn.ts'), /onInterruptedToolResult: onToolResult/);
+  assert.match(read('src/integrations/runAgentTurn.ts'), /onInterruptedToolResult: interrupted/);
+  assert.match(read('src/integrations/runAgentTurn.ts'), /interrupted\(call\)/);
 });
 test('the same model-planned three actions need four tool rounds instead of seven separate observations', async () => {
   const { personalChat } = await import('../src/integrations/personalTools.mjs'), h = harness();

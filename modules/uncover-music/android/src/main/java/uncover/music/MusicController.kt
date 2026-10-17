@@ -34,6 +34,7 @@ internal object MusicController {
       .put("searchIntent", searchIntent(provider).resolveActivity(context.packageManager) != null)
       .put("accessibilityGranted", accessibilityAccess(context)).put("accessibilityConnected", MusicAccessibilityService.instance != null)
       .put("screenConsent", MusicLedger.consent(context, "screen")).put("playbackConsent", MusicLedger.consent(context, "playback"))
+      .put("screenConsentAccepted", MusicLedger.accepted(context, "screen")).put("playbackConsentAccepted", MusicLedger.accepted(context, "playback")).put("backgroundConsentAccepted", MusicLedger.accepted(context, "background"))
       .put("notificationAccess", notificationAccess(context))
       .put("taskNotificationsEnabled", (context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager).areNotificationsEnabled())
     val background = MusicBackground.capability(context)

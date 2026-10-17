@@ -94,7 +94,8 @@ test('attempts are journaled before dispatch, uncertain outcomes persist, and ra
   assert.ok(controller.includes('scope = "phone:$request:$execution"'));
   const ledger = read('modules/uncover-device/android/src/main/java/uncover/device/PhoneLedger.kt');
   assert.match(ledger, /commandHash/); assert.match(ledger, /uncertain_operation/); assert.doesNotMatch(ledger, /put\("command", command\)/);
-  assert.match(ledger, /entry.put\("result", result\); save/);
+  assert.match(ledger, /entry.put\("result", JSONObject\(result.toString\(\)\).*remove\("screen"\).*save/);
+  assert.match(ledger, /entry.put\("observation", observation\); save/);
   assert.match(read('src/integrations/runAgentTurn.ts'), /phoneTransport.onCancelled/);
   assert.match(read('src/integrations/runAgentTurn.ts'), /phoneReceipts/);
 });
@@ -119,6 +120,7 @@ test('a cancelled screen observation cannot resume model execution with a late O
 
 test('a mixed music-and-phone task never lets music cleanup steal the final app foreground', async () => {
   const ts = require('typescript');
+  const usage = await import('../src/agent/usage.mjs');
   const { phoneCommandTypes } = await import('../src/device/modelTools.mjs');
   for (const names of [[], ['open_music'], ['read_phone_status'], ['open_music', 'open_app'], ['phone_ui_action'], ['phone_gesture'], ['phone_global_action']]) {
     const log = [], exports = {};
@@ -126,6 +128,7 @@ test('a mixed music-and-phone task never lets music cleanup steal the final app 
     const phoneTransport = { receipts: async () => [], onCancelled: () => () => {}, finish: async () => {}, cancel: async () => {} };
     const modules = {
       '../music/transport': { musicTransport }, '../device/transport': { phoneTransport }, '../device/modelTools.mjs': { phoneCommandTypes },
+      '../agent/usage.mjs': usage, '../agent/usageRuntime': { createAgentUsageRecorder: () => null },
       './credentials': { loadConnection: async () => {}, currentConnection: () => ({}) }, './deepseekClient.mjs': { createDeepseekClient: () => ({}) },
       './personalData': { executePersonalTool: async name => ({ name, ok: true }) },
       './personalTools.mjs': { personalChat: async ({ execute }) => { for (const name of names) await execute(name, {}); return 'done'; } },

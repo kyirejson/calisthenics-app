@@ -11,8 +11,9 @@ object PhoneLedger {
   private val cancelled = mutableSetOf<String>()
   private fun prefs(context: Context) = context.getSharedPreferences(FILE, Context.MODE_PRIVATE)
   fun enabled(context: Context) = prefs(context).getBoolean("consent", false)
+  fun accepted(context: Context) = prefs(context).getBoolean("consentAccepted", enabled(context))
   fun consent(context: Context, value: Boolean) {
-    if (!prefs(context).edit().putBoolean("consent", value).commit()) throw PhoneFailure("storage_failed", "手机控制授权保存失败。")
+    if (!prefs(context).edit().putBoolean("consent", value).apply { if (value) putBoolean("consentAccepted", true) }.commit()) throw PhoneFailure("storage_failed", "手机控制授权保存失败。")
   }
   @Synchronized fun cancel(id: String) { cancelled.add(id) }
   @Synchronized fun isCancelled(id: String) = id in cancelled
@@ -47,7 +48,16 @@ object PhoneLedger {
   }
   fun finish(context: Context, request: String, command: JSONObject, result: JSONObject) {
     val all = rows(context); val entry = all.getJSONObject(key(request, command.getString("operationKey")))
-    entry.put("result", result); save(context, all)
+    // Replay execution facts, not a stale/private copy of the screen. Observations are metadata below.
+    entry.put("result", JSONObject(result.toString()).apply { remove("screen") }); save(context, all)
+  }
+  fun observed(context: Context, request: String, command: JSONObject, frame: JSONObject) {
+    val all = rows(context); val entry = all.optJSONObject(key(request, command.getString("operationKey"))) ?: return
+    if (entry.optString("commandHash") != digest(command)) return
+    val observation = JSONObject().put("ok", frame.optBoolean("ok")).put("at", System.currentTimeMillis())
+    for (field in listOf("snapshotId", "packageName", "windowId", "appVersion", "emptyTree", "code"))
+      if (frame.has(field)) observation.put(field, frame.get(field))
+    entry.put("observation", observation); save(context, all)
   }
   fun receipts(context: Context, request: String): JSONArray {
     val result = JSONArray(); val all = rows(context)

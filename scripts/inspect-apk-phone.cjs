@@ -11,14 +11,14 @@ const entries = unzipSync(fs.readFileSync(file), { filter: entry => {
 } });
 assertPhoneApkArchitectures(abis);
 const dex = Object.entries(entries).filter(([name]) => /^classes\d*\.dex$/.test(name)).map(([, value]) => Buffer.from(value));
-for (const name of ['UncoverDeviceModule', 'PhoneApps', 'PhoneUi', 'PhoneController', 'PhoneExecutionService', 'PhoneLedger', 'PhoneOcr'])
+for (const name of ['UncoverDeviceModule', 'PhoneApps', 'PhoneUi', 'PhoneController', 'PhoneExecutionService', 'PhoneLedger', 'PhoneOcr', 'PhoneSequences', 'PhoneReminders', 'ReminderReceiver', 'ReminderRestoreReceiver'])
   assert.ok(dex.some(value => value.includes(Buffer.from('Luncover/device/' + name + ';'))), 'Missing real native phone component: ' + name);
-for (const name of ['PhoneControlTest', 'PhoneFixtureActivity', 'PhoneFixtureService'])
+for (const name of ['PhoneControlTest', 'PhoneFixtureActivity', 'PhoneFixtureService', 'ReminderDeliveryTest'])
   assert.ok(!dex.some(value => value.includes(Buffer.from('Luncover/device/' + name + ';'))), 'Test-only control fixture shipped: ' + name);
 for (const marker of ['uncertain_operation', 'operation_conflict', 'phone_consent_required', 'stale_screen', 'wrong_request', 'imageUploaded', 'local_ocr'])
   assert.ok(dex.some(value => value.includes(Buffer.from(marker))), 'Missing native execution/observation rule: ' + marker);
 const bundle = Object.entries(entries).filter(([name]) => /index\.android\.bundle$/.test(name)).map(([, value]) => Buffer.from(value));
-for (const marker of ['UncoverDevice', 'read_phone_status', 'find_apps', 'open_app', 'read_phone_screen', 'phone_ui_action', 'phone_gesture', 'phone_global_action', 'MAX 通用手机控制', 'visualText'])
+for (const marker of ['UncoverDevice', 'read_phone_status', 'find_apps', 'open_app', 'read_phone_screen', 'phone_ui_action', 'phone_gesture', 'phone_global_action', 'MAX 通用手机控制', 'visualText', 'read_phone_workflows', 'save_phone_workflow', 'run_phone_workflow', 'finish_phone_task', 'read_reminders', 'write_reminder', 'cancel_reminder'])
   assert.ok(bundle.some(value => value.includes(Buffer.from(marker)) || value.includes(Buffer.from(marker, 'utf16le'))), 'Missing embedded phone Agent feature: ' + marker);
 assert.ok(entries['assets/phone-control-notice.txt'], 'Missing local OCR disclosure');
 assert.ok(names.some(name => /assets\/.+(chinese|ocr|text_recognition)/i.test(name)), 'Missing bundled offline OCR resources');
@@ -28,7 +28,7 @@ assert.ok(sdk, 'Set ANDROID_HOME to an installed Android SDK for artifact inspec
 const tools = fs.readdirSync(path.join(sdk, 'build-tools')).filter(name => fs.existsSync(path.join(sdk, 'build-tools', name, 'aapt.exe'))).sort().at(-1);
 const aapt = path.join(sdk, 'build-tools', tools, 'aapt.exe');
 const xml = execFileSync(aapt, ['dump', 'xmltree', file, 'AndroidManifest.xml'], { encoding: 'utf8', windowsHide: true });
-for (const marker of ['uncover.device.PhoneExecutionService', 'uncover.music.MusicAccessibilityService', 'uncover.phone_control', 'android.intent.category.LAUNCHER']) assert.ok(xml.includes(marker), 'Missing phone manifest wiring: ' + marker);
+for (const marker of ['uncover.device.PhoneExecutionService', 'uncover.music.MusicAccessibilityService', 'uncover.phone_control', 'android.intent.category.LAUNCHER', 'uncover.device.ReminderReceiver', 'uncover.device.ReminderRestoreReceiver', 'android.permission.SCHEDULE_EXACT_ALARM', 'android.permission.RECEIVE_BOOT_COMPLETED']) assert.ok(xml.includes(marker), 'Missing phone manifest wiring: ' + marker);
 assert.ok(!xml.includes('android.permission.QUERY_ALL_PACKAGES'), 'Unnecessary all-package permission shipped');
 // Release optimization renames ZIP resources. Resolve the actual path from the resource table.
 const table = execFileSync(aapt, ['dump', '--values', 'resources', file], { encoding: 'utf8', windowsHide: true, maxBuffer: 32 * 1024 * 1024 });
@@ -36,4 +36,4 @@ const accessPath = table.match(/^\s*resource [^\r\n]*:xml\/uncover_music_accessi
 assert.ok(accessPath && names.includes(accessPath), 'Accessibility configuration has no packaged resource-table target');
 const access = execFileSync(aapt, ['dump', 'xmltree', file, accessPath], { encoding: 'utf8', windowsHide: true });
 assert.match(access, /canTakeScreenshot.*0xffffffff/); assert.doesNotMatch(access, /packageNames/);
-console.log('Phone APK includes dynamic all-launchable-app discovery, real shared UI execution, independent opt-in, operation journal/cancellation, local-only OCR and all seven model tools; ARM64 only, no isolated test fixtures. Real WeChat delivery/maps routes still require actual-account/device acceptance.');
+console.log('Phone APK includes dynamic app discovery, guarded shared UI, local OCR with missing-bounds recovery, saved model workflows, concise task conclusions and process-independent local reminders; ARM64 only, no isolated test fixtures. Real WeChat delivery/maps routes still require actual-device acceptance.');

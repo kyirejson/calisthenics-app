@@ -1,6 +1,6 @@
 export type PhoneResult = { ok: boolean; code?: string; status?: string; message?: string; replayed?: boolean; [key: string]: unknown };
-export type PhoneStatus = PhoneResult & { native: boolean; enabled: boolean; accessibilityGranted: boolean; connected: boolean; locked: boolean; mode: 'foreground'; appScope?: string; systemActions?: Array<{ id: number; label: string }> };
-export type PhoneCommand = { type: 'open' | 'ui' | 'gesture' | 'global'; operationKey: string; [key: string]: unknown };
+export type PhoneStatus = PhoneResult & { native: boolean; enabled: boolean; accessibilityGranted: boolean; connected: boolean; locked: boolean; mode: 'foreground'; consentAccepted?: boolean; appScope?: string; systemActions?: Array<{ id: number; label: string }> };
+export type PhoneCommand = { type: 'open' | 'ui' | 'gesture' | 'global' | 'sequence'; operationKey: string; [key: string]: unknown };
 export type PhoneTransport = {
   status(): Promise<PhoneStatus>;
   findApps(query: string, offset: number): Promise<PhoneResult>;

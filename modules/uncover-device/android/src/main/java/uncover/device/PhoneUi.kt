@@ -9,6 +9,9 @@ import android.os.Bundle
 import android.os.SystemClock
 import android.view.accessibility.AccessibilityNodeInfo
 import android.view.accessibility.AccessibilityWindowInfo
+import android.view.WindowManager
+import android.hardware.display.DisplayManager
+import android.util.DisplayMetrics
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withTimeout
@@ -26,13 +29,16 @@ data class PhoneUiTarget(val scope: String, val packageName: String? = null, val
 class PhoneUi(private val service: AccessibilityService) {
   private data class Anchor(val path: List<Int>, val fingerprint: String)
   private data class Snapshot(val scope: String, val packageName: String, val windowId: Int, val displayId: Int,
-    val context: String, val bounds: Rect, val anchors: Map<String, Anchor>)
+    val context: String, val bounds: Rect, val anchors: Map<String, Anchor>, var visualRevision: Long? = null)
+  private data class Visual(val scope: String, val packageName: String, val windowId: Int, val context: String,
+    val bounds: Rect, val revision: Long, val at: Long, val result: JSONObject)
   private data class Change(val revision: Long, val at: Long)
   private val snapshots = linkedMapOf<String, Snapshot>()
   private val changes = mutableMapOf<String, Change>()
+  private var visual: Visual? = null
   fun changed(packageName: String) { changes[packageName] = Change((changes[packageName]?.revision ?: 0L) + 1, SystemClock.elapsedRealtime()) }
   fun revision(packageName: String) = changes[packageName]?.revision ?: 0L
-  fun clear() { snapshots.clear(); changes.clear() }
+  fun clear() { snapshots.clear(); changes.clear(); visual = null }
   fun foregroundRoot(): AccessibilityNodeInfo? {
     val visible = service.windows
     val active = service.rootInActiveWindow
@@ -44,7 +50,14 @@ class PhoneUi(private val service: AccessibilityService) {
   private fun root(target: PhoneUiTarget): AccessibilityNodeInfo {
     target.validate()
     if (Build.VERSION.SDK_INT >= 33) service.clearCache()
-    val node = if (target.displayId == 0) foregroundRoot() else {
+    val node = if (target.displayId == 0) {
+      val active = foregroundRoot()
+      val candidates = service.windows.filter { it.type == AccessibilityWindowInfo.TYPE_APPLICATION }
+        .filter { target.packageName == null || it.root?.packageName?.toString() == target.packageName }
+      val preferred = candidates.filter { it.isActive || it.isFocused }.maxByOrNull { it.layer }
+      if (active != null && (target.packageName == null || active.packageName?.toString() == target.packageName) && !bounds(active).isEmpty) active
+      else preferred?.root ?: candidates.maxByOrNull { it.layer }?.root ?: active
+    } else {
       if (Build.VERSION.SDK_INT < 30) throw PhoneFailure("display_unsupported", "系统不支持独立显示器读取。")
       val windows = service.windowsOnAllDisplays.get(target.displayId).orEmpty().filter { it.type == AccessibilityWindowInfo.TYPE_APPLICATION }
       val window = windows.filter { it.isFocused || it.isActive }.maxByOrNull { it.layer } ?: windows.maxByOrNull { it.layer }
@@ -64,6 +77,26 @@ class PhoneUi(private val service: AccessibilityService) {
   }
   private fun fingerprint(node: AccessibilityNodeInfo) = listOf(node.viewIdResourceName ?: "", node.className?.toString() ?: "", label(node), node.isPassword.toString()).joinToString("\u0001")
   private fun bounds(node: AccessibilityNodeInfo) = Rect().also(node::getBoundsInScreen)
+  internal fun viewport(root: AccessibilityNodeInfo, displayId: Int): Pair<Rect, String> {
+    val node = bounds(root)
+    if (!node.isEmpty) return node to "root"
+    val windows = if (Build.VERSION.SDK_INT >= 30) service.windowsOnAllDisplays.get(displayId).orEmpty() else service.windows
+    windows.firstOrNull { it.id == root.windowId }?.let { window ->
+      val area = Rect().also(window::getBoundsInScreen)
+      if (!area.isEmpty) return area to "window"
+    }
+    if (displayId == 0 && Build.VERSION.SDK_INT >= 30) {
+      val area = runCatching { (service.getSystemService(AccessibilityService.WINDOW_SERVICE) as WindowManager).currentWindowMetrics.bounds }.getOrNull()
+      if (area != null && !area.isEmpty) return Rect(area) to "display"
+      val metrics = DisplayMetrics()
+      @Suppress("DEPRECATION")
+      val actualDisplay = (service.getSystemService(AccessibilityService.DISPLAY_SERVICE) as DisplayManager).getDisplay(0)
+      @Suppress("DEPRECATION")
+      actualDisplay?.getRealMetrics(metrics)
+      if (metrics.widthPixels > 0 && metrics.heightPixels > 0) return Rect(0, 0, metrics.widthPixels, metrics.heightPixels) to "display"
+    }
+    throw PhoneFailure("window_bounds_unavailable", "系统未返回此显示器的有效范围，无法读取画面；并非截图时页面改变。")
+  }
   private fun context(root: AccessibilityNodeInfo): String {
     val viewport = bounds(root); val headerBottom = viewport.top + minOf(viewport.height() / 4, (200 * service.resources.displayMetrics.density).toInt())
     val values = mutableListOf<String>(); val pending = ArrayDeque<AccessibilityNodeInfo>(); pending.add(root); var visited = 0
@@ -86,7 +119,9 @@ class PhoneUi(private val service: AccessibilityService) {
       for (index in 0 until node.childCount) node.getChild(index)?.let { pending.add(it to (path + index)) }
       if (!node.isVisibleToUser) continue
       val text = node.text?.toString().orEmpty(); val description = node.contentDescription?.toString().orEmpty()
-      if (text.isBlank() && description.isBlank() && !node.isClickable && !node.isEditable && !node.isScrollable && node.actionList.isEmpty()) continue
+      val passive = setOf(AccessibilityNodeInfo.ACTION_FOCUS, AccessibilityNodeInfo.ACTION_CLEAR_FOCUS, AccessibilityNodeInfo.ACTION_ACCESSIBILITY_FOCUS, AccessibilityNodeInfo.ACTION_CLEAR_ACCESSIBILITY_FOCUS,
+        AccessibilityNodeInfo.AccessibilityAction.ACTION_SHOW_ON_SCREEN.id)
+      if (text.isBlank() && description.isBlank() && !node.isClickable && !node.isEditable && !node.isScrollable && node.actionList.none { it.id !in passive }) continue
       val id = "n${anchors.size}"; val area = bounds(node); anchors[id] = Anchor(path, fingerprint(node))
       val actions = JSONArray(); node.actionList.forEach { actions.put(JSONObject().put("id", it.id).put("label", it.label?.toString() ?: JSONObject.NULL)) }
       nodes.put(JSONObject().put("nodeId", id).put("text", text).put("description", description).put("label", label(node))
@@ -96,15 +131,18 @@ class PhoneUi(private val service: AccessibilityService) {
         .put("showingHint", if (Build.VERSION.SDK_INT >= 26) node.isShowingHintText else false).put("actions", actions)
         .put("bounds", JSONArray().put(area.left).put(area.top).put(area.right).put(area.bottom)))
     }
-    val id = UUID.randomUUID().toString(); val area = bounds(root); val packageName = root.packageName?.toString().orEmpty()
+    val id = UUID.randomUUID().toString(); val (area, boundsSource) = viewport(root, target.displayId); val packageName = root.packageName?.toString().orEmpty()
     snapshots[id] = Snapshot(target.scope, packageName, root.windowId, target.displayId, context(root), area, anchors)
     while (snapshots.size > 16) snapshots.remove(snapshots.keys.first())
     val end = minOf(nodes.length().toLong(), offset.toLong() + PhonePolicy.PAGE_SIZE).toInt(); val page = JSONArray()
     for (index in offset until end) page.put(nodes.getJSONObject(index))
     return JSONObject().put("ok", true).put("snapshotId", id).put("packageName", packageName).put("windowId", root.windowId)
       .put("displayId", target.displayId).put("nodes", page).put("total", nodes.length()).put("nextOffset", if (end < nodes.length()) end else JSONObject.NULL)
+      .put("revision", revision(packageName))
       .put("truncated", pending.isNotEmpty()).put("source", "accessibility").put("externalData", true)
       .put("bounds", JSONArray().put(area.left).put(area.top).put(area.right).put(area.bottom))
+      .put("boundsSource", boundsSource).put("emptyTree", nodes.length() == 0)
+      .put("diagnostics", if (nodes.length() == 0) "系统返回空控件树；可请求 visualText 本机识字。空树不等于无授权，不要重复授权。" else JSONObject.NULL)
   }
   suspend fun awaitScreen(target: PhoneUiTarget, offset: Int = 0, before: Long? = null, cancelled: () -> Boolean = { false },
     deadlineMs: Long = PhonePolicy.DEADLINE_MS, ready: (Long, Long, Long, Boolean, Boolean) -> Boolean = PhonePolicy::ready): JSONObject {
@@ -132,12 +170,21 @@ class PhoneUi(private val service: AccessibilityService) {
     val current = root(target)
     if (snapshot.packageName != current.packageName?.toString() || snapshot.windowId != current.windowId ||
       target.strictContext && snapshot.context != context(current)) throw PhoneFailure("stale_screen", "当前应用、窗口或页面上下文已变化，未执行旧操作，请重新观察。")
+    if (snapshot.bounds != viewport(current, target.displayId).first)
+      throw PhoneFailure("stale_screen", "屏幕方向、窗口或键盘布局已改变，未使用旧范围操作；请重新观察。")
     return snapshot to current
   }
   suspend fun visualText(target: PhoneUiTarget, id: String): JSONObject {
     val (snapshot, root) = checkedSnapshot(target, id)
     if (target.displayId != 0) throw PhoneFailure("ocr_display_unsupported", "本机识字仅用于当前授权的主屏幕。")
+    val observedRevision = revision(snapshot.packageName)
+    visual?.takeIf { it.scope == snapshot.scope && it.packageName == snapshot.packageName && it.windowId == snapshot.windowId &&
+      it.context == snapshot.context && it.bounds == snapshot.bounds && it.revision == observedRevision && SystemClock.elapsedRealtime() - it.at < 750 }?.let {
+      snapshot.visualRevision = observedRevision
+      return JSONObject(it.result.toString()).put("reused", true)
+    }
     val passwords = mutableListOf<Rect>(); val pending = ArrayDeque<AccessibilityNodeInfo>(); pending.add(root); var visited = 0
+    service.windows.filter { it.id != root.windowId && it.type == AccessibilityWindowInfo.TYPE_APPLICATION }.forEach { window -> window.root?.let(pending::addLast) }
     while (pending.isNotEmpty()) {
       if (++visited > 10000) throw PhoneFailure("ocr_tree_truncated", "无法完整检查密码区域，本次不截图；可继续分页读取控件。")
       val node = pending.removeFirst()
@@ -146,6 +193,9 @@ class PhoneUi(private val service: AccessibilityService) {
     }
     val result = PhoneOcr.read(service, snapshot.bounds, passwords)
     checkedSnapshot(target, id) // Do not attach a late capture to a new page, request or permission scope.
+    if (revision(snapshot.packageName) != observedRevision) throw PhoneFailure("stale_visual_text", "识字期间页面内容发生变化，请重新观察；本次识字坐标未用于点击。")
+    snapshot.visualRevision = observedRevision
+    visual = Visual(snapshot.scope, snapshot.packageName, snapshot.windowId, snapshot.context, Rect(snapshot.bounds), observedRevision, SystemClock.elapsedRealtime(), JSONObject(result.toString()))
     return result
   }
   private fun nodeAt(root: AccessibilityNodeInfo, path: List<Int>): AccessibilityNodeInfo? {
@@ -230,6 +280,8 @@ class PhoneUi(private val service: AccessibilityService) {
     val gesture = builder.build()
     return {
       checkedSnapshot(target, id)
+      if (snapshot.visualRevision != null && snapshot.visualRevision != revision(snapshot.packageName))
+        throw PhoneFailure("stale_visual_text", "识字后页面内容发生变化，未使用旧坐标；请重新观察。")
       withTimeout(duration + 3000) {
         suspendCancellableCoroutine { continuation ->
           val accepted = service.dispatchGesture(gesture, object : AccessibilityService.GestureResultCallback() {

@@ -11,10 +11,11 @@ const labels = {
 
 /** A view of native facts, not another state machine or a guess based on microphone availability. */
 export function voicePresentation(voice: VoicePresentation) {
+  const paused = voice.inputSuppressed && !hasVoiceOutput(voice) && ['wake', 'listening', 'assessing'].includes(voice.phase);
   return {
-    label: labels[voice.phase],
+    label: paused ? voice.externalPlayback === 'navigation' ? '导航播报中，结束后继续听' : '手机播报中，结束后继续听' : labels[voice.phase],
     outputBusy: hasVoiceOutput(voice),
-    showTranscript: voice.phase === 'listening' || voice.phase === 'assessing',
+    showTranscript: !paused && (voice.phase === 'listening' || voice.phase === 'assessing'),
     speaking: voice.phase === 'speaking',
   };
 }

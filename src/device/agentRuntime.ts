@@ -1,5 +1,6 @@
 import type { PhoneCommand, PhoneTransport } from './types';
 import { phoneCommandTypes } from './modelTools.mjs';
+import { compactObservation } from './observations.mjs';
 type Context = { requestId: string; executionId: string; onInterruptedResult?: (call: { name: string; args: Record<string, unknown>; result: unknown }) => void };
 const object = (value: unknown): Record<string, unknown> => {
   if (value === undefined) return {};
@@ -32,7 +33,7 @@ export function createPhoneRuntime(transport: PhoneTransport, context: Context) 
         if (signal?.aborted) { cancel(); throw Error('请求已取消。'); }
         const result = await transport.screen(context.requestId, context.executionId, offset(args.offset), args.packageName as string | undefined, args.visualText === true);
         if (signal?.aborted) throw Error('请求已取消。');
-        return result;
+        return compactObservation(result);
       } finally { signal?.removeEventListener('abort', cancel); }
     }
     const type = (phoneCommandTypes as Record<string, PhoneCommand['type']>)[name]; if (!type) throw Error('未知手机工具。');
@@ -46,7 +47,7 @@ export function createPhoneRuntime(transport: PhoneTransport, context: Context) 
         context.onInterruptedResult?.({ name, args, result });
         throw Error('请求已取消；已尝试的手机操作应先核对真实界面，不要重复发送。');
       }
-      return result;
+      return compactObservation(result);
     } finally { signal?.removeEventListener('abort', cancel); }
   };
 }

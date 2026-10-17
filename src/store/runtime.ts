@@ -11,6 +11,9 @@ export const appRepository = createAppRepository(AsyncStorage, {
     await (await import('../device/transport')).phoneTransport.clear();
     await (await import('../voice/transport')).voiceTransport.clear();
     await (await import('../agent/runtime')).agentConversation.clear();
+    await (await import('../reminders/transport')).reminderTransport.clear();
+    await (await import('../agent/usageRuntime')).clearAgentUsage();
+    await (await import('../device/workflowRuntime')).phoneWorkflows.clear();
     await (await import('../music/transport')).musicTransport.clear();
   },
   resetConnection: async () => {

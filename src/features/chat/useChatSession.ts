@@ -71,7 +71,7 @@ export function useChatSession({ visible, onClose }: { visible: boolean; onClose
       if (!handle) return;
       const activeHandle = handle;
       const answer = await runAgentTurn({ repository, requestId, executionId, controller,
-        messages: agentConversation.messages(handle), responseMode: 'text',
+        journal: agentConversation.journal(handle), responseMode: 'text',
         onRoundStart: () => agentConversation.round(activeHandle),
         onToolCall: call => agentConversation.tool(activeHandle, call),
         onToolResult: call => agentConversation.receipt(activeHandle, call),

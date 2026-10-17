@@ -6,9 +6,11 @@ import android.os.Bundle
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
+import android.graphics.Rect
 import android.test.InstrumentationTestCase
 import android.text.InputType
 import android.view.View
+import android.view.accessibility.AccessibilityNodeInfo
 import android.widget.Button
 import android.widget.EditText
 import android.widget.LinearLayout
@@ -82,6 +84,39 @@ class PhoneControlTest : InstrumentationTestCase() {
   fun testPasswordTextIsNotReturnedToTheModel() {
     val frame = read(); assertFalse(frame.toString().contains("PRIVATE_FIXTURE_PASSWORD"))
     assertTrue(frame.getJSONArray("nodes").length() > 3)
+  }
+  fun testScreenshotWithMissingRootBoundsUsesTheRealCaptureInsteadOfFailingRepeatedly() {
+    val result = main { PhoneOcr.read(PhoneAccessibilityService.instance!!, Rect(), emptyList()) }
+    assertTrue(result.toString(), result.getBoolean("ok")); assertTrue(result.toString(), result.toString().contains("MAX CANVAS 42"))
+  }
+  fun testEmptyRootAndWindowGeometryStillResolveARealDisplayFromTheAccessibilityService() {
+    verifyDisplayFallback()
+  }
+  private fun verifyDisplayFallback() {
+    instrumentation.runOnMainSync {
+      @Suppress("DEPRECATION")
+      val empty = AccessibilityNodeInfo.obtain()
+      empty.setBoundsInScreen(Rect())
+      val (area, source) = PhoneAccessibilityService.instance!!.phoneUi.viewport(empty, 0)
+      assertTrue(area.width() > 0 && area.height() > 0); assertEquals("display", source)
+    }
+  }
+  fun testSavedSequenceReobservesEveryStepAndCannotReplayASend() {
+    val steps = org.json.JSONArray()
+      .put(JSONObject().put("type", "ui").put("packageName", context.packageName).put("selector", JSONObject().put("description", "输入测试消息")).put("action", "set_text").put("text", "MAX sequence fixture"))
+      .put(JSONObject().put("type", "ui").put("packageName", context.packageName).put("selector", JSONObject().put("text", "发送测试消息")).put("action", "click").put("expectedText", org.json.JSONArray().put("Isolated conversation — not WeChat")))
+      .put(JSONObject().put("type", "observe").put("packageName", context.packageName).put("expectedText", org.json.JSONArray().put("Sent 1: MAX sequence fixture")))
+    val command = JSONObject().put("type", "sequence").put("operationKey", "known-sequence").put("steps", steps)
+    val result = main { PhoneSequences.run(context, request, execution, command) }
+    assertTrue(result.toString(), result.getBoolean("ok")); assertEquals(1, activity.sent)
+    val retry = main { PhoneSequences.run(context, request, execution, command) }
+    assertTrue(retry.getBoolean("replayed")); assertEquals(1, activity.sent)
+  }
+  fun testChangedSequenceContextStopsBeforeTheFirstPhysicalAction() {
+    val steps = org.json.JSONArray().put(JSONObject().put("type", "ui").put("packageName", context.packageName).put("selector", JSONObject().put("text", "发送测试消息"))
+      .put("action", "click").put("expectedText", org.json.JSONArray().put("Not the requested conversation")))
+    val result = main { PhoneSequences.run(context, request, execution, JSONObject().put("type", "sequence").put("operationKey", "stale-sequence").put("steps", steps)) }
+    assertFalse(result.toString(), result.getBoolean("ok")); assertEquals("workflow_page_changed", result.getString("code")); assertEquals(0, activity.sent)
   }
   fun testAFrameFromAnotherTaskOrDisplayCannotAuthorizeAnAction() {
     val frame = read(); val command = action(frame, "发送测试消息", "other-task-send", "click")

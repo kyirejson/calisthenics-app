@@ -1,6 +1,8 @@
 package uncover.device
 
 import android.content.Intent
+import android.net.Uri
+import android.os.Build
 import android.provider.Settings
 import expo.modules.kotlin.functions.Coroutine
 import expo.modules.kotlin.functions.Queues
@@ -20,13 +22,29 @@ class UncoverDeviceModule : Module() {
     Name("UncoverDevice"); Events("cancelled", "statusChanged")
     OnCreate { instance = this@UncoverDeviceModule; PhoneExecutionService.onCancelled = { id -> runCatching { sendEvent("cancelled", mapOf("executionId" to id)) } } }
     OnDestroy { if (instance === this@UncoverDeviceModule) { instance = null; PhoneExecutionService.cancelActive(); PhoneExecutionService.onCancelled = null } }
+    OnActivityEntersForeground { PhoneReminders.restore(context) }
     AsyncFunction("status") { PhoneController.safe { PhoneController.status(context) }.toString() }
+    AsyncFunction("reminderStatus") { PhoneController.safe { PhoneReminders.status(context) }.toString() }
+    AsyncFunction("listReminders") { PhoneController.safe { PhoneReminders.list(context) }.toString() }
+    AsyncFunction("writeReminder") { request: String, raw: String -> PhoneController.safe { PhoneReminders.write(context, request, JSONObject(raw)) }.toString() }
+    AsyncFunction("cancelReminder") { id: String -> PhoneController.safe { PhoneReminders.cancel(context, id) }.toString() }
+    AsyncFunction("clearReminders") { PhoneReminders.clear(context) }
+    AsyncFunction("reminderPermission") { kind: String ->
+      val activity = appContext.currentActivity ?: error("请从服务设置开启提醒权限。")
+      val state = PhoneReminders.status(context)
+      if (kind == "exact" && Build.VERSION.SDK_INT >= 31 && !state.getBoolean("exactAlarmsGranted"))
+        activity.startActivity(Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM, Uri.parse("package:${context.packageName}")))
+      else if (kind == "notifications" && !state.getBoolean("notificationsGranted"))
+        activity.startActivity(Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName))
+    }.runOnQueue(Queues.MAIN)
     AsyncFunction("findApps") { query: String, offset: Int -> PhoneController.safe { PhoneApps.find(context, query, offset) }.toString() }
     AsyncFunction("screen") Coroutine { request: String, execution: String, offset: Int, expected: String?, visualText: Boolean -> withContext(Dispatchers.Main) {
       PhoneController.safeRequest { PhoneController.screen(context, request, execution, offset, expected, visualText) }.toString()
     } }
     AsyncFunction("executeAndObserve") Coroutine { request: String, execution: String, raw: String -> withContext(Dispatchers.Main) {
-      PhoneController.safeRequest { PhoneController.executeAndObserve(context, request, execution, JSONObject(raw)) }.toString()
+      PhoneController.safeRequest { val command = JSONObject(raw)
+        if (command.optString("type") == "sequence") PhoneSequences.run(context, request, execution, command) else PhoneController.executeAndObserve(context, request, execution, command)
+      }.toString()
     } }
     AsyncFunction("receipts") { request: String -> PhoneLedger.receipts(context, request).toString() }
     AsyncFunction("cancel") { execution: String -> PhoneLedger.cancel(execution); PhoneAccessibilityService.instance?.phoneUi?.clear() }.runOnQueue(Queues.MAIN)

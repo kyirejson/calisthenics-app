@@ -17,6 +17,7 @@ internal interface VoiceAudioEvents {
   fun probe(segment: String, id: String, text: String, wake: Boolean, silenceMs: Long)
   fun revoked(id: String); fun utterance(segment: String, text: String, wake: Boolean); fun settled(segment: String, action: String)
   fun assessmentError(message: String); fun microphoneState(silenced: Boolean); fun failure(error: Throwable)
+  fun externalPlayback(suppressed: Boolean, reason: String, available: Boolean) {}
 }
 
 /** Input processing only. Capture and reply playback have independent lifecycles. No identity gate. */
@@ -28,6 +29,7 @@ internal class VoiceAudioEngine(private val context: Context, private val refere
   private val decisions = ConcurrentLinkedQueue<Triple<String, String, String?>>()
   private val mode = AtomicReference<Boolean?>(null)
   private val capture = source({ value -> silenced = value; if (!stopped) events.microphoneState(value) }, { if (!stopped) events.failure(it) })
+  private val externalPlayback = VoiceExternalPlayback(context)
   private var worker: Thread? = null
   fun arm() { mode.set(true) }
   fun idle() { mode.set(false) }
@@ -64,7 +66,10 @@ internal class VoiceAudioEngine(private val context: Context, private val refere
           resetTurn(); recent.clear(); events.utterance(acceptedSegment, text, woke)
         }
         if (stopped) return@thread
+        externalPlayback.start()
         capture.start { if (!stopped) events.ready() }
+        var externalSuppressed = false
+        var externalStatus = ""
         while (!stopped) {
           val input = capture.next() ?: continue; val now = SystemClock.elapsedRealtime()
           mode.getAndSet(null)?.let { armed ->
@@ -72,6 +77,7 @@ internal class VoiceAudioEngine(private val context: Context, private val refere
             if (armed) events.armed(segment)
           }
           if (silenced) continue
+          externalPlayback.refresh(System.nanoTime())
           if ((captureRoute != 0 && input.routeId != 0 && captureRoute != input.routeId) || input.clockRevision != captureClockRevision)
             reference.routeChanged(input.startNs)
           captureClockRevision = input.clockRevision
@@ -86,10 +92,32 @@ internal class VoiceAudioEngine(private val context: Context, private val refere
           }
           val processor = checkNotNull(echo)
           val floats = processor.process(input.samples, rendered.samples)
-          val detected = vad.compute(floats)
+          val external = externalPlayback.state(input.startNs)
+          if (externalSuppressed && !external.suppressed) {
+            externalSuppressed = false; resetSegment(); resetKeyword(); vad.reset(); recent.clear()
+            lastSpeech = input.startNs / 1_000_000
+          }
+          val detected = if (external.suppressed) 0f else vad.compute(floats)
           val probability = if (floats.any { it != 0f }) detected else 0f
           val evidence = processor.evidence
           val source = evidence.source(rendered.renderProtected, rendered.reliable && input.timestamped)
+          val status = "${external.suppressed}:${external.reason}:${externalPlayback.available}"
+          if (status != externalStatus) {
+            externalStatus = status
+            events.externalPlayback(external.suppressed, external.reason, externalPlayback.available)
+          }
+          // Keep AEC/render clocks processing even when KWS/ASR admission is paused.
+          if (external.suppressed) {
+            if (!externalSuppressed) {
+              externalSuppressed = true
+              // Retain words collected before the known device playback interval.
+              turn.seal(); resetSegment(); resetKeyword(); vad.reset(); recent.clear()
+              control.reset()?.let(events::revoked); control.revise(turn.text); show()
+              events.settled(segment, if (turn.text.isBlank()) "noise" else "wait")
+              Log.i("MAX-VoiceInput", "Known device playback: KWS/ASR paused; prior user draft and MAX output retained")
+            }
+            continue
+          }
           val diagnostic = "$source protected=${rendered.renderProtected} renderClock=${rendered.reliable} captureClock=${input.timestamped}"
           if (diagnostic != lastAcoustic && now - loggedAt >= 500) {
             Log.i("MAX-VoiceInput", "$diagnostic near=${evidence.nearendBlocks}/${evidence.blocks} echo=${evidence.echoBlocks} delayMs=${evidence.delayMs} erleDb=${evidence.erleDb}")
@@ -152,7 +180,7 @@ internal class VoiceAudioEngine(private val context: Context, private val refere
           if (control.timeout(now)) { events.settled(segment, "error"); events.assessmentError("判停超时，输入已保留，不会执行未确认的半句话。") }
         }
       } catch (error: Throwable) { if (!stopped) events.failure(error) }
-      finally { capture.stop(); control.reset(); echo?.close(); vad?.release(); ks?.release(); stream?.release(); kws?.release(); asr?.release() }
+      finally { capture.stop(); externalPlayback.close(); control.reset(); echo?.close(); vad?.release(); ks?.release(); stream?.release(); kws?.release(); asr?.release() }
     }
   }
   fun stop() { stopped = true; control.reset(); capture.stop(); worker?.interrupt() }

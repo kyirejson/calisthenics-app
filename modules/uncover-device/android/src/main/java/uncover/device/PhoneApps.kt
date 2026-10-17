@@ -5,12 +5,27 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.ResolveInfo
 import android.net.Uri
+import android.os.Build
 import org.json.JSONArray
 import org.json.JSONObject
 import java.util.Locale
 
 /** Discover launchable apps dynamically. The model, not an app-name switch, selects the destination. */
 object PhoneApps {
+  fun version(context: Context, packageName: String): JSONObject {
+    return try {
+      @Suppress("DEPRECATION")
+      val info = context.packageManager.getPackageInfo(packageName, 0)
+      @Suppress("DEPRECATION")
+      val code = if (Build.VERSION.SDK_INT >= 28) info.longVersionCode else info.versionCode.toLong()
+      JSONObject().put("available", true).put("versionCode", code.toString())
+        .put("versionName", info.versionName ?: JSONObject.NULL).put("lastUpdateTime", info.lastUpdateTime)
+    } catch (_: android.content.pm.PackageManager.NameNotFoundException) {
+      JSONObject().put("available", false).put("code", "package_version_unavailable")
+    } catch (_: SecurityException) {
+      JSONObject().put("available", false).put("code", "package_version_not_visible")
+    }
+  }
   private fun launchers(context: Context): List<ResolveInfo> = context.packageManager.queryIntentActivities(Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER), 0)
     .filter { it.activityInfo.enabled && it.activityInfo.applicationInfo.enabled && (it.activityInfo.exported || it.activityInfo.packageName == context.packageName) }
   fun find(context: Context, query: String, offset: Int): JSONObject {
@@ -22,7 +37,7 @@ object PhoneApps {
       JSONObject().put("packageName", packageName).put("label", label).put("activities", entries)
     }.filter { term.isEmpty() || it.toString().lowercase(Locale.ROOT).contains(term) }.sortedBy { it.getString("label") }
     val end = minOf(apps.size.toLong(), offset.toLong() + PhonePolicy.PAGE_SIZE).toInt(); val page = JSONArray()
-    for (index in offset until end) page.put(apps[index])
+    for (index in offset until end) page.put(apps[index].put("appVersion", version(context, apps[index].getString("packageName"))))
     return JSONObject().put("ok", true).put("apps", page).put("total", apps.size).put("nextOffset", if (end < apps.size) end else JSONObject.NULL)
       .put("source", "android_package_manager").put("externalData", true)
   }
@@ -31,7 +46,9 @@ object PhoneApps {
     val candidates = launchers(context).filter { it.activityInfo.packageName == name }
     if (candidates.isEmpty()) throw PhoneFailure("app_not_launchable", "未找到该应用的可启动入口，请重新查询；它可能未安装、已停用、没有界面或不在当前用户空间。")
     val uri = command.optString("uri").takeIf { it.isNotBlank() }
-    val intent = if (uri != null) Intent(Intent.ACTION_VIEW, Uri.parse(PhonePolicy.launchUri(uri))).addCategory(Intent.CATEGORY_BROWSABLE).setPackage(name)
+    val intent = if (uri != null) Intent(Intent.ACTION_VIEW, Uri.parse(PhonePolicy.launchUri(uri))).setPackage(name).apply {
+      if (data?.scheme in setOf("http", "https")) addCategory(Intent.CATEGORY_BROWSABLE)
+    }
     else {
       val activityName = command.optString("activityName").takeIf { it.isNotBlank() }
       val selected = if (activityName == null) candidates.first() else candidates.firstOrNull { it.activityInfo.name == activityName }
