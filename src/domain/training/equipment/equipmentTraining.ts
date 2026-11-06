@@ -437,7 +437,7 @@ export function equipmentSessionPlan(
       item.id,
       item.targetSets,
       item.repRange,
-      item.setTargets,
+      ...(item.setTargets ? [item.setTargets] : []),
       item.restSeconds,
       item.perSide,
       item.loadBasis,
