@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="330" viewBox="0 0 1200 330" role="img" aria-labelledby="title desc">
+  <title id="title">Uncover · 自重训练 APP</title>
+  <desc id="desc">深色背景与橙色运动图形，自重训练、跑步、记录与进阶。</desc>
+  <defs><linearGradient id="bg" x2="1" y2="1"><stop stop-color="#182123"/><stop offset="1" stop-color="#2C3937"/></linearGradient></defs>
+  <rect width="1200" height="330" rx="18" fill="url(#bg)"/>
+  <g fill="none" stroke="#E87740" stroke-opacity=".11"><circle cx="1035" cy="170" r="222"/><circle cx="1035" cy="170" r="167"/><circle cx="1035" cy="170" r="113"/></g>
+  <path d="m849 256 55-52 42 16 65-94 51 29 81-97" fill="none" stroke="#E87740" stroke-width="7" stroke-linecap="round" stroke-linejoin="round" opacity=".7"/>
+  <g transform="translate(76 92)">
+    <rect width="132" height="132" rx="30" fill="#E87740"/>
+    <path d="M35 42V76a31 31 0 0 0 62 0V42M51 42V76a15 15 0 0 0 30 0V42" fill="none" stroke="#182123" stroke-width="7" stroke-linecap="round"/>
+  </g>
+  <text x="247" y="144" fill="#FFF7EF" font-size="60" font-weight="750" letter-spacing="1" font-family="Arial,sans-serif">UNCOVER</text>
+  <text x="251" y="188" fill="#E9BAA0" font-size="22" letter-spacing="5" font-family="'Microsoft YaHei',sans-serif">记录每一组 · 看见每一步</text>
+  <path d="M251 212H705" stroke="#FFF7EF" opacity=".14"/>
+  <text x="251" y="246" fill="#B9CBC5" font-size="17" letter-spacing="2" font-family="'Microsoft YaHei',sans-serif">自重训练 / 跑步 / 饮食 / MAX AI</text>
+  <text x="78" y="294" fill="#9BAFA7" font-size="11" letter-spacing="3" font-family="sans-serif">CALISTHENICS · BODYWEIGHT WORKOUT · ANDROID</text>
+</svg>

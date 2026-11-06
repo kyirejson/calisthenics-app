@@ -1,94 +1,98 @@
 <div align="center">
 
-<img src="assets/app-icon.png" width="112" alt="Uncover App 图标" />
+![Uncover · 记录每一组，看见每一步](docs/media/banner.svg)
 
-# Uncover
+# Uncover · 自重训练 APP
+
+**自重健身 / 街头健身 · 训练计划 · 逐组记录 · 跑步 · 饮食 · MAX AI 助手**
 
 永不言弃，积极向上，奋斗终生。
 
-源码配置版本：1.8.0 · Expo / React Native（正式发布状态以 Releases 为准）
+[![Android](https://img.shields.io/badge/Android-arm64--v8a-E87740?style=flat-square&logo=android&logoColor=white)](https://github.com/kyirejson/calisthenics-app/releases/latest)
+[![Release](https://img.shields.io/github/v/release/kyirejson/calisthenics-app?style=flat-square&color=E87740&label=最新版本)](https://github.com/kyirejson/calisthenics-app/releases/latest)
+[![Downloads](https://img.shields.io/github/downloads/kyirejson/calisthenics-app/total?style=flat-square&color=576B67&label=下载)](https://github.com/kyirejson/calisthenics-app/releases)
+[![React Native](https://img.shields.io/badge/React_Native-Expo-20272C?style=flat-square&logo=react&logoColor=61DAFB)](docs/DEVELOPMENT.md)
 
-[安装包发布页](https://github.com/kyirejson/calisthenics-app/releases) · [反馈问题](https://github.com/kyirejson/calisthenics-app/issues)
+[**下载安卓 APK**](https://github.com/kyirejson/calisthenics-app/releases/latest) · [功能介绍](#从训练计划到每一组记录) · [安装使用](#安装使用) · [反馈问题](https://github.com/kyirejson/calisthenics-app/issues)
+
+简体中文 / Chinese · Android · Calisthenics / Bodyweight Workout / Street Workout
 
 </div>
 
-## 知识库可见性
+## 从训练计划到每一组记录
 
-App 不提供整库浏览入口，助手仍可只读检索。动作详情的原文与配图继续保留，不等于开放整个知识库。
-已获准公开的资料位于 `knowledge/libraries/nutrition/`、`knowledge/libraries/prisoner/`，安装种子为 `src/knowledge/referenceBundle.ts`。GitHub 开源资料不是保密资料；个人 MEMORY、密钥、本机源目录及额外私有库不进入这些公开目录。
-正式手机包包含原图和原文；公开源码缺少图片时允许本地生成空占位，但 production 构建会拒绝缺少原文或图像的安装包，避免再次发布看不到原文的版本。
+**Uncover**（自重训练 APP，早期名称“自重进阶”）是一款将自重训练、健身计划、训练记录与进阶辅助放在一起的安卓应用。你可以安排今日训练、逐组记录完成情况、继续未结束的训练，并回看历史；饮食、体重和跑步记录帮助你整理训练之外的日常数据。
 
-## 当前功能
+| 模块 | 主要功能 |
+| --- | --- |
+| **今日训练** | 街头健身、自重训练、减肥控重与器械专题，日期清单、计划配置、固定开始入口 |
+| **动作学习** | 动作分类、步骤、原文与配图阅读，训练时查看动作细节 |
+| **逐组记录** | 完成组、休息计时、未完成会话续练，基于真实记录的进阶辅助 |
+| **历史与进展** | 训练日历、逐日历史、体重趋势，单次或整日记录管理 |
+| **饮食记录** | 今日饮食、已有餐食与照片、营养目标估算；可由助手添加、更正或删除记录 |
+| **跑步** | 地图轨迹、距离与配速、公里分段、目标与倒计时、专注模式和保存总结 |
+| **MAX AI 助手** | 用户配置 DeepSeek API，文本附件、个人记忆、知识检索及获授权的手机操作工具 |
 
-- 今日训练支持街头健身、减肥控重与器械专题，共享日期栏、训练清单和固定开始按钮。
-- 动作分类、步骤/原文阅读、计划配置、逐组记录、休息计时和基于真实记录的进阶辅助。
-- 未结束的训练退出后可从剩余组续练；今日清单显示已完成组，续练更新同一会话，明确结束后的再练追加独立会话。历史图表默认收起且一次只展开一天，可删除单次或整日训练并同步重算。
-- 今日饮食、已有餐食/照片展示、营养目标估算和体重趋势。Agent 自主判断餐次并添加、更正或删除饮食记录，代码负责持久化、校验与幂等；没有固定食谱或手动记餐入口。
-- 跑步位于饮食旁，显示地图、定位轨迹、距离与配速；支持目标、可取消的倒计时、全屏专注、防误触锁屏、公里分段及保存总结，结果关联训练历史。可选自动暂停和语音播报；Android 室内可启用传感器计步及校准步长估算，也可手动填写跑步机距离。未定位路段不虚构公里数。
-- MAX 是本项目的独立 AI 助手，使用用户配置的 DeepSeek 模型 API Key；支持文本附件、个人记忆和只读知识库工具，不以模型提供方作为助手名称。
-- 网易云 / QQ 音乐使用真实媒体会话和用户授权的界面操作，可选 Shizuku 后台专用屏幕；组合操作与结果观察减少模型往返，不用固定导航脚本替代模型。
-- 新增独立授权的通用手机控制：模型动态查找已安装的可启动 App，自主组合真实读屏、输入、点击、滚动、手势与系统操作，微信、浏览器和地图不是应用白名单。音乐保留专用工具，底层界面引擎共用；通用控制操作主屏幕，不继承音乐的后台模式。可按需本机 OCR 读取自绘文字，不保存或上传截图；不是完整图像理解。系统授权、登录及受保护页面仍需本人处理。
-- MAX 本地语音唤醒（英文 Max / Hey Max），由现有模型自主回应或继续倾听，不播放额外固定“我在”；语音和文字共用上下文、流式文字与原有 Agent 工具，可直接说话打断回答。30 秒无活动或模型判断用户要求结束交流时回唤醒待机，保留上下文与已执行业务。本地播放参考、AEC3、声学声源判定与人声检测协作处理回声，不接入新的云语音服务。文字/语音均引导简洁回答，不截断回答或限制工具轮次。可选默认语音助手与可停止的锁屏监听；ColorOS 实际效果、嘈杂环境和蓝牙路径仍需真机验证，关闭权限、关机或主动停止监听不支持唤醒。
-- 我的页面集中档案、训练专题、训练日历和最新训练历史，其他记录通过“查看全部”展开；保留检查更新与本地清除，不再显示重复营养入口、震动开关、数据导出、独立助手入口或知识库浏览入口。
-- GitHub 安装包检查与 Expo 内容更新；训练/编辑期间阻止内容重启。
+### MAX：围绕你的训练记录协作
 
-V1.8 源码包含 MAX 更名、模型选择回待机、连续播放及通用手机控制；需要新 APK，不会仅靠内容更新进入旧版。实现、已验证项目与待验收的微信真实发送/国内地图路线见 [手机控制实现记录](docs/max-phone-control-implementation-2026-10-16.md)，语音验证见 [本轮语音记录](docs/max-voice-continuity-2026-10-16.md)。正式上传状态以 Releases 为准，不以源码版本号冒充已发布。
+- **文本与语音**共用上下文和工具，可通过本地 “Max / Hey Max” 唤醒，支持说话打断。
+- **按需读取**个人记忆、训练、体重和饮食记录，调用工具完成已支持的记录操作。
+- **知识检索**可读取已收录资料；动作详情保留原文与配图，APP 不提供整库浏览入口。
+- **安卓手机工具**在用户单独授权后使用读屏、点击、输入和滚动；音乐另有媒体控制工具，可选 Shizuku 支持。
 
-原书文字知识库包含用户明确要求加入安装包的营养与囚徒健身资料；动作原文和已授权原图映射随手机构建上传，个人私有库和本机路径配置仍排除。器械示范图为生成配图，不宣称是真人拍摄。
+使用助手需自行配置可用 API Key，模型调用由所配置服务计费。锁屏唤醒、蓝牙音频、系统权限与不同厂商 ROM 的效果以设备实测为准，不能保证所有手机表现相同。
+
+## 安装使用
+
+1. 前往 [最新正式版](https://github.com/kyirejson/calisthenics-app/releases/latest)，在 **Assets** 下载 APK。
+2. 在 **ARM64 安卓手机**上打开并安装；独立安装包不依赖 Expo Go。
+3. 打开后可直接开始安排训练，也可在“我的”填写档案；使用 MAX 时再配置模型服务和所需授权。
+
+当前正式版本以 [Releases](https://github.com/kyirejson/calisthenics-app/releases/latest) 为准。手机正式包只包含 `arm64-v8a`，不适用于旧 ARM32 手机和 x86 模拟器；目前未提供正式 iOS 安装包。
+
+更新时直接覆盖安装，保留本机记录。应用支持检查 GitHub 安装包及 Expo 内容更新；涉及原生模块或权限的变更需要安装新版 APK。上传源码本身不会自动更新所有手机。
+
+### 常见问题
+
+**只能在健身房使用吗？** 自重与街头健身是主要使用方向，同时包含器械专题；可按自己的条件配置计划。
+
+**训练中途退出怎么办？** 未结束的会话支持从剩余组续练；明确结束后再次训练会新增会话。
+
+**跑步必须联网吗？** 地图底图需要联网加载，GPS 记录不以底图加载成功为前提。浏览器只支持前台定位，安卓使用用户启动的定位前台服务。
+
+**数据会自动同步到云端吗？** 档案、训练、饮食、跑步记录与照片主要保存在本机，不自动云同步，卸载可能丢失。被助手读取的记忆、资料和附件会随请求发送到用户配置的模型服务。
 
 ## 本地开发
 
-在本项目目录运行：
+技术栈为 **Expo、React Native、TypeScript**。在已安装 Node.js 与 npm 的开发环境运行：
 
 ```bash
 npm ci
 npm run dev:web
 ```
 
-默认浏览器地址 `http://localhost:8081/`。手机局域网预览使用电脑 IP；浏览器定位需要安全上下文，远程 HTTP 不等同于 localhost。独立 Android 包不依赖 Expo Go。
+浏览器默认地址为 `http://localhost:8081/`。检查代码与回归测试：
 
 ```bash
 npm run check
 ```
 
-Android 构建前运行 `npm run prepare:voice` 获取经过 SHA-256 固定的原生语音库、识别模型和本地 WebRTC AEC3 源码；二进制不进入 Git，许可、来源和资源清单随安装包提供。不播放本地固定唤醒答话，由现有 Agent 自主回应或继续倾听；未接入任何新云端语音服务。普通浏览器开发不需要下载模型，也不提供锁屏监听。
+安卓原生语音资源、公开资料准备和打包流程见 [开发与功能说明](docs/DEVELOPMENT.md)。浏览器预览不等于安卓原生功能验收；模拟器需显式构建对应架构。
 
-正式手机 APK 仅打包 `arm64-v8a`；旧款 ARM32 手机和 x86/x86_64 模拟器不能安装此手机包。`plugins/withAndroidArchitectures.cjs` 在 Expo prebuild 时写入持久默认值，发布检查也拒绝额外架构。模拟器调试请显式使用 Gradle 参数 `-PreactNativeArchitectures=x86_64`，不要把调试架构带入正式手机包。裁剪只去掉不匹配设备的原生库，不删除语音模型、动作图片或业务功能。
+| 文档 | 内容 |
+| --- | --- |
+| [开发与功能说明](docs/DEVELOPMENT.md) | 本地运行、功能细节、原生语音资源、资料范围与验证边界 |
+| [架构说明](docs/ARCHITECTURE.md) | 模块职责、平台边界与数据流 |
+| [联网更新说明](docs/ONLINE-UPDATES.md) | 正式与测试渠道、签名和更新流程 |
+| [开发工具说明](scripts/README.md) | 检查命令与隔离浏览器脚本 |
+| [更新记录](CHANGELOG.md) | 功能变更与历史说明 |
 
-自有语音 C++ 模块也跟随相同架构参数，避免手机构建仍编译不进入安装包的其他三种 ABI；没有删减现有音频算法。
+仓库保留现有 [LICENSE](LICENSE)；第三方代码、语音资源、原文与图片的来源和分发范围见开发文档及随包许可。训练与营养估算用于记录和参考。
 
-`check` 执行 TypeScript 和所有自动发现的有效回归测试。测试转译注册集中在 `scripts/lib/register-typescript.cjs`，不替代类型检查。按改动运行相关隔离浏览器脚本；脚本分类见 [开发工具说明](scripts/README.md)。
+## English overview
 
-安装后准备公开资源映射和本地 PDF worker；已有原书资源不覆盖，缺失原书时使用空映射。当前使用 Expo SDK 57、React Native 0.86、TypeScript，具体版本以 `package.json` 和锁文件为准。
+**Uncover** is a Chinese-language **Android calisthenics and bodyweight workout app** built with **React Native, Expo and TypeScript**. It includes workout plans, set-by-set training logs, rest timers, resumable sessions, progress history, running GPS tracking, nutrition records, and **MAX**, an optional AI assistant using a user-configured DeepSeek API key. Download the **ARM64 Android APK** from [GitHub Releases](https://github.com/kyirejson/calisthenics-app/releases/latest). Records are stored locally; there is no automatic cloud sync or official iOS release.
 
-## 架构与资料
+---
 
-当前职责、平台边界与数据流见 [架构说明](docs/ARCHITECTURE.md)，审核证据见 [架构审核报告](docs/architecture-audit-2026-10-09.md)，两轮整改结果见 [整改清单](docs/architecture-remediation-2026-10-09.md)。静态资料、纯领域算法、功能控制器和状态仓库已分离；旧全量 Context 订阅、重复知识正文与服务端索引链已清理。历史决策/研究文档不等于当前功能规格，不应据其恢复退场功能。
-
-首次启动不强制建档，可在“我的”填写。手机个人记忆保存在 App 文档目录 `personal-memory/MEMORY.md`；浏览器持久保存相同 Markdown。身体数据不填虚构默认值。聊天读取个人记忆，可通过工具更新，用户也能手动编辑；每日训练、近期体重和今日饮食按需读取，不复制成长期记忆。
-
-知识资料在开发侧按资料库 → 文件夹 → Markdown 笔记组织，App 不提供整库浏览、编辑入口。模型可列库、浏览、搜索和读取，不拥有知识库修改工具。被读取的记忆/资料/附件会随请求发送到用户配置的模型 API，不会自动把整套资料塞进每轮上下文。隐藏入口不是加密或保密机制，公开源码中的资料任何人都可获取。
-
-导入本地 Markdown：
-
-```bash
-npm run knowledge:import -- "源目录" 库ID "名称"
-```
-
-源资料不修改，图片及图片引用不导入。授权的营养/囚徒正文在 `referenceBundle.ts` 中只存一份；私有层引用它并追加其他本地库，新库不会自动公开分发。种子按需载入；更新时自动升级未修改正文，保留个人改动；存储层保留冲突保护，但 App 不提供知识库冲突处理界面。详见 [本地知识库说明](docs/local-knowledge-vault.md)。`knowledge:build` 从 App 自有 Markdown 副本重建当前种子，`knowledge:check` 检查逐篇哈希，不需要公网知识服务。
-
-## 数据与验证边界
-
-个人档案、训练/饮食/跑步记录、知识库和照片保存在本机，不自动云同步，卸载可能丢失。App 不再提供 JSON 数据导出入口；尚无业务 JSON 导入恢复功能。
-
-Android 跑步使用用户启动的定位前台服务；应用被系统强制终止后恢复为暂停，不补算未记录的时间/距离。浏览器仅支持前台定位；地图联网加载，断网不阻断 GPS。设计与验证边界见 [跑步模块说明](docs/running-map-2026-10-08.md)。
-
-单元测试、浏览器模拟、打包通过不代表已验证所有手机、真实 API Key、输入法和权限场景。每次审核的实际验证结果写在对应报告，不沿用旧版本测试数量冒充现状。训练/营养估算不替代个体化专业评估。
-
-## 安装与更新
-
-安卓安装包以发布页为准。更新应覆盖安装，保留本机记录，不建议卸载旧版。上传代码不等于已推送手机内容更新；新增或删除原生模块/权限需重新构建和安装新二进制，旧 APK 不能只靠网页或内容更新移除已携带的相机模块。
-
-正式/测试渠道和签名流程见 [联网更新说明](docs/ONLINE-UPDATES.md) 与 [发布说明](RELEASE-NOTES.md)。安装包以 [GitHub 最新正式发布](https://github.com/kyirejson/calisthenics-app/releases/latest) 为准，本轮训练和跑步验证见 [修复说明](docs/running-behaviors-2026-10-09.md)。
-
-[更新记录](CHANGELOG.md) · [历史版本](https://github.com/kyirejson/calisthenics-app/releases)
+同一作者的另一款应用：[造化元钥 · 命理排盘 APP](https://github.com/kyirejson/mingli-paipan) — 八字、紫微斗数、奇门遁甲、六爻与梅花易数。
