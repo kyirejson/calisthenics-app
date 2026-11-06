@@ -8,8 +8,7 @@
 
 从第一组练习，到下一阶动作，把每一次努力记下来。
 
-[![Android](https://img.shields.io/badge/Android-ARM64-E87740?style=flat-square&logo=android&logoColor=white)](https://github.com/kyirejson/calisthenics-app/releases/latest)
-[![Release](https://img.shields.io/github/v/release/kyirejson/calisthenics-app?style=flat-square&color=E87740&label=最新版本)](https://github.com/kyirejson/calisthenics-app/releases/latest)
+**Android ARM64 · 简体中文**
 
 [**下载 APK**](https://github.com/kyirejson/calisthenics-app/releases/latest)　·　[训练内容](#训练内容)　·　[安装说明](docs/INSTALL.md)　·　[问题反馈](https://github.com/kyirejson/calisthenics-app/issues)
 
