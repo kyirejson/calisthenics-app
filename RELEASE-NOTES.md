@@ -1,13 +1,12 @@
-# Uncover v1.8.1
+# Uncover v1.8.2
 
-App version: 1.8.1
+App version: 1.8.2
 
-Android versionCode: 33
+Android versionCode: 34
 
-- MAX now keeps the model conversation intact across text and voice turns, app restarts, and interrupted requests. Completed actions stay recorded and uncertain actions are not silently repeated.
-- Attachments and long reference material are stored privately on the device and remain available to MAX in full. Long conversations keep their original archive when an older part is summarized.
-- Request diagnostics distinguish the model's first response, visible text, and first tool call, and report cache tokens only when the provider supplies valid counts.
-- Added Android reminders delivered by the system after the app leaves the foreground.
-- Continued MAX phone operation with sequential UI actions and preserved the user's existing fitness records, app settings, and model configuration.
+- 记住每个动作手动调整后的组数、每组次数或保持秒数，下次安排同一动作时自动沿用。
+- 支持移除未完成组，至少保留一组。各动作独立保存，重启后仍保留设置。
+- 实际完成记录与训练量设置分开；少完成几组或修正已完成数据不会自动降低以后的训练量。
+- 保留当日训练继续功能，继续训练时仍还原原来的完成状态。
 
-This is an APK update. Install over the existing app to preserve local data; do not uninstall first.
+直接覆盖安装即可保留本地数据，请勿先卸载。

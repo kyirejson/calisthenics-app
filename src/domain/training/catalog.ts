@@ -11,6 +11,7 @@ import { RETIRED_PLAN_ID } from './trainingPlans';
 import { equipmentWorkoutItems, equipmentWorkouts } from './equipment/equipmentTraining';
 
 import { exercises, workouts } from '../../data/exerciseCatalog';
+import { applyTrainingVolume } from './trainingVolume';
 export { exercises, workouts } from '../../data/exerciseCatalog';
 
 export const categories = [
@@ -151,7 +152,7 @@ export function getWorkoutExercises(
   context: WorkoutContext = {},
 ) {
   const items = baseWorkoutExercises(id, profile, setMultiplier, dupDay, cycleWeek, context);
-  return items;
+  return items.map(item => applyTrainingVolume(item, profile));
 }
 function baseWorkoutExercises(
   id: string,

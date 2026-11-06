@@ -19,6 +19,7 @@ import { captureTrainingTopic } from '../domain/training/trainingTopicProfiles';
 import { exercises } from '../domain/training/catalog';
 import { normalizeCountInterval } from '../domain/training/voiceCounter';
 import { normalizeMusicPreferences } from '../music/preferences';
+import { normalizeTrainingVolumes } from '../domain/training/trainingVolume';
 
 export const defaultSettings: Settings = { vibration: true, restSeconds: 120, voiceCountInterval: 5, music: normalizeMusicPreferences(undefined) };
 const exerciseIds = new Set(exercises.map((exercise) => exercise.id));
@@ -122,6 +123,7 @@ export function normalizeProfile(raw: Partial<Profile> & Record<string, unknown>
         .slice(-180)
     : [];
   const base: Omit<Profile, 'planId'> = {
+    trainingVolumes: normalizeTrainingVolumes(raw.trainingVolumes),
     ...(raw.personalDetails && typeof raw.personalDetails === 'object'
       ? {
           personalDetails: Object.fromEntries(

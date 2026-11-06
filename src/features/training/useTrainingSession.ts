@@ -38,6 +38,7 @@ import type {
 } from '../../types';
 import { confirmAction } from '../../utils/confirm';
 import { resumableSession, restoreCourseSets } from '../../domain/training/sessionResume';
+import { applyTrainingVolume, editedTrainingVolume } from '../../domain/training/trainingVolume';
 export type SetState = CockpitSet;
 export type TrainingProps = {
   workoutId: string;
@@ -49,8 +50,8 @@ export type TrainingProps = {
   onComplete: (sessionId: string) => void;
 };
 const initialSets = (item: PrescribedExercise): SetState[] =>
-  Array.from({ length: item.targetSets }, () => ({
-    reps: item.repRange ? '' : String(item.targetValue),
+  Array.from({ length: item.targetSets }, (_, index) => ({
+    reps: item.setTargets?.[index] != null ? String(item.setTargets[index]) : item.repRange ? '' : String(item.targetValue),
     load: '',
     rir: '',
     completed: false,
@@ -74,7 +75,7 @@ export function useTrainingSession({
   onBack,
   onComplete,
 }: TrainingProps) {
-  const { profile, sessions, settings, dailyEdits, addDailyExercise, saveSession, deleteSession } =
+  const { profile, sessions, settings, dailyEdits, addDailyExercise, saveSession, deleteSession, patchProfile } =
     useAppStore((state) => ({
       profile: state.profile,
       sessions: state.sessions,
@@ -83,6 +84,7 @@ export function useTrainingSession({
       addDailyExercise: state.addDailyExercise,
       saveSession: state.saveSession,
       deleteSession: state.deleteSession,
+      patchProfile: state.patchProfile,
     }));
   useHideAgentDock();
   const [selectedSet, setSelectedSet] = useState<number | null>(null);
@@ -135,14 +137,14 @@ export function useTrainingSession({
       if (!canAddExercise(selectedExercise, profile, sessions)) return [];
       const initial = prescribeAddedExercise(selectedExercise, profile);
       return [
-        selectedExercise.category === 'neck' || selectedExercise.id === 'neck_handResistance'
+        applyTrainingVolume(selectedExercise.category === 'neck' || selectedExercise.id === 'neck_handResistance'
           ? initial
           : {
               ...initial,
               targetSets: mastery.sets,
               targetValue: mastery.value,
               targetUnit: mastery.unit,
-            },
+            }, profile),
       ];
     }
     const cycle = getPlanDay(profile).cycle;
@@ -479,9 +481,19 @@ export function useTrainingSession({
       logInteraction('set_unchecked', current.id, undefined, setIndex);
     }
   };
+  const rememberVolume = (count: number, edit?: { index: number; value: number }) => {
+    if (!current) return;
+    void patchProfile(latest => ({ trainingVolumes: { ...latest.trainingVolumes,
+      [current.id]: editedTrainingVolume(current, latest.trainingVolumes?.[current.id], count, edit),
+    } })).catch(() => setError('训练量偏好保存失败，请重试调整；本次训练数据仍保留。'));
+  };
   const editSet = (setIndex: number, field: 'reps' | 'load' | 'rir', value: string) => {
     if (!current || saving) return;
     setSelectedSet(setIndex);
+    if (field === 'reps' && currentSets[setIndex] && !currentSets[setIndex].completed &&
+      Number(value) > 0 && Number.isFinite(Number(value)) &&
+      (current.targetUnit === 'meters' || Number.isInteger(Number(value))))
+      rememberVolume(currentSets.length, { index: setIndex, value: Number(value) });
     setSets((old) => ({
       ...old,
       [current.id]: old[current.id].map((set, index) =>
@@ -506,6 +518,7 @@ export function useTrainingSession({
   };
   const addSet = () => {
     if (!current || saving) return;
+    rememberVolume(currentSets.length + 1);
     setSets((old) => ({
       ...old,
       [current.id]: [...old[current.id], initialSets({ ...current, targetSets: 1 })[0]],
@@ -517,9 +530,15 @@ export function useTrainingSession({
       !current ||
       !currentSets[position] ||
       currentSets[position].completed ||
-      position < current.targetSets
+      currentSets.length <= 1
     )
       return;
+    void patchProfile(latest => {
+      const volume = editedTrainingVolume(current, latest.trainingVolumes?.[current.id], currentSets.length);
+      return { trainingVolumes: { ...latest.trainingVolumes, [current.id]: {
+        ...volume, values: volume.values.filter((_, index) => index !== position),
+      } } };
+    }).catch(() => setError('训练量偏好保存失败，请重试调整；本次训练数据仍保留。'));
     setSets((old) => ({ ...old, [current.id]: old[current.id].filter((_, i) => i !== position) }));
     setSelectedSet(null);
   };
@@ -532,7 +551,7 @@ export function useTrainingSession({
   const addExercise = async (exercise: Exercise) => {
     if (!profile || items.some((item) => item.id === exercise.id)) return;
     if (!canAddExercise(exercise, profile, sessions)) throw new Error('尚未解锁');
-    const item = prescribeAddedExercise(exercise, profile);
+    const item = applyTrainingVolume(prescribeAddedExercise(exercise, profile), profile);
     if (!selectedExercise) await addDailyExercise(trainingDate, workoutId, exercise.id);
     setItems((old) => [...old, item]);
     setSets((old) => ({ ...old, [item.id]: initialSets(item) }));

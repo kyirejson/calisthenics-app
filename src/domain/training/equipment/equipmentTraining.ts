@@ -3,6 +3,7 @@ import { getEquipmentMovement } from '../../../data/equipment';
 import { equipmentFocus, equipmentMuscleRegions } from './equipmentLibrary';
 import { equipmentGear, type GearKey } from '../../../data/equipmentTaxonomy';
 import type { PrescribedExercise } from '../trainingPrescription';
+import { applyTrainingVolume } from '../trainingVolume';
 import {
   equipmentExecution,
   equipmentLoadBasis,
@@ -428,6 +429,7 @@ export function equipmentSessionPlan(
         Number(getEquipmentMovement(a.id)?.group === profile.equipmentPriority),
     );
   issues.push(...equipmentCoverage(items).issues);
+  items = items.map(item => applyTrainingVolume(item, profile));
   const revision = JSON.stringify([
     4,
     id,
@@ -435,6 +437,7 @@ export function equipmentSessionPlan(
       item.id,
       item.targetSets,
       item.repRange,
+      item.setTargets,
       item.restSeconds,
       item.perSide,
       item.loadBasis,

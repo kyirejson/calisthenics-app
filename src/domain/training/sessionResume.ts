@@ -16,7 +16,7 @@ export function restoreCourseSets(items: readonly PrescribedExercise[], session?
       const set = done[index];
       return set ? { reps: String(set.reps), load: set.loadKg === undefined ? '' : String(set.loadKg),
         rir: set.rir === undefined ? '' : String(set.rir), completed: true, completedAt: set.completedAt } :
-        { reps: item.repRange ? '' : String(item.targetValue), load: '', rir: '', completed: false };
+        { reps: item.setTargets?.[index] != null ? String(item.setTargets[index]) : item.repRange ? '' : String(item.targetValue), load: '', rir: '', completed: false };
     })];
   }));
 }

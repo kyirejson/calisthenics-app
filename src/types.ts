@@ -21,6 +21,7 @@ export type Profile = {
   levels: Record<string, number>;
   planLevels?: Record<string, number>;
   trainingRestSeconds?: number;
+  trainingVolumes?: Record<string, { unit: import('./domain/training/trainingPrescription').TargetUnit; values: Array<number | null> }>;
   neckBridgeConsent?: boolean;
   experience: ExperienceLevel;
   equipmentSplit?: EquipmentSplit;

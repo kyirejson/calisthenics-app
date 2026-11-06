@@ -6,6 +6,7 @@ import { estimateEquipmentSession } from './equipment/equipmentTimeline';
 export type TargetUnit = 'reps' | 'seconds' | 'steps' | 'meters';
 export type PrescribedExercise = Exercise & {
   targetSets: number;
+  setTargets?: Array<number | null>;
   targetValue: number;
   targetUnit: TargetUnit;
   restSeconds: number;
