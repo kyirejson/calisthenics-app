@@ -10,7 +10,7 @@
     <path d="M35 42V76a31 31 0 0 0 62 0V42M51 42V76a15 15 0 0 0 30 0V42" fill="none" stroke="#182123" stroke-width="7" stroke-linecap="round"/>
   </g>
   <text x="247" y="144" fill="#FFF7EF" font-size="60" font-weight="750" letter-spacing="1" font-family="Arial,sans-serif">UNCOVER</text>
-  <text x="251" y="188" fill="#E9BAA0" font-size="22" letter-spacing="5" font-family="'Microsoft YaHei',sans-serif">记录每一组 · 看见每一步</text>
+  <text x="251" y="188" fill="#E9BAA0" font-size="22" letter-spacing="2" font-family="'Microsoft YaHei',sans-serif">17 条进阶路线 · 逐组训练记录</text>
   <path d="M251 212H705" stroke="#FFF7EF" opacity=".14"/>
   <text x="251" y="246" fill="#B9CBC5" font-size="17" letter-spacing="2" font-family="'Microsoft YaHei',sans-serif">自重训练 / 跑步 / 饮食 / MAX AI</text>
   <text x="78" y="294" fill="#9BAFA7" font-size="11" letter-spacing="3" font-family="sans-serif">CALISTHENICS · BODYWEIGHT WORKOUT · ANDROID</text>
